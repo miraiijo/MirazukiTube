@@ -350,7 +350,7 @@ private fun ProfileTile(name: String, caption: String?, modifier: Modifier, onCl
 }
 
 /** Réglages' categories (left column). */
-private enum class SettingsPage(val label: String) { PLAYBACK("Lecture"), DISPLAY("Affichage"), PHONE("Téléphone"), ACCOUNT("Compte"), KIDS("Enfant"), UPDATES("Mises à jour"), ABOUT("À propos") }
+private enum class SettingsPage(val label: String) { SEARCH("Rechercher"), PLAYBACK("Lecture"), DISPLAY("Affichage"), PHONE("Téléphone"), ACCOUNT("Compte"), KIDS("Enfant"), UPDATES("Mises à jour"), ABOUT("À propos") }
 
 /**
  * Réglages (the redesign: full screen, like miryo's): the categories on the left (the one focused
@@ -396,6 +396,8 @@ fun SettingsDialog(
         }
         var page by remember { mutableStateOf(SettingsPage.PLAYBACK) }
         val pages = SettingsPage.entries.filter { it != SettingsPage.KIDS || kidChannels != null }
+        // Rechercher › a result: its page's menu item takes the focus (which shows the page).
+        val navFocus = remember { SettingsPage.entries.associateWith { FocusRequester() } }
         Column(Modifier.fillMaxSize().mirazukiBackground().safePadding()) {
             Text("Réglages", fontSize = 44.sp, lineHeight = 50.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.03).em, color = Palette.TextPrimary)
             Row(Modifier.weight(1f).padding(top = 22.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
@@ -411,11 +413,12 @@ fun SettingsDialog(
                         .focusGroup(),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    pages.forEachIndexed { index, item ->
+                    pages.forEach { item ->
                         SettingsNavItem(
                             item.label,
                             current = item == page,
-                            modifier = if (index == 0) Modifier.focusRequester(first) else Modifier,
+                            // Réglages opens on Lecture: Rechercher is right above it.
+                            modifier = Modifier.focusRequester(if (item == SettingsPage.PLAYBACK) first else navFocus.getValue(item)),
                             onFocus = { page = item },
                         )
                     }
@@ -426,6 +429,10 @@ fun SettingsDialog(
                     verticalArrangement = Arrangement.spacedBy(11.dp),
                 ) {
                     when (page) {
+                        SettingsPage.SEARCH -> SettingsSearch(pages = pages.map { it.name }.toSet()) { name ->
+                            val target = SettingsPage.valueOf(name)
+                            (if (target == SettingsPage.PLAYBACK) first else navFocus.getValue(target)).tryRequestFocus()
+                        }
                         SettingsPage.PLAYBACK -> {
                             SettingCard("Lecture automatique", "À la fin d’une vidéo, la suivante démarre après un court compte à rebours.") {
                                 Choice("Activée", settings.autoplay) { onSettings(settings.copy(autoplay = true)) }
@@ -584,6 +591,73 @@ fun SettingsDialog(
         LaunchedEffect(Unit) {
             withFrameNanos { }
             first.tryRequestFocus()
+        }
+    }
+}
+
+/**
+ * Réglages › Rechercher: a pill that opens the keyboard, then the matching settings (SettingsIndex),
+ * « name · page »; OK on one goes to its page.
+ */
+@Composable
+private fun SettingsSearch(pages: Set<String>, onOpen: (String) -> Unit) {
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    var text by remember { mutableStateOf("") }
+    var editing by remember { mutableStateOf(false) }
+    val pill = remember { FocusRequester() }
+    val field = remember { FocusRequester() }
+    val hits = remember(text, pages) { SettingsIndex.search(text, pages) }
+    fun done() {
+        keyboard?.hide()
+        editing = false
+        pill.tryRequestFocus()
+    }
+    SettingCard("Rechercher un réglage", if (text.isBlank()) "Par exemple : sombre, volume, bêta, enfant, téléphone." else if (hits.isEmpty()) "Aucun réglage ne correspond." else "OK sur un réglage ouvre sa page.") {
+        Surface(
+            onClick = { editing = true },
+            modifier = Modifier.width(440.dp).height(48.dp).focusRequester(pill),
+            shape = ClickableSurfaceDefaults.shape(shape = CircleShape),
+            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f, pressedScale = 1f),
+            colors = ClickableSurfaceDefaults.colors(
+                containerColor = Palette.ControlIdle,
+                contentColor = Palette.TextPrimary,
+                focusedContainerColor = Palette.ControlIdle,
+                focusedContentColor = Palette.TextPrimary,
+            ),
+            border = ClickableSurfaceDefaults.border(
+                focusedBorder = androidx.tv.material3.Border(androidx.compose.foundation.BorderStroke(2.dp, Palette.FocusRing), shape = CircleShape),
+            ),
+        ) {
+            Row(Modifier.fillMaxSize().padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(MirazukiIcon.SEARCH, size = 16.dp, color = Palette.TextSecondary)
+                Spacer(Modifier.width(12.dp))
+                if (editing) {
+                    androidx.compose.foundation.text.BasicTextField(
+                        value = text,
+                        onValueChange = { text = it.take(40) },
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Palette.TextPrimary, fontSize = 18.sp, fontFamily = InterFamily),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Palette.Highlight),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { done() }, onDone = { done() }),
+                        modifier = Modifier.weight(1f).focusRequester(field),
+                    )
+                    LaunchedEffect(Unit) {
+                        withFrameNanos { }
+                        field.tryRequestFocus()
+                        // As in Rechercher: the box ignored a keyboard asked for at once.
+                        kotlinx.coroutines.delay(150)
+                        keyboard?.show()
+                    }
+                } else {
+                    Text(text.ifBlank { "Nom d’un réglage" }, fontSize = 18.sp, color = if (text.isBlank()) Palette.TextSecondary else Palette.TextPrimary, maxLines = 1)
+                }
+            }
+        }
+    }
+    hits.forEach { hit ->
+        SettingCard(hit.label, SettingsIndex.PAGES[hit.page].orEmpty()) {
+            MirazukiButton("Ouvrir", contentColor = Palette.ChipText) { onOpen(hit.page) }
         }
     }
 }
