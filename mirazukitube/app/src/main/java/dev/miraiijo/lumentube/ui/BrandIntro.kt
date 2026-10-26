@@ -47,6 +47,7 @@ fun BrandIntro(ready: () -> Boolean, maxMs: Long, onDone: () -> Unit) {
         val startedAt = android.os.SystemClock.uptimeMillis()
         delay(LOGO_HOLD_MS)
         suffix.animateTo(1f, tween(SUFFIX_MS, easing = FastOutSlowInEasing))
+        delay(BEFORE_DOT_MS)
         dot.animateTo(1f, tween(DOT_MS, easing = BackEasing))
         delay(HOLD_MS)
         // Then held until the app has something to show (its own state, polled), never past maxMs.
@@ -81,7 +82,7 @@ fun BrandIntro(ready: () -> Boolean, maxMs: Long, onDone: () -> Unit) {
                 painterResource(R.drawable.intro_suffix), null,
                 // Never seen while it comes out of « miryo »: the logo makes room for it, then it
                 // fades in, whole, in its place.
-                Modifier.matchParentSize().graphicsLayer { alpha = ((suffix.value - SUFFIX_FADE_FROM) / (1 - SUFFIX_FADE_FROM)).coerceIn(0f, 1f) },
+                Modifier.matchParentSize().graphicsLayer { alpha = ((suffix.value - SUFFIX_FADE_FROM) / (SUFFIX_FADE_TO - SUFFIX_FADE_FROM)).coerceIn(0f, 1f) },
             )
             Image(
                 painterResource(R.drawable.intro_dot), null,
@@ -121,6 +122,10 @@ private const val SUFFIX_MS = 460
 private const val DOT_MS = 300
 /** Part of the suffix's time spent making room before it fades in. */
 private const val SUFFIX_FADE_FROM = 0.45f
+/** The suffix is whole a little before the logo stops moving. */
+private const val SUFFIX_FADE_TO = 0.85f
+/** The dot only comes once the suffix is whole and still. */
+private const val BEFORE_DOT_MS = 160L
 private const val HOLD_MS = 200L
 private const val READY_POLL_MS = 40L
 private const val FADE_MS = 220
