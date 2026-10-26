@@ -21,7 +21,7 @@ on:
 # Build and check only: the APK comes out UNSIGNED. Signing and publishing happen on the Mac
 # (mirazuki-ship: the key never leaves it), so there is no secret at all in GitHub. Read-only token:
 # this workflow publishes nothing (the APK is a workflow artifact, signed by mirazukitube-install.sh
-# or mirazuki-ship, then published on miraiijo/mirazuki-releases).
+# or mirazuki-ship, then published on miraiijo/miryo-releases).
 permissions:
   contents: read
 
