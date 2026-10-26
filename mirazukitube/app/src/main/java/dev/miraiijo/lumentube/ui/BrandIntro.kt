@@ -14,6 +14,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawWithContent
@@ -31,12 +32,14 @@ import dev.miraiijo.lumentube.R
 /**
  * Start-up animation, right after the system splash: the mark and « miryo » are there together,
  * then the logo makes room for « tube », which fades in, then the dot drops in, in
- * the app's colour. The logo stays centred while it grows. It is drawn over the app, which loads
- * underneath, and fades out once [ready] says there is something to show (at most [maxMs] after
- * it started). About 1.4 s: the Pop starts the app in that time anyway.
+ * the app's colour. The logo stays centred while it grows. Always played whole (about 1.4 s): the
+ * clock starts on the first frame really drawn, and the app's pages are only composed underneath
+ * once the dot has landed ([onSettled]): composing them during the animation dropped frames on the
+ * Freebox Player POP, and a time-based animation then jumped ahead (jerky, as if cut short). Then
+ * it fades out once [ready] says there is something to show (waiting at most [maxMs] in all).
  */
 @Composable
-fun BrandIntro(ready: () -> Boolean, maxMs: Long, onDone: () -> Unit) {
+fun BrandIntro(ready: () -> Boolean, maxMs: Long, onSettled: () -> Unit, onDone: () -> Unit) {
     // « miryo » is there from the start, with the mark: only the suffix and the dot come after.
     val word = remember { Animatable(1f) }
     val suffix = remember { Animatable(0f) }
@@ -44,12 +47,19 @@ fun BrandIntro(ready: () -> Boolean, maxMs: Long, onDone: () -> Unit) {
     val fade = remember { Animatable(1f) }
     val isReady = rememberUpdatedState(ready)
     LaunchedEffect(Unit) {
+        // Two frames first: the window is really on screen before the clock starts.
+        withFrameNanos { }
+        withFrameNanos { }
         val startedAt = android.os.SystemClock.uptimeMillis()
         delay(LOGO_HOLD_MS)
         suffix.animateTo(1f, tween(SUFFIX_MS, easing = FastOutSlowInEasing))
         delay(BEFORE_DOT_MS)
         dot.animateTo(1f, tween(DOT_MS, easing = BackEasing))
+        // The pages are composed now, behind the still logo, and drawn once before the fade.
+        onSettled()
         delay(HOLD_MS)
+        withFrameNanos { }
+        withFrameNanos { }
         // Then held until the app has something to show (its own state, polled), never past maxMs.
         val left = maxMs - (android.os.SystemClock.uptimeMillis() - startedAt)
         if (left > 0) withTimeoutOrNull(left) { while (!isReady.value()) delay(READY_POLL_MS) }

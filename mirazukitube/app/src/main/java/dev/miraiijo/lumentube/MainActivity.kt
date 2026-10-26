@@ -31,11 +31,15 @@ class MainActivity : ComponentActivity() {
     /** The logo animation over the first frames of a fresh start (see onCreate). */
     private val intro = mutableStateOf(false)
 
+    /** The pages are composed (after the intro's dot has landed, right away without the intro). */
+    private val pagesShown = mutableStateOf(true)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // A fresh start shows the logo animation (BrandIntro) over Accueil while it loads. A video
         // opened from a link (miryo, a browser…) skips it: the system splash (the mark) stays until
         // there's something to show (rows, an error, "Qui regarde ?", the video), at most SPLASH_MAX_MS.
         intro.value = savedInstanceState == null && intent?.data == null
+        pagesShown.value = !intro.value
         val splash = installSplashScreen()
         val shownAt = android.os.SystemClock.uptimeMillis()
         splash.setKeepOnScreenCondition { !intro.value && android.os.SystemClock.uptimeMillis() - shownAt < SPLASH_MAX_MS && !vm.state.value.readyToShow() }
@@ -55,8 +59,8 @@ class MainActivity : ComponentActivity() {
                 val background = Palette.Background
                 LaunchedEffect(background) { window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(background.toArgb())) }
                 Box(Modifier.fillMaxSize()) {
-                    Root(vm)
-                    if (intro.value) BrandIntro(ready = { vm.state.value.readyToShow() }, maxMs = SPLASH_MAX_MS, onDone = { intro.value = false })
+                    if (pagesShown.value) Root(vm)
+                    if (intro.value) BrandIntro(ready = { vm.state.value.readyToShow() }, maxMs = SPLASH_MAX_MS, onSettled = { pagesShown.value = true }, onDone = { intro.value = false })
                 }
             }
         }
