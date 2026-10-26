@@ -34,6 +34,8 @@ enum class MirazukiIcon {
     THUMB_UP_OUTLINE, THUMB_DOWN, THUMB_DOWN_OUTLINE, COMMENT,
     // Chapters: three lines (the last shorter), no play triangle.
     CHAPTERS,
+    // Apparence Auto (Jour / Nuit), as in miryo: a circle, half filled.
+    CONTRAST,
     // Avatar glyphs
     MOON, BOLT, SMILE, CAT, FLAME, LEAF, GHOST, CROWN,
 }
@@ -296,6 +298,10 @@ private fun DrawScope.drawIcon(icon: MirazukiIcon, color: Color) {
         // The same thumb upside down.
         MirazukiIcon.THUMB_DOWN -> scale(1f, -1f) { thumb(filled = true) }
         MirazukiIcon.THUMB_DOWN_OUTLINE -> scale(1f, -1f) { thumb(filled = false) }
+        MirazukiIcon.CONTRAST -> {
+            ring(12f, 12f, 8f)
+            polygon((0..24).map { i -> val a = Math.toRadians(90.0 + 180.0 * i / 24); p(12f + 8f * cos(a).toFloat(), 12f + 8f * sin(a).toFloat()) }, filled = true)
+        }
         MirazukiIcon.CHAPTERS -> {
             line(4f, 6f, 20f, 6f); line(4f, 12f, 20f, 12f); line(4f, 18f, 14f, 18f)
         }

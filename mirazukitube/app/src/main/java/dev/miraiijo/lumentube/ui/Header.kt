@@ -56,10 +56,10 @@ import dev.miraiijo.lumentube.update.Updater
 import kotlinx.coroutines.delay
 
 /**
- * The redesign's header (miryo's bar): the sections as tabs with Recherche right after them, and
- * on the right ("Lecture en cours" with a video in the small window) the account, the appearance
- * (Jour / Nuit / Auto: OK goes to the next one), Réglages (a red dot: an update is available) and
- * the time right-most. Replaces the side menu. OK on a tab opens that section.
+ * The redesign's header (miryo's bar): the account left-most, the sections as tabs with Recherche
+ * right after them, and on the right ("Lecture en cours" with a video in the small window) the
+ * appearance (Jour / Nuit / Auto: OK goes to the next one), Réglages (a red dot: an update is
+ * available), miryo's weather and the time right-most. Replaces the side menu. OK on a tab opens that section.
  */
 @Composable
 fun TopHeader(
@@ -108,6 +108,8 @@ fun TopHeader(
         // Opale: one bar, as in miryo. The sections on the left (no big title) and Recherche right
         // after them; the round glass buttons and the time right-most, all on one line.
         Row(Modifier.weight(1f, fill = false), horizontalArrangement = Arrangement.spacedBy(TAB_GAP), verticalAlignment = Alignment.CenterVertically) {
+            // The account left-most, as miryo's profile.
+            RoundButton(onClick = onAccount, filled = false) { AvatarPicture(accountAvatar, accountName, HEADER_BUTTON, 13.sp) }
             // The tabs scroll when they don't fit (signed in, 9 tabs, from ~95 %): before, the last
             // ones were squeezed to nothing and the focus went invisible on them.
             Box(Modifier.weight(1f, fill = false)) {
@@ -140,13 +142,12 @@ fun TopHeader(
                     onClick = onRestorePlayer,
                 )
             }
-            RoundButton(onClick = onAccount, filled = false) { AvatarPicture(accountAvatar, accountName, HEADER_BUTTON, 13.sp) }
-            // One button for the three looks: it shows the current one (sun, moon, "A").
+            // One button for the three looks: it shows the current one (sun, moon, miryo's half circle for Auto).
             RoundButton(onClick = onAppearance) {
                 when (appearance) {
                     1 -> Icon(MirazukiIcon.SUN, size = HEADER_ICON)
                     2 -> Icon(MirazukiIcon.MOON, size = HEADER_ICON)
-                    else -> Text("A", fontSize = Dimens.TextMin, fontWeight = FontWeight.SemiBold)
+                    else -> Icon(MirazukiIcon.CONTRAST, size = HEADER_ICON)
                 }
             }
             // Réglages, with miryo's red dot when an update is waiting (drawn over the button's corner).
@@ -156,7 +157,8 @@ fun TopHeader(
                     Box(Modifier.align(Alignment.TopEnd).size(UPDATE_DOT).background(Palette.Live, CircleShape))
                 }
             }
-            // The time right-most, as in miryo.
+            // miryo's weather (its city), then the time right-most, as in miryo.
+            HeaderWeather(Modifier.padding(start = 2.dp))
             HeaderClock(Modifier.padding(start = 2.dp))
         }
     }
@@ -232,6 +234,29 @@ private fun RoundButton(onClick: () -> Unit, filled: Boolean = true, content: @C
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { content() }
     }
 }
+
+/**
+ * The temperature of miryo's city (mirazuki-link), refreshed every 30 min while the bar is shown.
+ * Nothing at all without miryo or without a city there.
+ */
+@Composable
+private fun HeaderWeather(modifier: Modifier = Modifier) {
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    val weather by androidx.compose.runtime.produceState<dev.miraiijo.lumentube.link.MirazukiWeather.Now?>(null) {
+        while (true) {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { dev.miraiijo.lumentube.link.MirazukiWeather.current(context) }?.let { value = it }
+            delay(WEATHER_REFRESH_MS)
+        }
+    }
+    val now = weather ?: return
+    val icon = runCatching { MirazukiIcon.valueOf(now.icon) }.getOrDefault(MirazukiIcon.CLOUD)
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(5.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, size = 15.dp, color = Palette.TextPrimary)
+        Text("${now.temperature}°", fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = Palette.TextPrimary, maxLines = 1, softWrap = false)
+    }
+}
+
+private const val WEATHER_REFRESH_MS = 30 * 60_000L
 
 @Composable
 private fun HeaderClock(modifier: Modifier = Modifier) {
