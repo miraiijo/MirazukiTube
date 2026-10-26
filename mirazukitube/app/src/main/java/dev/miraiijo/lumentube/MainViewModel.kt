@@ -28,8 +28,15 @@ import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+
+/** The profile being opened (account, Invité, Enfant): its name and picture on the cover. */
+@androidx.compose.runtime.Immutable
+data class SwitchCover(val name: String, val avatar: String? = null, val kind: Kind = Kind.ACCOUNT) {
+    enum class Kind { ACCOUNT, GUEST, KIDS }
+}
 
 /** A page's content: loading, rows, or an error message. */
 @androidx.compose.runtime.Immutable
@@ -97,7 +104,19 @@ data class Settings(
     val uiScale: Int = UI_SCALE_DEFAULT,
     /** "Recevoir même miryo tube fermé": the phone link listens in the background (remote.CastService). */
     val backgroundCast: Boolean = false,
-)
+    /** « Petite fenêtre »: when the video goes on in the system's picture-in-picture window (player.PictureInPicture). */
+    val background: String = dev.miraiijo.lumentube.player.PictureInPicture.HOME,
+    /** "Sons de navigation": 0 = Comme miryo (the default; on without miryo), 1 = Activés, 2 = Coupés. */
+    val navSounds: Int = 0,
+) {
+    /** The clicks of the remote's arrows and OK are heard. */
+    val navSoundsOn: Boolean
+        get() = when (navSounds) {
+            1 -> true
+            2 -> false
+            else -> dev.miraiijo.lumentube.link.MirazukiLook.current?.navSounds ?: true
+        }
+}
 
 /**
  * Réglages › Mises à jour: the installed version, « Recevoir les versions bêta », and the version
@@ -182,6 +201,8 @@ data class UiState(
     val kidsMiryoCode: Boolean = false,
     /** Parental code dialog open. */
     val pin: PinPrompt? = null,
+    /** A profile picked in "Qui regarde ?": a cover hides the page until its Accueil is in. */
+    val switchingTo: SwitchCover? = null,
 ) {
     /**
      * The launch has something to show (the splash screen can go): Accueil's first rows or its
@@ -251,7 +272,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
             viewModelScope.launch {
                 // By id, not by name (two accounts can share a name): the pages are another account's.
                 val id = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { YouTube.homeAccountId() }
-                if (id != _state.value.accountId && !_state.value.choosingAccount) {
+                if (id != _state.value.accountId && !_state.value.choosingAccount && _state.value.switchingTo == null) {
                     cancelLoads()
                     _state.update { it.copy(pages = emptyMap(), resume = null, search = null, openedStack = emptyList(), focusKey = null, cardMenu = null) }
                     refreshAccount()
@@ -990,7 +1011,11 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                 return
             }
         }
-        viewModelScope.launch { kidsMutex.withLock { beginKids(fromMirazuki = false) } }
+        coverFor(SwitchCover("Enfant", kind = SwitchCover.Kind.KIDS))
+        viewModelScope.launch {
+            kidsMutex.withLock { beginKids(fromMirazuki = false) }
+            liftCover()
+        }
     }
 
     /** Réglages › Enfant. */
@@ -1231,6 +1256,8 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         prefs.appearance = settings.appearance
         prefs.uiScale = settings.uiScale
         prefs.backgroundCast = settings.backgroundCast
+        prefs.background = settings.background
+        prefs.navSounds = settings.navSounds
         if (settings.remote != _state.value.settings.remote) {
             if (settings.remote && foreground) RemoteControl.start(getApplication()) else if (!settings.remote) RemoteControl.stop()
         }
@@ -1264,37 +1291,67 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     /** Account picked at launch ("Qui regarde ?") or in the settings: Accueil reloads for it. */
     fun chooseAccount(account: Account) {
         if (_state.value.kids) return
-        viewModelScope.launch {
-            if (!account.selected) YouTube.selectAccount(account)
-            // Playing as another account for miryo: the new home loads when that video stops.
-            if (playingAs) {
+        // Playing as another account for miryo: the new home loads when that video stops.
+        if (playingAs) {
+            viewModelScope.launch {
+                if (!account.selected) YouTube.selectAccount(account)
                 _state.update { it.copy(choosingAccount = false, accountsOpen = false, settingsOpen = false) }
                 refreshAccount()
-                return@launch
             }
-            cancelLoads()
-            channelJob?.cancel()
-            _state.update { it.copy(choosingAccount = false, accountsOpen = false, settingsOpen = false, pages = emptyMap(), resume = null, search = null, section = Section.HOME, openedStack = emptyList(), focusKey = null) }
+            return
+        }
+        coverFor(SwitchCover(account.name, account.avatar))
+        viewModelScope.launch {
+            if (!account.selected) YouTube.selectAccount(account)
             refreshAccount()
             show(Section.HOME)
+            liftCover()
         }
     }
 
     /** "Invité" in "Qui regarde ?": signed-out YouTube, the linked accounts kept. */
     fun chooseGuest() {
         if (_state.value.kids) return
+        if (playingAs) {
+            _state.update { it.copy(choosingAccount = false, accountsOpen = false) }
+            refreshAccount()
+            return
+        }
+        coverFor(SwitchCover("Invité", kind = SwitchCover.Kind.GUEST))
         viewModelScope.launch {
-            if (!YouTube.useGuest()) {
-                _state.update { it.copy(choosingAccount = false, accountsOpen = false) }
-                refreshAccount()
-                return@launch
-            }
-            cancelLoads()
-            channelJob?.cancel()
-            _state.update { it.copy(choosingAccount = false, accountsOpen = false, settingsOpen = false, pages = emptyMap(), resume = null, search = null, section = Section.HOME, openedStack = emptyList(), focusKey = null) }
+            YouTube.useGuest()
             refreshAccount()
             show(Section.HOME)
+            liftCover()
         }
+    }
+
+    /**
+     * A profile picked: the page is covered at once (its name and picture), emptied under the
+     * cover, and "Qui regarde ?" closes a moment later, over the cover: the previous account's
+     * rows and name never show. [liftCover] takes it away once the new Accueil is in.
+     */
+    private fun coverFor(cover: SwitchCover) {
+        cancelLoads()
+        channelJob?.cancel()
+        _state.update {
+            it.copy(
+                switchingTo = cover, accountName = cover.name, accountAvatar = cover.avatar, cardMenu = null,
+                pages = emptyMap(), resume = null, search = null, section = Section.HOME, openedStack = emptyList(), focusKey = null,
+            )
+        }
+        viewModelScope.launch {
+            delay(COVER_DRAWN_MS)
+            _state.update { it.copy(choosingAccount = false, accountsOpen = false, settingsOpen = false) }
+        }
+    }
+
+    /** The cover goes once Accueil's first rows (or its error) are in, at most [SWITCH_MAX_MS] later. */
+    private suspend fun liftCover() {
+        kotlinx.coroutines.withTimeoutOrNull(SWITCH_MAX_MS) {
+            state.first { s -> s.pages[Section.HOME]?.let { it.rows.isNotEmpty() || !it.loading } == true }
+        }
+        _state.update { it.copy(switchingTo = null, choosingAccount = false, accountsOpen = false, settingsOpen = false) }
     }
 
     /** "Qui regarde ?" dismissed: the account already selected stays. */
@@ -1347,6 +1404,10 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         val VIDEO_ID = Regex("[A-Za-z0-9_-]{11}")
         const val DEARROW_BATCH = 50
         const val RESUME_REFRESH_DELAY_MS = 1_500L
+        /** Profile switch: "Qui regarde ?" closes this long after the cover is up (2 frames and more). */
+        const val COVER_DRAWN_MS = 48L
+        /** Profile switch: the cover lifts at the latest after this, even if Accueil is still loading. */
+        const val SWITCH_MAX_MS = 1_500L
         const val SUGGEST_DELAY_MS = 300L
         const val NOTICE_MS = 3_000L
         /** This app's file on the update channel (miryo-releases › channel › lumentube.json). */

@@ -316,7 +316,25 @@ fun MirazukiDialog(onDismissRequest: () -> Unit, content: @Composable () -> Unit
     ) {
         // A long OK opens most menus: the release of that press must not click their first button.
         androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.okPressStartsHere()) {
+            // A dialog is its own window: the sounds follow the setting there too.
+            SystemClicks(LocalNavSounds.current)
             CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides density, LocalSafe provides safe, content = content)
         }
+    }
+}
+
+/** Réglages › Affichage › Sons de navigation, for the windows (dialogs) opened from the pages. */
+val LocalNavSounds = androidx.compose.runtime.staticCompositionLocalOf { true }
+
+/**
+ * The system's click on the remote's arrows and OK, on or off for this window (its Compose view and
+ * the window's root, where Android plays it from).
+ */
+@Composable
+fun SystemClicks(enabled: Boolean) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    androidx.compose.runtime.SideEffect {
+        view.isSoundEffectsEnabled = enabled
+        view.rootView.isSoundEffectsEnabled = enabled
     }
 }

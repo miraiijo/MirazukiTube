@@ -10,6 +10,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -57,6 +63,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import dev.miraiijo.lumentube.UpdateUi
+import dev.miraiijo.lumentube.player.PictureInPicture
 import dev.miraiijo.lumentube.update.Updater
 import com.bumptech.glide.integration.compose.GlideImage
 import androidx.compose.foundation.Canvas
@@ -395,6 +402,9 @@ fun SettingsDialog(
             }
         }
         var page by remember { mutableStateOf(SettingsPage.PLAYBACK) }
+        // Rechercher can't take the focus before Lecture has it: Android's own first focus would
+        // land on it for a frame and show its page, then Lecture's (the menu and the page jumped).
+        var settled by remember { mutableStateOf(false) }
         val pages = SettingsPage.entries.filter { it != SettingsPage.KIDS || kidChannels != null }
         // Rechercher › a result: its page's menu item takes the focus (which shows the page).
         val navFocus = remember { SettingsPage.entries.associateWith { FocusRequester() } }
@@ -418,14 +428,24 @@ fun SettingsDialog(
                             item.label,
                             current = item == page,
                             // Réglages opens on Lecture: Rechercher is right above it.
-                            modifier = Modifier.focusRequester(if (item == SettingsPage.PLAYBACK) first else navFocus.getValue(item)),
-                            onFocus = { page = item },
+                            modifier = Modifier
+                                .focusRequester(if (item == SettingsPage.PLAYBACK) first else navFocus.getValue(item))
+                                .focusProperties { canFocus = settled || item != SettingsPage.SEARCH },
+                            onFocus = { if (settled || item == SettingsPage.PLAYBACK) page = item },
                         )
                     }
                 }
                 // One scroll per page: a page scrolled down doesn't make the next one open scrolled.
-                androidx.compose.runtime.key(page) { Column(
-                    Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
+                androidx.compose.runtime.key(page) {
+                val scroll = rememberScrollState()
+                val scope = androidx.compose.runtime.rememberCoroutineScope()
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        // À propos has nothing to focus: Right enters the page, Up and Down scroll it.
+                        .then(if (page == SettingsPage.ABOUT) Modifier.dpadScroll(scroll, scope) else Modifier)
+                        .verticalScroll(scroll),
                     verticalArrangement = Arrangement.spacedBy(11.dp),
                 ) {
                     when (page) {
@@ -446,6 +466,17 @@ fun SettingsDialog(
                                 Choice("Activé", settings.stableVolume) { onSettings(settings.copy(stableVolume = true)) }
                                 Choice("Désactivé", !settings.stableVolume) { onSettings(settings.copy(stableVolume = false)) }
                             }
+                            // Only where the box offers the system's window (many Android TV boxes turn it off).
+                            val pipSupported = androidx.compose.ui.platform.LocalContext.current.packageManager
+                                .hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)
+                            if (pipSupported) SettingCard(
+                                "Petite fenêtre (image dans l’image)",
+                                "La vidéo continue dans un coin de l’écran, par-dessus miryo ou une autre appli, avec la touche choisie (si elle est en pause, elle s’arrête). ▶︎ ⏸ de la télécommande la met en pause, rouvrir miryo tube la remet en plein écran.",
+                            ) {
+                                PictureInPicture.all.forEach { mode ->
+                                    Choice(PictureInPicture.label(mode), settings.background == mode) { onSettings(settings.copy(background = mode)) }
+                                }
+                            }
                         }
                         SettingsPage.DISPLAY -> {
                             val miryo = dev.miraiijo.lumentube.link.MirazukiLook.current != null
@@ -457,6 +488,14 @@ fun SettingsDialog(
                                 Choice("Jour", settings.appearance == 1) { onSettings(settings.copy(appearance = 1)) }
                                 Choice("Nuit", settings.appearance == 2) { onSettings(settings.copy(appearance = 2)) }
                                 Choice("Auto", settings.appearance == 0) { onSettings(settings.copy(appearance = 0)) }
+                            }
+                            SettingCard(
+                                "Sons de navigation",
+                                if (miryo) "Le petit clic des flèches et de OK. Comme miryo suit son réglage." else "Le petit clic des flèches et de OK de la télécommande.",
+                            ) {
+                                if (miryo) Choice("Comme miryo", settings.navSounds == 0) { onSettings(settings.copy(navSounds = 0)) }
+                                Choice("Activés", settings.navSounds == 1 || (!miryo && settings.navSounds == 0)) { onSettings(settings.copy(navSounds = 1)) }
+                                Choice("Coupés", settings.navSounds == 2) { onSettings(settings.copy(navSounds = 2)) }
                             }
                             // The size in the title: the pills never move under the focus as it changes.
                             val size = settings.uiScale
@@ -591,9 +630,26 @@ fun SettingsDialog(
         LaunchedEffect(Unit) {
             withFrameNanos { }
             first.tryRequestFocus()
+            settled = true
         }
     }
 }
+
+/** A page without buttons, focusable as a whole: Up and Down scroll it, then leave it at either end. */
+private fun Modifier.dpadScroll(scroll: androidx.compose.foundation.ScrollState, scope: kotlinx.coroutines.CoroutineScope): Modifier = this
+    .onPreviewKeyEvent { event ->
+        if (event.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onPreviewKeyEvent false
+        val step = when (event.key) {
+            androidx.compose.ui.input.key.Key.DirectionDown -> if (scroll.canScrollForward) SCROLL_STEP else return@onPreviewKeyEvent false
+            androidx.compose.ui.input.key.Key.DirectionUp -> if (scroll.canScrollBackward) -SCROLL_STEP else return@onPreviewKeyEvent false
+            else -> return@onPreviewKeyEvent false
+        }
+        scope.launch { scroll.animateScrollBy(step) }
+        true
+    }
+    .focusable()
+
+private const val SCROLL_STEP = 260f
 
 /**
  * Réglages › Rechercher: a pill that opens the keyboard, then the matching settings (SettingsIndex),
@@ -767,3 +823,44 @@ private fun openOverlayPermission(context: android.content.Context) {
     }
     android.widget.Toast.makeText(context, "Cette box n’a pas l’écran d’autorisation : active-le depuis Paramètres › Applications.", android.widget.Toast.LENGTH_LONG).show()
 }
+
+/**
+ * Profile switch: covers the page at once (no fade in, so the previous account's rows and name
+ * never show) with the new profile's picture and name, then fades out once its Accueil is in.
+ * One opaque layer and an alpha: light on the Freebox Player POP.
+ */
+@Composable
+fun ProfileSwitchCover(cover: dev.miraiijo.lumentube.SwitchCover?) {
+    var shown by remember { mutableStateOf(cover) }
+    val alpha = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(cover) {
+        if (cover != null) {
+            shown = cover
+            alpha.snapTo(1f)
+        } else if (alpha.value > 0f) {
+            alpha.animateTo(0f, tween(SWITCH_FADE_MS))
+            shown = null
+        }
+    }
+    val current = cover ?: shown ?: return
+    // Visible from the first frame the cover is set (the effect above runs one frame later).
+    val visible = if (cover != null) 1f else alpha.value
+    if (visible <= 0f) return
+    Column(
+        Modifier.fillMaxSize().graphicsLayer { this.alpha = visible }.mirazukiBackground(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        when (current.kind) {
+            dev.miraiijo.lumentube.SwitchCover.Kind.ACCOUNT -> AvatarPicture(current.avatar, current.name, SWITCH_AVATAR, 52.sp)
+            else -> Box(Modifier.size(SWITCH_AVATAR).clip(CircleShape).background(Palette.ControlIdle), contentAlignment = Alignment.Center) {
+                Icon(if (current.kind == dev.miraiijo.lumentube.SwitchCover.Kind.KIDS) MirazukiIcon.SMILE else MirazukiIcon.USER, size = 48.dp)
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+        Text(current.name, fontSize = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.03).em, color = Palette.TextPrimary)
+    }
+}
+
+private val SWITCH_AVATAR = 132.dp
+private const val SWITCH_FADE_MS = 220

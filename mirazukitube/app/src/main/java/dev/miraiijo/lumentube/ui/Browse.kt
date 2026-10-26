@@ -388,11 +388,13 @@ fun VideoCard(
             // below) moved as such a card scrolled into view. Same for the channel line.
             modifier = Modifier.padding(top = 10.dp).height(lines(TITLE_LINE, 2)),
         )
-        // Channel · when it was published (a channel page's cards already say the date alone). A long
-        // channel name is cut, never the date after it.
+        // Channel · when it was published. A long channel name is cut, never the date after it: when
+        // the line already holds the date (YouTube's whole second line, « Chaîne • 12 k vues • il y a
+        // 3 jours », given when there's no author), it's taken out of the part that may be cut.
+        val published = video.published
         KeepEndLine(
-            start = video.channel,
-            end = video.published?.takeUnless { video.channel.contains(it) },
+            start = if (published == null) video.channel else video.channel.withoutPart(published),
+            end = published,
             fontSize = 13.sp,
             lineHeight = CHANNEL_LINE,
             modifier = Modifier.padding(top = 2.dp).height(lines(CHANNEL_LINE, 1)),
@@ -592,3 +594,8 @@ private val OPTIONS_KEYS = setOf(
     android.view.KeyEvent.KEYCODE_TV_CONTENTS_MENU,
     android.view.KeyEvent.KEYCODE_TV_MEDIA_CONTEXT_MENU,
 )
+
+/** This « • »-separated line without [part] (« Chaîne • 12 k vues • il y a 3 jours » → « Chaîne • 12 k vues »). */
+private fun String.withoutPart(part: String): String =
+    if (!contains(part)) this
+    else split('•', '·').map { it.trim() }.filter { it.isNotEmpty() && it != part.trim() }.joinToString(" • ")

@@ -89,6 +89,7 @@ import dev.miraiijo.lumentube.data.Video
 import dev.miraiijo.lumentube.data.YouTube
 import dev.miraiijo.lumentube.player.AutoFrameRate
 import dev.miraiijo.lumentube.player.MirazukiPlayer
+import dev.miraiijo.lumentube.player.PictureInPicture
 import dev.miraiijo.lumentube.remote.RemoteControl
 import dev.miraiijo.lumentube.player.PlayerPrefs
 import kotlinx.coroutines.delay
@@ -165,6 +166,8 @@ fun PlayerScreen(
     signedIn: Boolean,
     onNext: (Video) -> Unit,
     onExit: () -> Unit,
+    /** Retour on the video, nothing over it (the system's window if chosen); else as [onExit]. */
+    onBack: () -> Unit = onExit,
     /** In-app picture-in-picture: small window in a corner, no controls, browsing goes on. */
     minimized: Boolean = false,
     onMinimize: () -> Unit = {},
@@ -425,7 +428,10 @@ fun PlayerScreen(
             }
         }
         player.exo.addListener(listener)
+        // The system's picture-in-picture window plays this player (and its Lecture / Pause follows it).
+        PictureInPicture.attach(context, player)
         onDispose {
+            PictureInPicture.detach(player)
             val seconds = player.exo.currentPosition / 1000f
             // Outlives the screen (its own scope is cancelled with it).
             AppScope.launch { YouTube.savePosition(videoId, seconds) }
@@ -694,7 +700,7 @@ fun PlayerScreen(
 
     // Back leaves the video once nothing is over it. Declared after (so asked first): the controls,
     // then the panels (settings, comments) — Back closes what's on top, one thing at a time.
-    BackHandler(enabled = !minimized) { onExit() }
+    BackHandler(enabled = !minimized) { onBack() }
     BackHandler(enabled = controls && started && error == null && upNext == null && !commentsOpen && !minimized) {
         // The controls go, the video goes on (a seek preview not released is dropped).
         preview = null
