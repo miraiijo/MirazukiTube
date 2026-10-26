@@ -32,14 +32,14 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-/** A page's content: loading, rows, or an error message. */
-@androidx.compose.runtime.Immutable
 /** The profile being opened (account, Invité, Enfant): its name and picture on the cover. */
 @androidx.compose.runtime.Immutable
 data class SwitchCover(val name: String, val avatar: String? = null, val kind: Kind = Kind.ACCOUNT) {
     enum class Kind { ACCOUNT, GUEST, KIDS }
 }
 
+/** A page's content: loading, rows, or an error message. */
+@androidx.compose.runtime.Immutable
 data class Page(val rows: List<VideoRow> = emptyList(), val loading: Boolean = true, val error: String? = null)
 
 /** A channel or playlist opened from a card, shown over the section. [channel]: a channel page's header. */
