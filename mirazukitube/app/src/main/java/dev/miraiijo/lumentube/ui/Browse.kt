@@ -300,7 +300,7 @@ private fun VideoRowView(
     }
 }
 
-/** 16:9 thumbnail (duration badge, watched lane), title and channel below. */
+/** 16:9 thumbnail (duration badge, watched lane), title, then channel and publication date below. */
 @Composable
 fun VideoCard(
     video: Video,
@@ -388,8 +388,10 @@ fun VideoCard(
             // below) moved as such a card scrolled into view. Same for the channel line.
             modifier = Modifier.padding(top = 10.dp).height(lines(TITLE_LINE, 2)),
         )
+        // Channel · when it was published (a channel page's cards already say the date alone).
+        val second = video.published?.takeUnless { video.channel.contains(it) }?.let { if (video.channel.isBlank()) it else "${video.channel} · $it" } ?: video.channel
         Text(
-            video.channel,
+            second,
             fontSize = 13.sp,
             lineHeight = CHANNEL_LINE,
             color = Palette.TextSecondary,

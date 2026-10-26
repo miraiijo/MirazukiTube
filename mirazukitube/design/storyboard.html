@@ -468,7 +468,10 @@ function header(cur,o={}){
  return `<div class="hdr"><div class="lft"><div class="tabs"><div class="tin" data-id="tin" data-grp="tb">${TABS.map(([id,l])=>`<div class="tab ${id===cur?'sel':''}" data-id="tab-${id}">${l}</div>`).join('')}</div></div><div class="rb" data-id="btn-search">${I.search}</div></div>
  <div class="right">${o.mini?`<div class="btn glass" data-id="btn-now">${I.pip}Lecture en cours</div>`:''}<div class="rb av" data-id="btn-acc">${av('Moi',30,13,'hav')}</div>${apBtn()}<div class="rb" data-id="btn-set">${I.gear}<i class="tg udot" data-id="udot"></i></div><div class="clock">20:45</div></div></div>`;
 }
-const vcard=(v,id)=>{const [t,c,b,h,w,live]=v;const wt=w>0&&w<100;
+// Second line: channel · when it was published (not on a channel page, already dated, nor on lives / playlists).
+const AGES=['il y a 2 h','il y a 9 h','il y a 1 jour','il y a 3 jours','il y a 5 jours','il y a 1 semaine','il y a 2 semaines','il y a 1 mois','il y a 4 mois','il y a 1 an'];
+const withAge=(t,c,b,live)=>live||/il y a|vues|spectateurs|^Moi$/.test(c)||/vidéos/.test(b||'')?c:`${c} · ${AGES[[...t].reduce((a,ch)=>a+ch.charCodeAt(0),0)%AGES.length]}`;
+const vcard=(v,id)=>{let [t,c,b,h,w,live]=v;c=withAge(t,c,b,live);const wt=w>0&&w<100;
  return `<div class="cw" data-id="${id}w"><div class="card scene" data-id="${id}" style="--h:${h}">${b?`<span class="bdg ${live?'live':''} ${wt?'w':''}">${b}</span>`:''}${wt?`<div class="lane"><i style="width:${w}%"></i></div>`:''}</div><div class="ct">${t}</div><div class="cs">${c}</div></div>`};
 const ccard=(name,id)=>`<div class="chw"><div class="chr" data-id="${id}">${av(name,96,36)}</div><div class="chn">${name}</div></div>`;
 const vrow=(title,items,pre,i,top=i*235)=>`<div class="vrow" style="top:${top}px"><div class="rt">${title}</div><div class="rc" data-id="${pre}${i}">${items}</div></div>`;
