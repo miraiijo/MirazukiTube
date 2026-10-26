@@ -73,9 +73,15 @@ class PlayerPrefs(context: Context) {
         get() = prefs.getBoolean(KEY_BACKGROUND_CAST, false)
         set(value) = prefs.edit().putBoolean(KEY_BACKGROUND_CAST, value).apply()
 
+    /** « Petite fenêtre » (PictureInPicture.HOME…): Accueil by default, as in miryo iptv. */
+    var background: String
+        get() = prefs.getString(KEY_BACKGROUND, null)?.takeIf { it in PictureInPicture.all } ?: PictureInPicture.HOME
+        set(value) = prefs.edit().putString(KEY_BACKGROUND, value).apply()
+
     fun settings() = Settings(
         sponsorBlock = sponsorBlock, autoplay = autoplay, stableVolume = stableVolume, deArrow = deArrow,
         remote = remote, appearance = appearance, uiScale = uiScale, backgroundCast = backgroundCast,
+        background = background,
     )
 
     private companion object {
@@ -93,5 +99,6 @@ class PlayerPrefs(context: Context) {
         const val KEY_LARGE_UI = "large_ui"
         const val KEY_UI_SCALE = "ui_scale"
         const val KEY_BACKGROUND_CAST = "background_cast"
+        const val KEY_BACKGROUND = "background"
     }
 }

@@ -22,6 +22,7 @@ object SettingsIndex {
         e("Lecture automatique", "PLAYBACK", "autoplay", "suivante", "enchaîner", "compte à rebours"),
         e("Passer les sponsors (SponsorBlock)", "PLAYBACK", "sponsor", "pub", "publicité", "autopromo", "sauter"),
         e("Volume stable", "PLAYBACK", "volume", "son", "fort", "niveau sonore"),
+        e("Petite fenêtre (image dans l'image)", "PLAYBACK", "pip", "image dans l'image", "arrière-plan", "réduire", "fenêtre", "accueil"),
         e("Apparence (Jour, Nuit, Auto, Comme miryo)", "DISPLAY", "thème", "clair", "sombre", "mode sombre", "nuit", "jour", "miryo"),
         e("Taille de l'interface", "DISPLAY", "taille", "zoom", "grand", "petit", "texte", "lisible"),
         e("DeArrow (titres sans racolage)", "DISPLAY", "titres", "miniatures", "clickbait", "racolage"),

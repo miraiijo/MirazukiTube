@@ -34,6 +34,7 @@ import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.focusRestorer
 import androidx.compose.ui.input.key.onPreviewKeyEvent
 import dev.miraiijo.lumentube.MainViewModel
+import dev.miraiijo.lumentube.player.PictureInPicture
 
 /**
  * The redesign's layout (miryo's): a header with the section's name, the sections as tabs and the
@@ -388,8 +389,19 @@ fun Root(vm: MainViewModel) {
                 onExit = {
                     vm.stopPlaying()
                     returnFocusTick++
+                    // The video ended in the system's window with nothing after it: the window goes
+                    // (never the pages in a corner of the screen).
+                    if (PictureInPicture.active) PictureInPicture.dismiss()
                 },
-                minimized = state.minimized,
+                // Retour: the system's window when chosen (Réglages › Lecture › Petite fenêtre).
+                onBack = {
+                    if (!(PictureInPicture.onBack(state.settings.background) && PictureInPicture.enter())) {
+                        vm.stopPlaying()
+                        returnFocusTick++
+                    }
+                },
+                // In the system's window too: no controls nor panels, only the video.
+                minimized = state.minimized || PictureInPicture.active,
                 onMinimize = {
                     vm.minimize()
                     miniFocusTick++
@@ -402,7 +414,7 @@ fun Root(vm: MainViewModel) {
                 onPosition = { seconds -> vm.notePosition(playingId, seconds) },
                 frameRate = frameRate,
                 kids = state.kids,
-                modifier = if (state.minimized) {
+                modifier = if (state.minimized && !PictureInPicture.active) {
                     // A third of the screen's width, whatever the interface size (a fixed 400 dp
                     // took half the screen at 120 %), inside the TV's safe zone.
                     Modifier.align(Alignment.BottomEnd).padding(end = SafeArea.side, bottom = SafeArea.bottom).fillMaxWidth(MINI_FRACTION).aspectRatio(16f / 9f).shadow(30.dp)

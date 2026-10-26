@@ -16,6 +16,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import dev.miraiijo.lumentube.link.MirazukiLink
+import dev.miraiijo.lumentube.link.MirazukiPip
+import dev.miraiijo.lumentube.player.PictureInPicture
 import dev.miraiijo.lumentube.ui.Appearance
 import dev.miraiijo.lumentube.ui.BrandIntro
 import dev.miraiijo.lumentube.ui.DayColors
@@ -65,6 +67,76 @@ class MainActivity : ComponentActivity() {
             }
         }
         if (savedInstanceState == null) handleLink(intent)
+        PictureInPicture.enter = ::enterPip
+        PictureInPicture.dismiss = { moveTaskToBack(true) }
+        addOnPictureInPictureModeChangedListener { info ->
+            if (info.isInPictureInPictureMode) {
+                PictureInPicture.opened(this)
+                return@addOnPictureInPictureModeChangedListener
+            }
+            PictureInPicture.closed()
+            leftPip()
+            // Window closed by the user (not expanded back): the video ends (its position is saved
+            // by the player screen as the app stops).
+            if (!lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED)) vm.stopPlaying()
+        }
+    }
+
+    /** miryo was told the window opens (MirazukiPip): told again when it closes. */
+    private var pipTold = false
+
+    /**
+     * The system's picture-in-picture window: only if the box offers it and while a video plays
+     * (paused, Accueil just leaves, as Android TV asks). miryo is told first so that, back on the
+     * launcher, it lets the window play. False when it couldn't start.
+     */
+    private fun enterPip(): Boolean {
+        val player = PictureInPicture.player ?: return false
+        if (isInPictureInPictureMode || !player.exo.playWhenReady) return false
+        if (!packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)) return false
+        val format = player.exo.videoFormat
+        val ratio = if (format != null && format.width > 0 && format.height > 0) (format.width * format.pixelWidthHeightRatio / format.height) else 16f / 9f
+        val params = android.app.PictureInPictureParams.Builder()
+            .setAspectRatio(android.util.Rational((ratio.coerceIn(0.42f, 2.38f) * 1000).toInt(), 1000))
+            .build()
+        MirazukiPip.tell(this, true)
+        pipTold = true
+        val entered = runCatching { enterPictureInPictureMode(params) }.getOrDefault(false)
+        if (!entered) leftPip()
+        return entered
+    }
+
+    private fun leftPip() {
+        if (!pipTold) return
+        pipTold = false
+        MirazukiPip.tell(this, false)
+    }
+
+    /** Accueil during a video: the system's window, if chosen (Réglages › Lecture › Petite fenêtre). */
+    override fun onUserLeaveHint() {
+        super.onUserLeaveHint()
+        if (leftByUser() && PictureInPicture.onHome(vm.state.value.settings.background)) enterPip()
+    }
+
+    /** When this app last opened a screen of its own (installer, Android's settings, dictation). */
+    private var ownLaunchAt = 0L
+
+    /** Also called when this app opens one of those screens: never the window then, only for Accueil. */
+    @Deprecated("Kept to see the app's own launches")
+    override fun startActivityForResult(intent: Intent, requestCode: Int, options: Bundle?) {
+        ownLaunchAt = android.os.SystemClock.uptimeMillis()
+        @Suppress("DEPRECATION")
+        super.startActivityForResult(intent, requestCode, options)
+    }
+
+    private fun leftByUser() = android.os.SystemClock.uptimeMillis() - ownLaunchAt > OWN_LAUNCH_MS
+
+    override fun onDestroy() {
+        PictureInPicture.closed()
+        leftPip()
+        PictureInPicture.enter = { false }
+        PictureInPicture.dismiss = {}
+        super.onDestroy()
     }
 
     // "Regarder sur la TV": listened to only while miryo tube is on screen (Android 10 doesn't let a
@@ -169,6 +241,9 @@ class MainActivity : ComponentActivity() {
          * the network: longer than miryo iptv's 1.5 s, its rows usually arrive within it).
          */
         const val SPLASH_MAX_MS = 3_000L
+
+        /** onUserLeaveHint this soon after the app opened a screen itself: that screen, not Accueil. */
+        const val OWN_LAUNCH_MS = 1_000L
         val VIDEO_ID = Regex("[A-Za-z0-9_-]{11}")
         val GAMEPAD_KEYS = mapOf(
             KeyEvent.KEYCODE_BUTTON_A to KeyEvent.KEYCODE_DPAD_CENTER,
