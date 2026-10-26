@@ -53,30 +53,35 @@ fun glassRimBrush(corner: Color = Color.White, side: Color = Color.White.copy(al
 fun glassRim(width: Dp = 1.dp, light: Boolean = Palette.colors.isLight): BorderStroke =
     BorderStroke(width, if (light) DayRim else glassRimBrush())
 
-private val DaySheen: Brush = Brush.verticalGradient(0f to Color.White.copy(alpha = 0.42f), 0.5f to Color.White.copy(alpha = 0.08f), 1f to Color.Transparent)
-private val NightSheen: Brush = Brush.linearGradient(0f to Color.White.copy(alpha = 0.10f), 0.45f to Color.Transparent, start = Offset.Zero, end = Offset.Infinite)
-
 /**
- * A glass panel: its fill, a soft light, the rim, and by day a short shadow under it (drawn only
- * outside the panel, so the milky body stays clean). Shapes and paths are built once per size.
+ * A glass panel: its body with a soft light, the rim, and by day a short shadow under it (drawn only
+ * outside the panel, so the milky body stays clean). Kept to three draws for the Player POP's GPU:
+ * the light is baked into the body's gradient (no second layer over the whole panel) and the shadow
+ * is one path, both built once per size.
  */
 fun Modifier.liquidGlass(shape: Shape, fill: Color = Palette.Glass, light: Boolean = Palette.colors.isLight): Modifier = this
     .drawWithCache {
         val outline = shape.createOutline(size, layoutDirection, this)
         val shadow = if (light) {
             val body = outline.toPath()
-            fun dropped(dy: Float) = Path().apply { addPath(body, Offset(0f, dy)) }.let { Path().apply { op(it, body, PathOperation.Difference) } }
-            listOf(dropped(1.dp.toPx()) to Shade.copy(alpha = 0.10f), dropped(3.dp.toPx()) to Shade.copy(alpha = 0.05f))
+            val dropped = Path().apply { addPath(body, Offset(0f, 2.dp.toPx())) }
+            Path().apply { op(dropped, body, PathOperation.Difference) }
         } else {
-            emptyList()
+            null
+        }
+        val lit = if (light) {
+            Brush.verticalGradient(0f to Color.White.copy(alpha = 0.42f).compositeOver(fill), 0.5f to Color.White.copy(alpha = 0.08f).compositeOver(fill), 1f to fill)
+        } else {
+            Brush.linearGradient(0f to Color.White.copy(alpha = 0.10f).compositeOver(fill), 0.45f to fill, start = Offset.Zero, end = Offset.Infinite)
         }
         onDrawBehind {
-            shadow.forEach { (path, color) -> drawPath(path, color) }
-            drawOutline(outline, fill)
-            drawOutline(outline, if (light) DaySheen else NightSheen)
+            shadow?.let { drawPath(it, ShadowColor) }
+            drawOutline(outline, lit)
         }
     }
     .border(glassRim(1.dp, light), shape)
+
+private val ShadowColor = Shade.copy(alpha = 0.12f)
 
 /** A focused card's ring, lit at the corners like glass ([base]: the ring's own colour on the sides). */
 fun glassFocusRing(width: Dp, base: Color): BorderStroke =
