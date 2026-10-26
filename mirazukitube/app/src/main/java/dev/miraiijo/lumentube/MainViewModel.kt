@@ -91,8 +91,8 @@ data class Settings(
     val stableVolume: Boolean,
     val deArrow: Boolean,
     val remote: Boolean = false,
-    /** 0 = Auto, 1 = Jour, 2 = Nuit (ui.Appearance). */
-    val appearance: Int = 0,
+    /** 0 = Auto, 1 = Jour, 2 = Nuit, 3 = Comme miryo (ui.Appearance). */
+    val appearance: Int = dev.miraiijo.lumentube.ui.APPEARANCE_DEFAULT,
     /** "Taille de l'interface", in % (ui.UI_SCALE_MIN..UI_SCALE_MAX). */
     val uiScale: Int = UI_SCALE_DEFAULT,
     /** "Recevoir même miryo tube fermé": the phone link listens in the background (remote.CastService). */
@@ -890,8 +890,8 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
 
     /** At start: true when the kids profile is on (miryo's current profile, or left on here). */
     private suspend fun startKids(): Boolean {
-        // miryo's parental code (the suite's) may guard the kids profile: read whether it has one.
-        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { kidsStore.refreshSuite() }
+        // miryo's parental code (the suite's) may guard the kids profile: read whether it has one; and its look.
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { kidsStore.refreshSuite(); dev.miraiijo.lumentube.link.MirazukiLook.refresh(getApplication()) }
         kidsUi()
         val mirazukiKids = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MirazukiProfile.currentIsKids(getApplication()) }
         return kidsMutex.withLock {
@@ -912,7 +912,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     /** Back on screen: miryo's profile may have changed meanwhile (kids ↔ adult). */
     private fun checkMirazukiProfile() {
         viewModelScope.launch {
-            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { kidsStore.refreshSuite() }
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { kidsStore.refreshSuite(); dev.miraiijo.lumentube.link.MirazukiLook.refresh(getApplication()) }
             kidsUi()
             val mirazukiKids = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MirazukiProfile.currentIsKids(getApplication()) } ?: return@launch
             kidsMutex.withLock {

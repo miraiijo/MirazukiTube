@@ -109,4 +109,7 @@ dependencies {
     implementation("com.github.bumptech.glide:compose:1.0.0-beta10")
     // QR code of the sign-in, drawn on the box (no web QR service sees the activation code).
     implementation("com.google.zxing:core:3.5.4")
+
+    // Pure JVM unit tests (parental code, appearance), run by the CI before the APK.
+    testImplementation("junit:junit:4.13.2")
 }

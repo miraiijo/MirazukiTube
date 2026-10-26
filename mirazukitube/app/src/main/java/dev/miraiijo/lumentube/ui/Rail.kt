@@ -365,6 +365,8 @@ fun SettingsDialog(
     onPair: () -> Unit,
     onSignOut: () -> Unit,
     onDismiss: () -> Unit,
+    /** Réglages › Compte when signed out: the TV code sign-in. */
+    onSignIn: () -> Unit = {},
     /** The pairing dialog is open over Réglages: when it closes, the focus goes back to "Lier un téléphone". */
     pairingOpen: Boolean = false,
     update: UpdateUi = UpdateUi(),
@@ -393,7 +395,7 @@ fun SettingsDialog(
             }
         }
         var page by remember { mutableStateOf(SettingsPage.PLAYBACK) }
-        val pages = SettingsPage.entries.filter { (it != SettingsPage.ACCOUNT || accountName != null) && (it != SettingsPage.KIDS || kidChannels != null) }
+        val pages = SettingsPage.entries.filter { it != SettingsPage.KIDS || kidChannels != null }
         Column(Modifier.fillMaxSize().mirazukiBackground().safePadding()) {
             Text("Réglages", fontSize = 44.sp, lineHeight = 50.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.03).em, color = Palette.TextPrimary)
             Row(Modifier.weight(1f).padding(top = 22.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
@@ -439,7 +441,12 @@ fun SettingsDialog(
                             }
                         }
                         SettingsPage.DISPLAY -> {
-                            SettingCard("Apparence", "Auto : clair de 7 h 30 à 19 h 30, sombre le reste du temps.") {
+                            val miryo = dev.miraiijo.lumentube.link.MirazukiLook.current != null
+                            SettingCard(
+                                "Apparence",
+                                if (miryo) "Comme miryo suit le profil de miryo. Auto : clair de 7 h à 20 h." else "Auto : clair de 7 h à 20 h, sombre le reste du temps.",
+                            ) {
+                                if (miryo || settings.appearance == 3) Choice("Comme miryo", settings.appearance == 3) { onSettings(settings.copy(appearance = 3)) }
                                 Choice("Jour", settings.appearance == 1) { onSettings(settings.copy(appearance = 1)) }
                                 Choice("Nuit", settings.appearance == 2) { onSettings(settings.copy(appearance = 2)) }
                                 Choice("Auto", settings.appearance == 0) { onSettings(settings.copy(appearance = 0)) }
@@ -462,24 +469,38 @@ fun SettingsDialog(
                                 Choice("Désactivé", !settings.remote) { onSettings(settings.copy(remote = false)) }
                                 MirazukiButton("Lier un téléphone", modifier = Modifier.focusRequester(pair), icon = MirazukiIcon.PLUS, onClick = onPair)
                             }
-                            // Opening miryo tube from the background needs the overlay permission (adb, once).
+                            // Opening miryo tube from the background needs the overlay permission: Android's
+                            // screen for it, read again while it is open (no lifecycle event to wait for here).
                             val context = androidx.compose.ui.platform.LocalContext.current
-                            val canOpen = remember(settings.backgroundCast) { android.provider.Settings.canDrawOverlays(context) }
+                            var canOpen by remember { mutableStateOf(android.provider.Settings.canDrawOverlays(context)) }
+                            if (settings.backgroundCast && !canOpen) LaunchedEffect(Unit) {
+                                while (!canOpen) {
+                                    kotlinx.coroutines.delay(1_500)
+                                    canOpen = android.provider.Settings.canDrawOverlays(context)
+                                }
+                            }
                             SettingCard(
                                 "Recevoir même miryo tube fermé",
                                 if (settings.backgroundCast && !canOpen) {
-                                    "Autorisation à donner une fois depuis l’ordinateur : adb shell appops set dev.miraiijo.lumentube SYSTEM_ALERT_WINDOW allow"
+                                    "Une autorisation d’Android est nécessaire une fois : « Autoriser », puis active miryo tube."
                                 } else {
                                     "miryo tube reste prêt en arrière-plan et s’ouvre quand le téléphone envoie une vidéo. Garde environ 50 à 80 Mo de mémoire."
                                 },
                             ) {
                                 Choice("Activé", settings.backgroundCast) { onSettings(settings.copy(backgroundCast = true, remote = true)) }
                                 Choice("Désactivé", !settings.backgroundCast) { onSettings(settings.copy(backgroundCast = false)) }
+                                if (settings.backgroundCast && !canOpen) MirazukiButton("Autoriser", contentColor = Palette.ChipText) { openOverlayPermission(context) }
                             }
                         }
                         SettingsPage.ACCOUNT -> {
-                            SettingCard("Compte YouTube", "Les autres comptes liés restent sur la box (« Qui regarde ? »).") {
-                                MirazukiButton("Se déconnecter de ${accountName.orEmpty()}", icon = MirazukiIcon.CLOSE, onClick = onSignOut)
+                            if (accountName != null) {
+                                SettingCard("Compte YouTube", "Les autres comptes liés restent sur la box (« Qui regarde ? »).") {
+                                    MirazukiButton("Se déconnecter de $accountName", icon = MirazukiIcon.CLOSE, onClick = onSignOut)
+                                }
+                            } else {
+                                SettingCard("Compte YouTube", "Pour retrouver tes abonnements, ton historique et tes playlists. Un code s’affiche, à saisir sur le téléphone.") {
+                                    MirazukiButton("Se connecter", icon = MirazukiIcon.PLUS, contentColor = Palette.ChipText, onClick = onSignIn)
+                                }
                             }
                         }
                         SettingsPage.KIDS -> {
@@ -664,3 +685,13 @@ internal fun DialogRow(
     }
 }
 
+
+/** Android's "Afficher par-dessus les autres applis" screen for miryo tube (the general list if a box has no per-app one). */
+private fun openOverlayPermission(context: android.content.Context) {
+    val app = android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${context.packageName}"))
+    val all = android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+    for (intent in listOf(app, all)) {
+        if (runCatching { context.startActivity(intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
+    }
+    android.widget.Toast.makeText(context, "Cette box n’a pas l’écran d’autorisation : active-le depuis Paramètres › Applications.", android.widget.Toast.LENGTH_LONG).show()
+}

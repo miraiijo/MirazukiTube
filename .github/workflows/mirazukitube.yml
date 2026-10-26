@@ -71,7 +71,7 @@ jobs:
         run: |
           chmod +x ./gradlew
           set -o pipefail
-          ./gradlew --no-daemon --build-cache :app:assembleRelease 2>&1 | tee build.log
+          ./gradlew --no-daemon --build-cache :app:testReleaseUnitTest :app:assembleRelease 2>&1 | tee build.log
 
       - name: Report build errors
         if: failure()

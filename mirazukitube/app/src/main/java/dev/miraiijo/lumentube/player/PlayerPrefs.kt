@@ -57,9 +57,9 @@ class PlayerPrefs(context: Context) {
         get() = prefs.getBoolean(KEY_REMOTE, false)
         set(value) = prefs.edit().putBoolean(KEY_REMOTE, value).apply()
 
-    /** "Apparence": 0 = Auto (day / night by the hour), 1 = Jour, 2 = Nuit. */
+    /** "Apparence": 0 = Auto (day / night by the hour), 1 = Jour, 2 = Nuit, 3 = Comme miryo (the default). */
     var appearance: Int
-        get() = prefs.getInt(KEY_APPEARANCE, 0)
+        get() = prefs.getInt(KEY_APPEARANCE, dev.miraiijo.lumentube.ui.APPEARANCE_DEFAULT)
         set(value) = prefs.edit().putInt(KEY_APPEARANCE, value).apply()
 
     /** "Taille de l'interface", in %; 0.12.1's "Grande" (large_ui) is read as 100 %. */

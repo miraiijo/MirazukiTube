@@ -91,7 +91,7 @@ class MainActivity : ComponentActivity() {
         // kernels): Android's Generic.kl scrambles it (Cross came as B = Back, Square as A = OK).
         // Its buttons are read from their raw code instead, the same whatever the key layout.
         val sony = if (event.device?.vendorId == SONY_VENDOR && android.os.Build.VERSION.SDK_INT < SONY_DRIVER_SDK) SONY_SCANCODES[event.scanCode] else null
-        if (event.device?.vendorId == SONY_VENDOR && event.action == KeyEvent.ACTION_DOWN) {
+        if (BuildConfig.DEBUG && event.device?.vendorId == SONY_VENDOR && event.action == KeyEvent.ACTION_DOWN) {
             android.util.Log.d("MirazukiTube.Pad", "key=${KeyEvent.keyCodeToString(event.keyCode)} scan=0x${Integer.toHexString(event.scanCode)} → ${sony?.let(KeyEvent::keyCodeToString)}")
         }
         // L3 / R3: nothing (they used to come as Select / Start).
