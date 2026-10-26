@@ -168,6 +168,8 @@ data class UiState(
     val accountsOpen: Boolean = false,
     /** Réglages dialog open. */
     val settingsOpen: Boolean = false,
+    /** Réglages open on Mises à jour, focus on Vérifier (back from this app's own update). */
+    val settingsOnUpdates: Boolean = false,
     val settings: Settings = Settings(sponsorBlock = true, autoplay = true, stableVolume = true, deArrow = false),
     /** "Reprendre" row at the top of Accueil (null: none, or not signed in). */
     val resume: VideoRow? = null,
@@ -1215,6 +1217,8 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
             _state.update { it.copy(update = it.update.copy(busy = false, progress = null)) }
             apk.fold(
                 { file ->
+                    // Restarted by the update: back on Réglages › Mises à jour (reopenAfterUpdate).
+                    app.getSharedPreferences(UPDATES_UI, android.content.Context.MODE_PRIVATE).edit().putLong(KEY_REOPEN, System.currentTimeMillis()).commit()
                     runCatching { Updater.install(app, file) }
                         .onFailure { e -> _state.update { it.copy(update = it.update.copy(message = "Installation impossible : ${e.message}")) } }
                 },
@@ -1228,6 +1232,18 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     fun openSettings() {
         if (!_state.value.kids) _state.update { it.copy(settingsOpen = true) }
     }
+
+    /** At start-up: restarted by its own update a moment ago, Réglages › Mises à jour open again. */
+    fun reopenAfterUpdate() {
+        val prefs = getApplication<Application>().getSharedPreferences(UPDATES_UI, android.content.Context.MODE_PRIVATE)
+        val at = prefs.getLong(KEY_REOPEN, 0L)
+        if (at == 0L) return
+        prefs.edit().remove(KEY_REOPEN).commit()
+        if (System.currentTimeMillis() - at !in 0..REOPEN_MS || _state.value.kids) return
+        _state.update { it.copy(settingsOpen = true, settingsOnUpdates = true) }
+    }
+
+    fun settingsOnUpdatesShown() = _state.update { it.copy(settingsOnUpdates = false) }
 
     fun openAccounts() {
         val s = _state.value
@@ -1395,6 +1411,9 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     }
 
     private companion object {
+        private const val UPDATES_UI = "updates_ui"
+        private const val KEY_REOPEN = "reopen_updates_at"
+        private const val REOPEN_MS = 15 * 60 * 1000L
         /** Saved state (survives the process being killed in the background). */
         const val KEY_SECTION = "section"
         const val KEY_VIDEO = "video"

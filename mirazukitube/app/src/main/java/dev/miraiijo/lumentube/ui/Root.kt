@@ -51,6 +51,8 @@ fun Root(vm: MainViewModel) {
     val page = remember(state.section, state.pages, state.opened, state.search, state.resume, state.deArrow) { state.page }
     val content = remember { FocusRequester() }
     val header = remember { FocusRequester() }
+    // Restarted by its own update: Réglages › Mises à jour open again.
+    LaunchedEffect(Unit) { vm.reopenAfterUpdate() }
     // Incremented when a page should take the focus (section opened from the menu, channel opened).
     // Starts at 1: at launch, Accueil takes the focus as soon as its rows arrive.
     var pageFocusTick by remember { mutableIntStateOf(1) }
@@ -352,6 +354,8 @@ fun Root(vm: MainViewModel) {
                 onChangeKidsPin = vm::changeKidsPin,
                 kidsMiryoCode = state.kidsMiryoCode,
                 onDeleteKids = vm::deleteKids,
+                startOnUpdates = state.settingsOnUpdates,
+                onStarted = vm::settingsOnUpdatesShown,
             )
         } else if (state.cardMenu != null) {
             val video = state.cardMenu!!
@@ -381,6 +385,18 @@ fun Root(vm: MainViewModel) {
         // The parental code opens over "Qui regarde ?" and Réglages (composed after them: on top).
         state.pin?.let { prompt ->
             PinDialog(prompt.title, prompt.hint, key = prompt, submit = { vm.submitPin(it) }, onDismiss = vm::closePin)
+        }
+        // New install: one question, the YouTube account (closes once an account is linked).
+        val setupContext = androidx.compose.ui.platform.LocalContext.current
+        var firstRun by remember { androidx.compose.runtime.mutableStateOf(FirstRun.pending(setupContext)) }
+        val closeFirstRun = {
+            FirstRun.finish(setupContext)
+            firstRun = false
+        }
+        LaunchedEffect(state.signedIn) { if (state.signedIn && firstRun) closeFirstRun() }
+        if (firstRun && !state.signingIn && state.playing == null) {
+            val withMiryo = remember { dev.miraiijo.lumentube.link.MirazukiLink.partner(setupContext, dev.miraiijo.lumentube.link.MirazukiLink.MIRAZUKI, dev.miraiijo.lumentube.link.MirazukiLink.PROFILES_AUTHORITY) }
+            FirstRunTube(withMiryo, onSignIn = vm::startSignIn, onDone = closeFirstRun)
         }
         if (state.signingIn) {
             SignInDialog(code = state.signInCode, error = state.signInError, onRetry = vm::startSignIn, onDismiss = vm::cancelSignIn)
