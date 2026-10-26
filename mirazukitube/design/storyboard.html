@@ -90,6 +90,20 @@ td kbd{min-width:26px;height:24px;font-size:11px}
 .page{position:absolute;inset:0;transition:opacity .22s}
 .tab,.rb,.btn,.card,.chr,.sitem,.drow,.mr,.cb,.pt .pring,.cmr,.sbar{transition:transform .22s ease,background-color .22s,color .22s,box-shadow .22s,opacity .3s,border-color .22s}
 svg{display:block}
+/* ---- Verre liquide (same as miryo): almost clear glass, a thin rim lit at the top-left and
+   bottom-right corners and fading along the sides, a soft shadow under it. Gradients only (no blur
+   on the box). By day a milky body and a hairline of shade, or the glass vanishes. ---- */
+.btn,.dlg{position:relative}
+.rb:not(.f),.btn:not(.f),.dlg{background-image:linear-gradient(160deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 45%);box-shadow:0 10px 26px rgba(0,0,0,.22);border-color:transparent}
+.rb:not(.f)::after,.btn:not(.f)::after,.dlg::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.2px;pointer-events:none;z-index:3;
+  background:linear-gradient(125deg,rgba(255,255,255,.95) 0%,rgba(255,255,255,.3) 16%,rgba(255,255,255,.07) 38%,rgba(255,255,255,.07) 62%,rgba(255,255,255,.3) 84%,rgba(255,255,255,.9) 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.stage:not(.nuit) .rb:not(.f),.stage:not(.nuit) .btn:not(.f),.stage:not(.nuit) .dlg{background-image:linear-gradient(160deg,rgba(255,255,255,.55) 0%,rgba(255,255,255,.18) 50%,rgba(255,255,255,.3) 100%);
+  box-shadow:0 0 0 .6px rgba(60,45,20,.16),0 12px 28px rgba(60,45,20,.14),0 2px 4px rgba(60,45,20,.08)}
+/* Focused cards: the same corner-lit rim, over the usual ring. */
+.card.f::before{content:"";position:absolute;inset:0;border-radius:inherit;z-index:4;pointer-events:none;padding:1.8px;
+  background:linear-gradient(125deg,#fff 0%,rgba(255,255,255,.35) 18%,rgba(255,255,255,.08) 40%,rgba(255,255,255,.08) 60%,rgba(255,255,255,.35) 82%,#fff 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
 /* « Zone sûre » toggle: the TV safe zone (48 / 32 / 48 dp, ×1.125 on the stage) */
 .stage.safe::after{content:"";position:absolute;left:54px;right:54px;top:36px;bottom:54px;border:1.5px dashed rgba(229,56,59,.85);border-radius:4px;pointer-events:none;z-index:60}
 
