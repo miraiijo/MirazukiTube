@@ -388,15 +388,13 @@ fun VideoCard(
             // below) moved as such a card scrolled into view. Same for the channel line.
             modifier = Modifier.padding(top = 10.dp).height(lines(TITLE_LINE, 2)),
         )
-        // Channel · when it was published (a channel page's cards already say the date alone).
-        val second = video.published?.takeUnless { video.channel.contains(it) }?.let { if (video.channel.isBlank()) it else "${video.channel} · $it" } ?: video.channel
-        Text(
-            second,
+        // Channel · when it was published (a channel page's cards already say the date alone). A long
+        // channel name is cut, never the date after it.
+        KeepEndLine(
+            start = video.channel,
+            end = video.published?.takeUnless { video.channel.contains(it) },
             fontSize = 13.sp,
             lineHeight = CHANNEL_LINE,
-            color = Palette.TextSecondary,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(top = 2.dp).height(lines(CHANNEL_LINE, 1)),
         )
     }
@@ -483,7 +481,7 @@ private fun ChannelSheet(channel: ChannelHeader, signedIn: Boolean, onSubscribe:
                 // As wide either way: the sorts don't slide when it switches.
                 modifier = Modifier.widthIn(min = SUBSCRIBE_WIDTH),
                 icon = if (subscribed) MirazukiIcon.CHECK else MirazukiIcon.PLUS,
-                containerColor = if (subscribed) Palette.ControlIdle else Palette.Live,
+                containerColor = if (subscribed) null else Palette.Live,
                 contentColor = if (subscribed) Palette.TextPrimary else Color.White,
                 onClick = {
                     when {
@@ -514,7 +512,7 @@ private val SUBSCRIBE_WIDTH = 116.dp
 
 @Composable
 private fun SortChip(label: String, selected: Boolean, onClick: () -> Unit) =
-    MirazukiButton(label, icon = if (selected) MirazukiIcon.CHECK else null, iconSize = 13.dp, containerColor = if (selected) Palette.Selected else Palette.ControlIdle, contentColor = Palette.ChipText, onClick = onClick)
+    MirazukiButton(label, icon = if (selected) MirazukiIcon.CHECK else null, iconSize = 13.dp, containerColor = if (selected) Palette.Selected else null, contentColor = Palette.ChipText, onClick = onClick)
 
 @Composable
 private fun Message(text: String, button: String? = null, buttonModifier: Modifier = Modifier, onClick: () -> Unit = {}) {

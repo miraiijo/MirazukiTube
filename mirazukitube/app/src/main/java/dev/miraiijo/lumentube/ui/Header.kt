@@ -138,7 +138,6 @@ fun TopHeader(
                     "Lecture en cours",
                     modifier = Modifier.focusRequester(playerButton),
                     icon = MirazukiIcon.PIP,
-                    containerColor = Palette.Glass,
                     onClick = onRestorePlayer,
                 )
             }
@@ -207,7 +206,7 @@ private fun Tab(label: String, current: Boolean, modifier: Modifier, onClick: ()
     }
 }
 
-/** miryo's round header button (white by day, translucent at night; solid focus color when focused). */
+/** miryo's round header button: the suite's glass (Glass.kt); solid focus color when focused. */
 @Composable
 private fun RoundButton(onClick: () -> Unit, filled: Boolean = true, content: @Composable () -> Unit) {
     Surface(
@@ -226,7 +225,7 @@ private fun RoundButton(onClick: () -> Unit, filled: Boolean = true, content: @C
             pressedContentColor = Palette.OnFocus,
         ),
         border = ClickableSurfaceDefaults.border(
-            border = if (filled) androidx.tv.material3.Border(androidx.compose.foundation.BorderStroke(1.dp, Palette.GlassBorder), shape = CircleShape) else androidx.tv.material3.Border.None,
+            border = if (filled) androidx.tv.material3.Border(glassRim(), shape = CircleShape) else androidx.tv.material3.Border.None,
             focusedBorder = if (filled) androidx.tv.material3.Border.None else androidx.tv.material3.Border(androidx.compose.foundation.BorderStroke(3.dp, Palette.Focus), inset = 3.dp, shape = CircleShape),
         ),
         glow = ClickableSurfaceDefaults.glow(focusedGlow = androidx.tv.material3.Glow(elevationColor = Palette.Shadow, elevation = 12.dp)),

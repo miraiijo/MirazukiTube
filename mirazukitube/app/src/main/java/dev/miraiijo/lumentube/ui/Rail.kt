@@ -399,7 +399,7 @@ fun SettingsDialog(
                     Modifier
                         .width(230.dp)
                         .fillMaxHeight()
-                        .background(settingsPanel(), RoundedCornerShape(18.dp))
+                        .liquidGlass(RoundedCornerShape(18.dp))
                         .padding(11.dp)
                         // Left from a pill: back to the current category (the 2D search picked the
                         // one level with the pill, which then showed its page).
@@ -561,8 +561,6 @@ fun SettingsDialog(
     }
 }
 
-/** Panels of Réglages: Opale's glass (white veil by day, a light one at night). */
-private fun settingsPanel(): Color = Palette.Glass
 
 @Composable
 private fun SettingsNavItem(label: String, current: Boolean, modifier: Modifier, onFocus: () -> Unit) {
@@ -591,7 +589,7 @@ private fun SettingCard(title: String, help: String, choices: @Composable () -> 
     Column(
         Modifier
             .fillMaxWidth()
-            .background(settingsPanel(), RoundedCornerShape(16.dp))
+            .liquidGlass(RoundedCornerShape(16.dp))
             .padding(horizontal = 18.dp, vertical = 16.dp),
     ) {
         Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Palette.TextPrimary)
@@ -611,7 +609,7 @@ private val SETTINGS_HELP_NIGHT = Color(0xFFA3A5AD)
 /** A choice of a setting: a pill, checked when it's the current one. */
 @Composable
 private fun Choice(label: String, selected: Boolean, onClick: () -> Unit) =
-    MirazukiButton(label, icon = if (selected) MirazukiIcon.CHECK else null, containerColor = if (selected) Palette.Selected else Palette.ControlIdle, contentColor = Palette.ChipText, onClick = onClick)
+    MirazukiButton(label, icon = if (selected) MirazukiIcon.CHECK else null, containerColor = if (selected) Palette.Selected else null, contentColor = Palette.ChipText, onClick = onClick)
 
 @Composable
 internal fun SectionLabel(text: String) {
