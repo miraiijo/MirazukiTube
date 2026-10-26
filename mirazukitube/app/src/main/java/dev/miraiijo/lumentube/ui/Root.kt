@@ -16,6 +16,8 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -106,6 +108,25 @@ fun Root(vm: MainViewModel) {
     // tabs → Accueil; then, with a video in the small window, the last Back closes it; then
     // « Retour encore pour quitter » (3 s), as in miryo iptv: a single Back never leaves the app.
     val fullScreenPlayer = (state.playingId != null || state.playing != null) && !state.minimized
+    // Into the small window and back: a short veil in the page's colour while the video changes
+    // size (no jump of the picture, nor of the header that gains « Lecture en cours »). Cheaper
+    // than animating the size on the box: the video's surface is resized once, under the veil.
+    var miniLayout by remember { mutableStateOf(state.minimized) }
+    val veil = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(state.minimized, (state.playingId != null || state.playing != null)) {
+        if (state.minimized == miniLayout) return@LaunchedEffect
+        if ((state.playingId == null && state.playing == null) || PictureInPicture.active) {
+            miniLayout = state.minimized
+            veil.snapTo(0f)
+            return@LaunchedEffect
+        }
+        veil.animateTo(1f, tween(VEIL_IN_MS))
+        miniLayout = state.minimized
+        // The new size laid out and drawn (surface resized) before the veil lifts.
+        withFrameNanos { }
+        withFrameNanos { }
+        veil.animateTo(0f, tween(VEIL_OUT_MS))
+    }
     val exitActivity = androidx.compose.ui.platform.LocalContext.current.findActivity()
     var exitArmed by remember { androidx.compose.runtime.mutableStateOf(false) }
     LaunchedEffect(exitArmed) {
@@ -202,7 +223,7 @@ fun Root(vm: MainViewModel) {
                 signedIn = state.signedIn,
                 accountName = state.accountName,
                 accountAvatar = state.accountAvatar,
-                minimized = state.minimized,
+                minimized = miniLayout,
                 modifier = Modifier.focusRequester(header),
                 onFocusChange = { inHeader = it },
                 // A tab: the focus stays on the tabs (Down goes to the videos); the search button: Rechercher.
@@ -414,7 +435,7 @@ fun Root(vm: MainViewModel) {
                 onPosition = { seconds -> vm.notePosition(playingId, seconds) },
                 frameRate = frameRate,
                 kids = state.kids,
-                modifier = if (state.minimized && !PictureInPicture.active) {
+                modifier = if (miniLayout && !PictureInPicture.active) {
                     // A third of the screen's width, whatever the interface size (a fixed 400 dp
                     // took half the screen at 120 %), inside the TV's safe zone.
                     Modifier.align(Alignment.BottomEnd).padding(end = SafeArea.side, bottom = SafeArea.bottom).fillMaxWidth(MINI_FRACTION).aspectRatio(16f / 9f).shadow(30.dp)
@@ -423,6 +444,7 @@ fun Root(vm: MainViewModel) {
                 },
             ) }
         }
+        if (veil.value > 0f) Box(Modifier.fillMaxSize().graphicsLayer { alpha = veil.value }.background(Palette.Background))
         // With the small window in the bottom right corner, the notice moves to the bottom left.
         if (playingId != null && state.minimized) {
             Notice(state.notice, Modifier.align(Alignment.BottomStart).padding(start = SafeArea.side, bottom = SafeArea.bottom))
@@ -451,6 +473,10 @@ fun Root(vm: MainViewModel) {
 
 /** Width of the in-app picture-in-picture window (16:9), a share of the screen's. */
 private const val MINI_FRACTION = 0.33f
+
+/** The veil over the video changing size (into the small window and back). */
+private const val VEIL_IN_MS = 140
+private const val VEIL_OUT_MS = 220
 
 /** A held Left / Right's pace: one card every 120 ms (about 8 a second), as in miryo and miryo iptv. */
 private const val HOLD_STEP_MS = 120L

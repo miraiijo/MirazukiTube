@@ -96,14 +96,34 @@ class MainActivity : ComponentActivity() {
         if (!packageManager.hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)) return false
         val format = player.exo.videoFormat
         val ratio = if (format != null && format.width > 0 && format.height > 0) (format.width * format.pixelWidthHeightRatio / format.height) else 16f / 9f
+        val fitted = ratio.coerceIn(0.42f, 2.38f)
         val params = android.app.PictureInPictureParams.Builder()
-            .setAspectRatio(android.util.Rational((ratio.coerceIn(0.42f, 2.38f) * 1000).toInt(), 1000))
+            .setAspectRatio(android.util.Rational((fitted * 1000).toInt(), 1000))
+            // From the full-screen picture (the small in-app window: the system's default animation).
+            .setSourceRectHint(if (vm.state.value.minimized) null else pictureRect(fitted))
             .build()
         MirazukiPip.tell(this, true)
         pipTold = true
         val entered = runCatching { enterPictureInPictureMode(params) }.getOrDefault(false)
         if (!entered) leftPip()
         return entered
+    }
+
+    /**
+     * Where the picture is on screen right now (the video fitted in the window): the system grows
+     * the window from there, without a jump, instead of cutting to the small window.
+     */
+    private fun pictureRect(ratio: Float): android.graphics.Rect? {
+        val w = window.decorView.width
+        val h = window.decorView.height
+        if (w <= 0 || h <= 0) return null
+        return if (w.toFloat() / h > ratio) {
+            val pw = (h * ratio).toInt()
+            android.graphics.Rect((w - pw) / 2, 0, (w + pw) / 2, h)
+        } else {
+            val ph = (w / ratio).toInt()
+            android.graphics.Rect(0, (h - ph) / 2, w, (h + ph) / 2)
+        }
     }
 
     private fun leftPip() {
