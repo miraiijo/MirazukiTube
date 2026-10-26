@@ -20,7 +20,6 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
@@ -31,7 +30,7 @@ import dev.miraiijo.lumentube.R
 
 /**
  * Start-up animation, right after the system splash (which shows the mark alone): « miryo » is
- * written from left to right, « tube » slides out of it to the right, then the dot drops in, in
+ * written from left to right, the logo makes room for « tube », which fades in, then the dot drops in, in
  * the app's colour. The logo stays centred while it grows. It is drawn over the app, which loads
  * underneath, and fades out once [ready] says there is something to show (at most [maxMs] after
  * it started). About 1.4 s: the Pop starts the app in that time anyway.
@@ -79,13 +78,9 @@ fun BrandIntro(ready: () -> Boolean, maxMs: Long, onDone: () -> Unit) {
             )
             Image(
                 painterResource(R.drawable.intro_suffix), null,
-                Modifier.matchParentSize().drawWithContent {
-                    val k = size.width / Logo.WIDTH
-                    // Comes out from behind « miryo »: hidden left of the gap, slid in from the left.
-                    clipRect(left = (Logo.WORD_END + 1) * k) {
-                        translate(left = -(Logo.SUFFIX_END - Logo.WORD_END) * (1 - suffix.value) * k) { this@drawWithContent.drawContent() }
-                    }
-                },
+                // Never seen while it comes out of « miryo »: the logo makes room for it, then it
+                // fades in, whole, in its place.
+                Modifier.matchParentSize().graphicsLayer { alpha = ((suffix.value - SUFFIX_FADE_FROM) / (1 - SUFFIX_FADE_FROM)).coerceIn(0f, 1f) },
             )
             Image(
                 painterResource(R.drawable.intro_dot), null,
@@ -122,6 +117,8 @@ private val LOGO_HEIGHT = 112.dp
 private const val WORD_MS = 420
 private const val SUFFIX_MS = 460
 private const val DOT_MS = 300
+/** Part of the suffix's time spent making room before it fades in. */
+private const val SUFFIX_FADE_FROM = 0.45f
 private const val HOLD_MS = 200L
 private const val READY_POLL_MS = 40L
 private const val FADE_MS = 220
