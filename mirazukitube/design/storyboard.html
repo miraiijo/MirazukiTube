@@ -370,13 +370,13 @@ svg{display:block}
 #demarrage .intro-lockup{position:relative;width:368px;height:102px;animation:i-center 3600ms infinite;}
 #demarrage .intro-layer{position:absolute;inset:0;width:100%;height:100%}
 #demarrage .i-word{animation:i-word 3600ms infinite}
-#demarrage .i-suffix{animation:i-suffix 3600ms infinite}
-#demarrage .i-dot{transform-origin:96.51% 65.6%;animation:i-dot 3600ms infinite}
+#demarrage .i-suffix{opacity:0;animation:i-suffix 3600ms infinite both}
+#demarrage .i-dot{opacity:0;transform-origin:96.51% 65.6%;animation:i-dot 3600ms infinite both}
 #demarrage .intro-wrap{animation:i-fade 3600ms infinite}
 @keyframes i-center{0%,6.9%{transform:translateX(56.3px)}24.4%,28.8%{transform:translateX(0.4px)}37.2%,100%{transform:translateX(-7.5px)}}
 @keyframes i-word{0%,100%{clip-path:none}}
-@keyframes i-suffix{0%,12.6%{opacity:0}17.7%,100%{opacity:1}}
-@keyframes i-dot{0%,28.8%{opacity:0;transform:translateY(-11px) scale(0)}33.8%{opacity:1;transform:translateY(1px) scale(1.25)}37.2%,100%{opacity:1;transform:none}}
+@keyframes i-suffix{0%,12.6%{opacity:0}17.7%,95%{opacity:1}96%,100%{opacity:0}}
+@keyframes i-dot{0%,28.8%{opacity:0;transform:translateY(-11px) scale(0)}33.8%{opacity:1;transform:translateY(1px) scale(1.25)}37.2%,95%{opacity:1;transform:none}96%,100%{opacity:0;transform:none}}
 @keyframes i-fade{0%,88%{opacity:1}96%,100%{opacity:0}}
 @media (prefers-reduced-motion: reduce){#demarrage *{animation:none!important}#demarrage .intro-lockup{transform:translateX(-7.5px)}}
 </style>
