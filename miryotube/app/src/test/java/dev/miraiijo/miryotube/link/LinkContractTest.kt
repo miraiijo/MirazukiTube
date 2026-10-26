@@ -12,8 +12,9 @@ import org.junit.Test
  * constants and manifest: a name changed on one side only breaks the link silently on the box.
  */
 class LinkContractTest {
+    // Read from the module's folder (Gradle runs unit tests there), like the manifest below.
     private val contract = Properties().apply {
-        javaClass.classLoader!!.getResourceAsStream("link-contract.properties").use { load(it) }
+        File("src/test/resources/link-contract.properties").reader().use { load(it) }
     }
     private val manifest = File("src/main/AndroidManifest.xml").readText()
 
