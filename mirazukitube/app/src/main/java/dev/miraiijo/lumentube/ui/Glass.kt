@@ -58,25 +58,29 @@ fun glassRim(width: Dp = 1.dp, light: Boolean = Palette.colors.isLight): BorderS
  * outside the panel, so the milky body stays clean). Kept to three draws for the Player POP's GPU:
  * the light is baked into the body's gradient (no second layer over the whole panel) and the shadow
  * is one path, both built once per size.
+ * [flat]: for a large panel (Accueil's favourites), an opaque body and the rim only, so the GPU
+ * fills that area once instead of blending a light and a shadow over the page.
  */
-fun Modifier.liquidGlass(shape: Shape, fill: Color = Palette.Glass, light: Boolean = Palette.colors.isLight): Modifier = this
+fun Modifier.liquidGlass(shape: Shape, fill: Color = Palette.Glass, light: Boolean = Palette.colors.isLight, flat: Boolean = false): Modifier = this
     .drawWithCache {
         val outline = shape.createOutline(size, layoutDirection, this)
-        val shadow = if (light) {
+        val shadow = if (light && !flat) {
             val body = outline.toPath()
             val dropped = Path().apply { addPath(body, Offset(0f, 2.dp.toPx())) }
             Path().apply { op(dropped, body, PathOperation.Difference) }
         } else {
             null
         }
-        val lit = if (light) {
+        val lit = if (flat) {
+            null
+        } else if (light) {
             Brush.verticalGradient(0f to Color.White.copy(alpha = 0.42f).compositeOver(fill), 0.5f to Color.White.copy(alpha = 0.08f).compositeOver(fill), 1f to fill)
         } else {
             Brush.linearGradient(0f to Color.White.copy(alpha = 0.10f).compositeOver(fill), 0.45f to fill, start = Offset.Zero, end = Offset.Infinite)
         }
         onDrawBehind {
             shadow?.let { drawPath(it, ShadowColor) }
-            drawOutline(outline, lit)
+            if (lit != null) drawOutline(outline, lit) else drawOutline(outline, fill)
         }
     }
     .border(glassRim(1.dp, light), shape)
