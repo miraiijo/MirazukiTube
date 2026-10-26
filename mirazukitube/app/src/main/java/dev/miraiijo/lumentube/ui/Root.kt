@@ -102,10 +102,19 @@ fun Root(vm: MainViewModel) {
     val showHeader = state.opened == null && state.section != Search
 
     // Back: channel / playlist → its page; Rechercher → the section before; rows → the tabs;
-    // tabs → Accueil; then, with a video in the small window, the last Back closes it (the next
-    // one leaves the app).
+    // tabs → Accueil; then, with a video in the small window, the last Back closes it; then
+    // « Retour encore pour quitter » (3 s), as in miryo iptv: a single Back never leaves the app.
     val fullScreenPlayer = (state.playingId != null || state.playing != null) && !state.minimized
-    BackHandler(enabled = !fullScreenPlayer && (state.opened != null || state.section == Search || !inHeader || state.section != Home || state.minimized)) {
+    val exitActivity = androidx.compose.ui.platform.LocalContext.current.findActivity()
+    var exitArmed by remember { androidx.compose.runtime.mutableStateOf(false) }
+    LaunchedEffect(exitArmed) {
+        if (exitArmed) {
+            kotlinx.coroutines.delay(EXIT_WINDOW_MS)
+            exitArmed = false
+        }
+    }
+    LaunchedEffect(state.section, inHeader, state.opened) { if (state.section != Home || !inHeader || state.opened != null) exitArmed = false }
+    BackHandler(enabled = !fullScreenPlayer) {
         when {
             state.opened != null -> {
                 holdFocus()
@@ -118,7 +127,12 @@ fun Root(vm: MainViewModel) {
             }
             !inHeader -> header.tryRequestFocus()
             state.section != Home -> showSection(Home, focusPage = false)
-            else -> vm.stopPlaying()
+            state.minimized -> vm.stopPlaying()
+            exitArmed -> exitActivity?.finish()
+            else -> {
+                exitArmed = true
+                vm.showNotice("Retour encore pour quitter")
+            }
         }
     }
 
@@ -152,6 +166,18 @@ fun Root(vm: MainViewModel) {
                     if (native.repeatCount == 0) {
                         if (state.section != Search || state.opened != null) showSection(Search)
                         if (voice || !native.isFromSource(android.view.InputDevice.SOURCE_GAMEPAD)) dictate = true
+                    }
+                    return@onPreviewKeyEvent true
+                }
+                // ◀◀ / ▶▶ on the remote (L1 / R1 on a gamepad): previous / next section, the focus on
+                // its tab, stopping at the ends; the same keys as in miryo and miryo iptv.
+                if (native.keyCode in PAGE_KEYS && showHeader && !fullScreenPlayer) {
+                    if (native.repeatCount == 0) {
+                        val sections = if (state.kids) listOf(Home) else dev.miraiijo.lumentube.data.Section.entries.filter { it != Search && (!it.account || state.signedIn) }
+                        val forward = native.keyCode == android.view.KeyEvent.KEYCODE_BUTTON_R1 || native.keyCode == android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD
+                        val index = sections.indexOf(state.section)
+                        val next = if (index < 0) null else sections.getOrNull(index + if (forward) 1 else -1)
+                        if (next != null) showSection(next, focusPage = false)
                     }
                     return@onPreviewKeyEvent true
                 }
@@ -412,8 +438,19 @@ fun Root(vm: MainViewModel) {
 /** Width of the in-app picture-in-picture window (16:9), a share of the screen's. */
 private const val MINI_FRACTION = 0.33f
 
-/** A held Left / Right's pace: one card every 130 ms (about 8 a second). */
-private const val HOLD_STEP_MS = 130L
+/** A held Left / Right's pace: one card every 120 ms (about 8 a second), as in miryo and miryo iptv. */
+private const val HOLD_STEP_MS = 120L
+
+/** Time to press Back again to leave the app (as in miryo iptv). */
+private const val EXIT_WINDOW_MS = 3_000L
+
+/** Previous / next section: ◀◀ / ▶▶ on the remote, L1 / R1 on a gamepad. */
+private val PAGE_KEYS = setOf(
+    android.view.KeyEvent.KEYCODE_MEDIA_REWIND,
+    android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD,
+    android.view.KeyEvent.KEYCODE_BUTTON_L1,
+    android.view.KeyEvent.KEYCODE_BUTTON_R1,
+)
 
 /**
  * A held Up / Down's pace: one row every 280 ms (about 3.5 a second). Slower than along a row:

@@ -437,10 +437,13 @@ private fun androidx.compose.foundation.layout.BoxScope.CardShine(focused: Boole
     )
 }
 
-/** The remote's Menu key, when it has one, does what a long press does. */
+/**
+ * The options keys, when the remote has one, do what a long press does: Menu, Y / Select on a
+ * gamepad, the red key and the TV context-menu keys (the same set as miryo and miryo iptv).
+ */
 private fun Modifier.menuKey(action: (() -> Unit)?): Modifier = if (action == null) this else onPreviewKeyEvent { event ->
     val native = event.nativeKeyEvent
-    if (native.keyCode != android.view.KeyEvent.KEYCODE_MENU) return@onPreviewKeyEvent false
+    if (native.keyCode !in OPTIONS_KEYS) return@onPreviewKeyEvent false
     if (native.action == android.view.KeyEvent.ACTION_DOWN && native.repeatCount == 0) action()
     true
 }
@@ -582,3 +585,12 @@ private val CHANNEL_AVATAR = 96.dp
 /** The avatar, a 4 dp gap and the 2.5 dp ring. */
 private val CHANNEL_RING = CHANNEL_AVATAR + 13.dp
 private const val CHANNEL_FOCUS_SCALE = 1.06f
+
+private val OPTIONS_KEYS = setOf(
+    android.view.KeyEvent.KEYCODE_MENU,
+    android.view.KeyEvent.KEYCODE_BUTTON_Y,
+    android.view.KeyEvent.KEYCODE_BUTTON_SELECT,
+    android.view.KeyEvent.KEYCODE_PROG_RED,
+    android.view.KeyEvent.KEYCODE_TV_CONTENTS_MENU,
+    android.view.KeyEvent.KEYCODE_TV_MEDIA_CONTEXT_MENU,
+)
