@@ -185,7 +185,8 @@ private fun Tab(label: String, current: Boolean, modifier: Modifier, onClick: ()
     ) {
         // As wide as the word: the bar sits right under it.
         Column(Modifier.width(IntrinsicSize.Max).padding(top = 8.dp)) {
-            Text(label, fontSize = 15.sp, fontWeight = if (current) FontWeight.Bold else FontWeight.Medium, maxLines = 1, softWrap = false)
+            // Steady width: the bold current tab never pushes the others.
+            SteadyText(label, fontSize = 15.sp, fontWeight = if (current) FontWeight.Bold else FontWeight.Medium)
             Box(
                 Modifier
                     .padding(top = 5.dp)
