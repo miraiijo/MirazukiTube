@@ -585,7 +585,12 @@ V.who=()=>`<div class="who"><h3>Qui regarde ?</h3><div class="ptiles">
  ${codeDlg('si','Connecter un compte YouTube','Scanne le QR code avec ton téléphone, ou ouvre youtube.com/activate et saisis ce code :','miryo tube reste connecté ensuite. Tu peux lier plusieurs comptes et choisir lequel à l’ouverture.',cbtn('si-0','','Annuler'),7)}`;
 const HINT='Les bêtas arrivent plus tôt mais peuvent planter ou contenir des bugs. Sans elles, seules les versions stables sont proposées.';
 V.set=()=>`<div class="stitle">Réglages</div>
- <div class="snav" data-grp="sn">${['Lecture','Affichage','Téléphone','Compte','Mises à jour','À propos'].map((l,i)=>`<div class="sitem ${i===0?'sel':''}" data-id="sn-${i}">${l}</div>`).join('')}</div>
+ <div class="snav" data-grp="sn">${[['Rechercher','s'],['Lecture',0],['Affichage',1],['Téléphone',2],['Compte',3],['Mises à jour',4],['À propos',5]].map(([l,i])=>`<div class="sitem ${i===0?'sel':''}" data-id="sn-${i}">${l}</div>`).join('')}</div>
+ <div class="spage" data-id="sp-s" style="opacity:0">
+  ${scard('Rechercher un réglage',`<div class="btn c" data-id="fd-field" style="width:440px;justify-content:flex-start">${I.search}<span data-id="fd-q">Nom d’un réglage</span></div>`,'Par exemple : sombre, volume, bêta, enfant, téléphone.',{hid:'fd-h'})}
+  <div data-id="fd-hits" style="opacity:0;display:flex;flex-direction:column;gap:11px">
+  ${scard('Passer les sponsors (SponsorBlock)','<div class="btn c" data-id="fd-0">Ouvrir</div>','Lecture')}
+  ${scard('Volume stable','<div class="btn c" data-id="fd-1">Ouvrir</div>','Lecture')}</div></div>
  <div class="spage" data-id="sp-0">
   ${scard('Lecture automatique',choice('la',['Activée','Désactivée'],0,'la'),'À la fin d’une vidéo, la suivante démarre après un court compte à rebours.')}
   ${scard('Passer les sponsors (SponsorBlock)',choice('lb',['Activé','Désactivé'],0,'lb'),'Sponsors, autopromo et rappels d’abonnement sautés automatiquement.')}
@@ -802,7 +807,7 @@ const SCREENS=[
  {k:'OK',t:'Alex',view:'home',f:'h0-0',txt:{hav:'A'},st:{hav:{background:grad('Alex')}},n:'Compte choisi : l’Accueil, les abonnements, l’historique et le flux de miryo suivent ce compte.'},
  ]},
 {id:'reglages',title:'Réglages',desc:'Bouton rond Réglages de l’en-tête. Plein écran : « Réglages » en grand, les catégories à gauche (celle qui a le focus montre sa page), une carte en verre par réglage à droite, les choix en pastilles (l’actuel coché). OK applique tout de suite.',
- notes:['Catégories : Lecture, Affichage, Téléphone, Compte (toujours : « Se connecter » quand aucun compte n’est lié), Enfant (si le profil existe), Mises à jour, À propos.','À propos : fork de SmartTube, son avis de licence MIT en entier et les licences des autres composants. Rien à sélectionner : la page s’affiche quand « À propos » a le focus.','Chaque page a son propre défilement.'],
+ notes:['Catégories : Rechercher, Lecture, Affichage, Téléphone, Compte (toujours : « Se connecter » quand aucun compte n’est lié), Enfant (si le profil existe), Mises à jour, À propos.','À propos : fork de SmartTube, son avis de licence MIT en entier et les licences des autres composants. Rien à sélectionner : la page s’affiche quand « À propos » a le focus.','Chaque page a son propre défilement.'],
  steps:[
  {view:'home',f:'btn-set',on:['udot'],k:'▶',t:'En-tête'},
  {k:'OK',t:'Réglages',view:'set',f:'sn-0',n:'Lecture : lecture automatique, SponsorBlock, volume stable.'},
@@ -815,6 +820,9 @@ const SCREENS=[
  {k:'OK',t:'Valider',txt:{'sz-t':'Taille de l’interface · 105 %'},sel:{szd:''},n:'Appliqué tout de suite ; le pourcentage est dans le titre, les pastilles ne bougent pas sous le focus. La zone sûre reste la même en dp de la TV : les marges suivent la taille. (Ce storyboard reste dessiné à 100 %.)'},
  {k:'◀▼▼',t:'Compte',f:'sn-3',sel:{sn:'sn-3'},st:{'sp-1':{opacity:'0'},'sp-3':{opacity:'1'}},n:'Compte : se déconnecter ; les autres comptes liés restent sur la box.'},
  {k:'▼▼',t:'À propos',f:'sn-5',sel:{sn:'sn-5'},st:{'sp-3':{opacity:'0'},'sp-5':{opacity:'1'}},n:'À propos : miryo tube est un fork de SmartTube ; avis de licence MIT et licences des composants.'},
+ {k:'▲×6',t:'Rechercher',f:'sn-s',sel:{sn:'sn-s'},st:{'sp-5':{opacity:'0'},'sp-s':{opacity:'1'}},n:'En haut du menu, au-dessus de Lecture : Réglages s’ouvre toujours sur Lecture.'},
+ {k:'▶ OK',t:'Taper « pub »',f:'fd-field',txt:{'fd-q':'pub','fd-h':'OK sur un réglage ouvre sa page.'},st:{'fd-hits':{opacity:'1'}},n:'Le clavier s’ouvre ; les réglages trouvés par leur nom ou un mot courant (sans accents, 2 lettres au moins). Sans profil Enfant, ses réglages ne sont pas proposés.'},
+ {k:'▼ OK',t:'Ouvrir',f:'sn-0',sel:{sn:'sn-0'},st:{'sp-s':{opacity:'0'},'sp-0':{opacity:'1'}},n:'Le focus va sur la catégorie du réglage, qui affiche sa page.'},
  {k:'B',t:'Retour',view:'home',f:'btn-set',n:'Retour ferme les Réglages.'},
  ]},
 {id:'telephone',title:'Lier un téléphone',desc:'Réglages › Téléphone. « Regarder sur la TV » : l’app YouTube du téléphone, liée par un code TV, envoie ses vidéos ici et sert de télécommande (lecture, pause, position, suivante, arrêt, volume), quand miryo tube est ouvert.',
