@@ -382,6 +382,18 @@ fun Root(vm: MainViewModel) {
         state.pin?.let { prompt ->
             PinDialog(prompt.title, prompt.hint, key = prompt, submit = { vm.submitPin(it) }, onDismiss = vm::closePin)
         }
+        // New install: one question, the YouTube account (closes once an account is linked).
+        val setupContext = androidx.compose.ui.platform.LocalContext.current
+        var firstRun by remember { androidx.compose.runtime.mutableStateOf(FirstRun.pending(setupContext)) }
+        val closeFirstRun = {
+            FirstRun.finish(setupContext)
+            firstRun = false
+        }
+        LaunchedEffect(state.signedIn) { if (state.signedIn && firstRun) closeFirstRun() }
+        if (firstRun && !state.signingIn && state.playing == null) {
+            val withMiryo = remember { dev.miraiijo.lumentube.link.MirazukiLink.partner(setupContext, dev.miraiijo.lumentube.link.MirazukiLink.MIRAZUKI, dev.miraiijo.lumentube.link.MirazukiLink.PROFILES_AUTHORITY) }
+            FirstRunTube(withMiryo, onSignIn = vm::startSignIn, onDone = closeFirstRun)
+        }
         if (state.signingIn) {
             SignInDialog(code = state.signInCode, error = state.signInError, onRetry = vm::startSignIn, onDismiss = vm::cancelSignIn)
         }
