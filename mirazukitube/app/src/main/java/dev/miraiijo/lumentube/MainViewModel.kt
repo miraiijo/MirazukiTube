@@ -97,6 +97,8 @@ data class Settings(
     val uiScale: Int = UI_SCALE_DEFAULT,
     /** "Recevoir même miryo tube fermé": the phone link listens in the background (remote.CastService). */
     val backgroundCast: Boolean = false,
+    /** « Petite fenêtre »: when the video goes on in the system's picture-in-picture window (player.PictureInPicture). */
+    val background: String = dev.miraiijo.lumentube.player.PictureInPicture.HOME,
 )
 
 /**
@@ -1231,6 +1233,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         prefs.appearance = settings.appearance
         prefs.uiScale = settings.uiScale
         prefs.backgroundCast = settings.backgroundCast
+        prefs.background = settings.background
         if (settings.remote != _state.value.settings.remote) {
             if (settings.remote && foreground) RemoteControl.start(getApplication()) else if (!settings.remote) RemoteControl.stop()
         }

@@ -57,6 +57,7 @@ import androidx.tv.material3.Surface
 import androidx.tv.material3.Text
 import com.bumptech.glide.integration.compose.ExperimentalGlideComposeApi
 import dev.miraiijo.lumentube.UpdateUi
+import dev.miraiijo.lumentube.player.PictureInPicture
 import dev.miraiijo.lumentube.update.Updater
 import com.bumptech.glide.integration.compose.GlideImage
 import androidx.compose.foundation.Canvas
@@ -445,6 +446,17 @@ fun SettingsDialog(
                             SettingCard("Volume stable", "Même niveau sonore d’une vidéo à l’autre.") {
                                 Choice("Activé", settings.stableVolume) { onSettings(settings.copy(stableVolume = true)) }
                                 Choice("Désactivé", !settings.stableVolume) { onSettings(settings.copy(stableVolume = false)) }
+                            }
+                            // Only where the box offers the system's window (many Android TV boxes turn it off).
+                            val pipSupported = androidx.compose.ui.platform.LocalContext.current.packageManager
+                                .hasSystemFeature(android.content.pm.PackageManager.FEATURE_PICTURE_IN_PICTURE)
+                            if (pipSupported) SettingCard(
+                                "Petite fenêtre (image dans l’image)",
+                                "La vidéo continue dans un coin de l’écran, par-dessus miryo ou une autre appli, avec la touche choisie (si elle est en pause, elle s’arrête). ▶︎ ⏸ de la télécommande la met en pause, rouvrir miryo tube la remet en plein écran.",
+                            ) {
+                                PictureInPicture.all.forEach { mode ->
+                                    Choice(PictureInPicture.label(mode), settings.background == mode) { onSettings(settings.copy(background = mode)) }
+                                }
                             }
                         }
                         SettingsPage.DISPLAY -> {
