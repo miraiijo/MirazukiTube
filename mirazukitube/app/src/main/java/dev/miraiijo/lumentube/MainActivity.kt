@@ -23,6 +23,7 @@ import dev.miraiijo.lumentube.ui.MirazukiTubeTheme
 import dev.miraiijo.lumentube.ui.NightColors
 import dev.miraiijo.lumentube.ui.Palette
 import dev.miraiijo.lumentube.ui.Root
+import dev.miraiijo.lumentube.ui.SystemClicks
 import dev.miraiijo.lumentube.ui.windowBackground
 
 class MainActivity : ComponentActivity() {
@@ -58,8 +59,10 @@ class MainActivity : ComponentActivity() {
                 // And when the look changes (Auto at 7:30 / 19:30, the header's button).
                 val background = Palette.Background
                 LaunchedEffect(background) { window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(background.toArgb())) }
+                val sounds = settings.navSoundsOn
+                SystemClicks(sounds)
                 Box(Modifier.fillMaxSize()) {
-                    if (pagesShown.value) Root(vm)
+                    if (pagesShown.value) androidx.compose.runtime.CompositionLocalProvider(dev.miraiijo.lumentube.ui.LocalNavSounds provides sounds) { Root(vm) }
                     if (intro.value) BrandIntro(ready = { vm.state.value.readyToShow() }, maxMs = SPLASH_MAX_MS, onSettled = { pagesShown.value = true }, onDone = { intro.value = false })
                 }
             }

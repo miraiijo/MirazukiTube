@@ -73,9 +73,15 @@ class PlayerPrefs(context: Context) {
         get() = prefs.getBoolean(KEY_BACKGROUND_CAST, false)
         set(value) = prefs.edit().putBoolean(KEY_BACKGROUND_CAST, value).apply()
 
+    /** "Sons de navigation": 0 = Comme miryo (the default), 1 = Activés, 2 = Coupés. */
+    var navSounds: Int
+        get() = prefs.getInt(KEY_NAV_SOUNDS, 0)
+        set(value) = prefs.edit().putInt(KEY_NAV_SOUNDS, value).apply()
+
     fun settings() = Settings(
         sponsorBlock = sponsorBlock, autoplay = autoplay, stableVolume = stableVolume, deArrow = deArrow,
         remote = remote, appearance = appearance, uiScale = uiScale, backgroundCast = backgroundCast,
+        navSounds = navSounds,
     )
 
     private companion object {
@@ -93,5 +99,6 @@ class PlayerPrefs(context: Context) {
         const val KEY_LARGE_UI = "large_ui"
         const val KEY_UI_SCALE = "ui_scale"
         const val KEY_BACKGROUND_CAST = "background_cast"
+        const val KEY_NAV_SOUNDS = "nav_sounds"
     }
 }

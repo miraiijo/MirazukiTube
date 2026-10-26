@@ -611,6 +611,7 @@ V.set=()=>`<div class="stitle">Réglages</div>
   ${scard('Volume stable',choice('lc',['Activé','Désactivé'],1,'lc'),'Même niveau sonore d’une vidéo à l’autre.')}</div>
  <div class="spage" data-id="sp-1" style="opacity:0">
   ${scard('Apparence',choice('ap',['Comme miryo','Jour','Nuit','Auto'],0,'ap'),'Comme miryo suit le profil de miryo. Auto : clair de 7 h à 20 h.')}
+  ${scard('Sons de navigation',choice('ns',['Comme miryo','Activés','Coupés'],0,'ns'),'Le petit clic des flèches et de OK. Comme miryo suit son réglage.')}
   ${scard('Taille de l’interface · 100 %',`<div class="btn c" data-id="sz-0">Plus petit</div><div class="btn c" data-id="sz-1">Plus grand</div>${choice('szd',['Par défaut'],0,'szd')}`,'De 60 à 120 % par pas de 5 %, appliqué tout de suite. Par défaut : 100 %.',{tid:'sz-t'})}
   ${scard('DeArrow',choice('da',['Activé','Désactivé'],1,'da'),'Titres et miniatures de la communauté, sans racolage, quand il y en a.')}</div>
  <div class="spage" data-id="sp-2" style="opacity:0">

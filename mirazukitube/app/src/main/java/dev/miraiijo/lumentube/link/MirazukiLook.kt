@@ -9,12 +9,16 @@ import java.time.LocalDateTime
 
 /**
  * The look of miryo's current profile (mirazuki-link v3, ProfilesProvider /look): « Comme miryo »
- * follows its Jour / Nuit / Auto, Auto with the same day bounds (sunrise and sunset in miryo's city).
+ * follows its Jour / Nuit / Auto, Auto with the same day bounds (sunrise and sunset in miryo's city),
+ * and its « Sons de navigation ».
  * Read again with miryo's profile (start-up, back to the front).
  */
 object MirazukiLook {
-    /** [dayStart] / [dayEnd]: Auto's day, in minutes of the local day. */
-    data class Look(val appearance: String, val dayStart: Int, val dayEnd: Int) {
+    /**
+     * [dayStart] / [dayEnd]: Auto's day, in minutes of the local day. [navSounds]: miryo's « Sons de
+     * navigation » (null: an older miryo that doesn't say).
+     */
+    data class Look(val appearance: String, val dayStart: Int, val dayEnd: Int, val navSounds: Boolean? = null) {
         fun isLight(now: LocalDateTime): Boolean = when (appearance) {
             "day" -> true
             "night" -> false
@@ -39,7 +43,7 @@ object MirazukiLook {
             val appearance = str("appearance")?.takeIf { it in setOf("day", "night", "auto") } ?: return@use null
             val start = str("day_start")?.toIntOrNull()?.coerceIn(0, MINUTES_A_DAY) ?: DAY_START
             val end = str("day_end")?.toIntOrNull()?.coerceIn(0, MINUTES_A_DAY) ?: DAY_END
-            Look(appearance, start, end)
+            Look(appearance, start, end, navSounds = str("nav_sounds")?.let { it == "1" })
         }
     }.getOrNull()
 
