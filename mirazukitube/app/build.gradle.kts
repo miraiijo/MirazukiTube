@@ -43,6 +43,9 @@ android {
         }
     }
 
+    // AGP 9 makes unit tests for the tested build type only: CI tests the release one (testReleaseUnitTest).
+    testBuildType = "release"
+
     buildTypes {
         release {
             // Not minified, like SmartTube: its engine relies on reflection (Retrofit, Gson, JsonPath).
