@@ -53,6 +53,8 @@ data class Video(
     val raw: MediaItem,
     /** Picture replacing the thumbnail (DeArrow), shown instead of the HD one. */
     val customThumbnail: String? = null,
+    /** When it was published, as YouTube says it (« il y a 3 jours »); null when unknown. */
+    val published: String? = null,
 ) {
     val isChannel get() = kind == MediaItem.TYPE_CHANNEL
     val isVideo get() = kind == MediaItem.TYPE_VIDEO || kind == MediaItem.TYPE_MUSIC || kind == MediaItem.TYPE_UNDEFINED && videoId != null
@@ -559,7 +561,7 @@ object YouTube {
         if (!signedIn) return@withContext null
         val history = runCatching { historyForFeed() }.getOrNull() ?: return@withContext null
         val started = history.mediaItems.orEmpty().filterNotNull()
-            .filter { !it.isShorts && !it.isLive && it.videoId != null && it.percentWatched in 3..94 }
+            .filter { !it.isShorts && !it.isLive && it.videoId != null && it.percentWatched in 3..94 && it.isAvailableVideo() }
             .map { it.toVideo() }
             .distinctBy { it.key }
             .take(20)
@@ -1041,5 +1043,46 @@ object YouTube {
         badge = badgeText?.takeIf { it.isNotBlank() },
         kind = type,
         raw = this,
+        published = if (type == MediaItem.TYPE_CHANNEL || type == MediaItem.TYPE_PLAYLIST || isLive || isUpcoming) null else publishedText(),
     )
+
+    /**
+     * « il y a 3 jours »: the part of YouTube's second line that says it (its own wording), else
+     * the engine's date put the same way, null when neither is there.
+     */
+    private fun MediaItem.publishedText(): String? {
+        secondTitle?.toString().orEmpty().split('•', '·').map { it.trim() }
+            .firstOrNull { part -> AGE.containsMatchIn(part.lowercase()) && (part.contains("il y a", true) || part.contains("ago", true)) }
+            ?.let { return it }
+        val date = runCatching { publishedDate }.getOrDefault(0L).let { if (it in 1 until 100_000_000_000L) it * 1000 else it }
+        if (date <= 0) return null
+        val minutes = ((System.currentTimeMillis() - date) / 60_000L).coerceAtLeast(0)
+        val hours = minutes / 60
+        val days = hours / 24
+        return when {
+            minutes < 60 -> "il y a ${minutes.coerceAtLeast(1)} min"
+            hours < 24 -> "il y a $hours h"
+            days < 7 -> if (days == 1L) "il y a 1 jour" else "il y a $days jours"
+            days < 31 -> (days / 7).let { if (it == 1L) "il y a 1 semaine" else "il y a $it semaines" }
+            days < 365 -> "il y a ${days / 30} mois"
+            else -> (days / 365).let { if (it == 1L) "il y a 1 an" else "il y a $it ans" }
+        }
+    }
 }
+
+/**
+ * Still watchable: a video deleted or made private since it was watched stays in the history,
+ * with no picture, no channel, and a title like « [Vidéo privée] »; it played « vidéo
+ * indisponible ». Used by Reprendre here and by the rows given to miryo (FeedCache).
+ */
+internal fun MediaItem.isAvailableVideo(): Boolean {
+    val name = title?.trim().orEmpty()
+    if (name.isEmpty() || UNAVAILABLE_TITLES.any { name.equals(it, ignoreCase = true) }) return false
+    if (cardImageUrl.isNullOrBlank() && backgroundImageUrl.isNullOrBlank()) return false
+    return !(author.isNullOrBlank() && secondTitle.isNullOrBlank())
+}
+
+private val UNAVAILABLE_TITLES = listOf(
+    "[Vidéo privée]", "[Vidéo supprimée]", "Vidéo privée", "Vidéo supprimée", "Vidéo non disponible",
+    "[Private video]", "[Deleted video]", "Private video", "Deleted video", "Video unavailable",
+)

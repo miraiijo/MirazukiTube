@@ -1,5 +1,6 @@
 package dev.miraiijo.lumentube.feed
 
+import dev.miraiijo.lumentube.data.isAvailableVideo
 import android.content.Context
 import android.net.Uri
 import com.liskovsoft.mediaserviceinterfaces.data.MediaItem
@@ -118,6 +119,7 @@ object FeedCache {
         .filter { !it.isShorts && it.type != MediaItem.TYPE_CHANNEL && it.type != MediaItem.TYPE_PLAYLIST }
         .filter { it.videoId?.let(VIDEO_ID::matches) == true }
         .filter { list != CONTINUE || it.percentWatched in 1..94 }
+        .filter { it.isAvailableVideo() }
         .distinctBy { it.videoId }
         .map { item ->
             val id = item.videoId

@@ -309,3 +309,15 @@ fun BrandLogo(modifier: Modifier = Modifier) {
         modifier = modifier,
     )
 }
+
+/**
+ * A one-line label whose weight changes with the focus or the selection without changing its
+ * width: the box is as wide as the bold version, so the bar around it never shifts.
+ */
+@Composable
+fun SteadyText(text: String, fontSize: androidx.compose.ui.unit.TextUnit, fontWeight: androidx.compose.ui.text.font.FontWeight, modifier: Modifier = Modifier) {
+    Box(modifier, contentAlignment = Alignment.Center) {
+        androidx.tv.material3.Text(text, fontSize = fontSize, fontWeight = androidx.compose.ui.text.font.FontWeight.Bold, maxLines = 1, softWrap = false, color = Color.Transparent)
+        androidx.tv.material3.Text(text, fontSize = fontSize, fontWeight = fontWeight, maxLines = 1, softWrap = false)
+    }
+}

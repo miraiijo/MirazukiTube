@@ -306,6 +306,9 @@ fun MirazukiDialog(onDismissRequest: () -> Unit, content: @Composable () -> Unit
         onDismissRequest = onDismissRequest,
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false),
     ) {
-        CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides density, LocalSafe provides safe, content = content)
+        // A long OK opens most menus: the release of that press must not click their first button.
+        androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.okPressStartsHere()) {
+            CompositionLocalProvider(androidx.compose.ui.platform.LocalDensity provides density, LocalSafe provides safe, content = content)
+        }
     }
 }

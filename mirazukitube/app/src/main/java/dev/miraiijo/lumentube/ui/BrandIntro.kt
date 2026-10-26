@@ -20,7 +20,6 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.clipRect
-import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
@@ -30,23 +29,25 @@ import kotlinx.coroutines.withTimeoutOrNull
 import dev.miraiijo.lumentube.R
 
 /**
- * Start-up animation, right after the system splash (which shows the mark alone): « miryo » is
- * written from left to right, « tube » slides out of it to the right, then the dot drops in, in
+ * Start-up animation, right after the system splash: the mark and « miryo » are there together,
+ * then the logo makes room for « tube », which fades in, then the dot drops in, in
  * the app's colour. The logo stays centred while it grows. It is drawn over the app, which loads
  * underneath, and fades out once [ready] says there is something to show (at most [maxMs] after
  * it started). About 1.4 s: the Pop starts the app in that time anyway.
  */
 @Composable
 fun BrandIntro(ready: () -> Boolean, maxMs: Long, onDone: () -> Unit) {
-    val word = remember { Animatable(0f) }
+    // « miryo » is there from the start, with the mark: only the suffix and the dot come after.
+    val word = remember { Animatable(1f) }
     val suffix = remember { Animatable(0f) }
     val dot = remember { Animatable(0f) }
     val fade = remember { Animatable(1f) }
     val isReady = rememberUpdatedState(ready)
     LaunchedEffect(Unit) {
         val startedAt = android.os.SystemClock.uptimeMillis()
-        word.animateTo(1f, tween(WORD_MS, easing = FastOutSlowInEasing))
+        delay(LOGO_HOLD_MS)
         suffix.animateTo(1f, tween(SUFFIX_MS, easing = FastOutSlowInEasing))
+        delay(BEFORE_DOT_MS)
         dot.animateTo(1f, tween(DOT_MS, easing = BackEasing))
         delay(HOLD_MS)
         // Then held until the app has something to show (its own state, polled), never past maxMs.
@@ -79,13 +80,9 @@ fun BrandIntro(ready: () -> Boolean, maxMs: Long, onDone: () -> Unit) {
             )
             Image(
                 painterResource(R.drawable.intro_suffix), null,
-                Modifier.matchParentSize().drawWithContent {
-                    val k = size.width / Logo.WIDTH
-                    // Comes out from behind « miryo »: hidden left of the gap, slid in from the left.
-                    clipRect(left = (Logo.WORD_END + 1) * k) {
-                        translate(left = -(Logo.SUFFIX_END - Logo.WORD_END) * (1 - suffix.value) * k) { this@drawWithContent.drawContent() }
-                    }
-                },
+                // Never seen while it comes out of « miryo »: the logo makes room for it, then it
+                // fades in, whole, in its place.
+                Modifier.matchParentSize().graphicsLayer { alpha = ((suffix.value - SUFFIX_FADE_FROM) / (SUFFIX_FADE_TO - SUFFIX_FADE_FROM)).coerceIn(0f, 1f) },
             )
             Image(
                 painterResource(R.drawable.intro_dot), null,
@@ -119,9 +116,16 @@ private object Logo {
 /** The splash's night (splash_background), so the system splash hands over without a flash. */
 private val SplashNight = Color(0xFF10121A)
 private val LOGO_HEIGHT = 112.dp
-private const val WORD_MS = 420
+/** « miryo » and the mark alone, before the suffix comes. */
+private const val LOGO_HOLD_MS = 250L
 private const val SUFFIX_MS = 460
 private const val DOT_MS = 300
+/** Part of the suffix's time spent making room before it fades in. */
+private const val SUFFIX_FADE_FROM = 0.45f
+/** The suffix is whole a little before the logo stops moving. */
+private const val SUFFIX_FADE_TO = 0.85f
+/** The dot only comes once the suffix is whole and still. */
+private const val BEFORE_DOT_MS = 160L
 private const val HOLD_MS = 200L
 private const val READY_POLL_MS = 40L
 private const val FADE_MS = 220

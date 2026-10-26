@@ -83,7 +83,10 @@ class MainActivity : ComponentActivity() {
      *  Y / Start = Menu (a card's menu, the player's settings) · Select = search ·
      *  L1 / R1 = −10 s / +10 s · L2 / R2 = previous / next chapter (±60 s without chapters).
      */
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean =
+        dev.miraiijo.lumentube.ui.OkRelease.dispatch(event, ::dispatchMapped)
+
+    private fun dispatchMapped(event: KeyEvent): Boolean {
         // A Sony pad (DualSense, DualShock 4) on a box without the PlayStation driver (Android 10/11
         // kernels): Android's Generic.kl scrambles it (Cross came as B = Back, Square as A = OK).
         // Its buttons are read from their raw code instead, the same whatever the key layout.
