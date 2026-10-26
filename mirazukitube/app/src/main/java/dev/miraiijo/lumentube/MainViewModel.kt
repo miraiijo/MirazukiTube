@@ -91,8 +91,8 @@ data class Settings(
     val stableVolume: Boolean,
     val deArrow: Boolean,
     val remote: Boolean = false,
-    /** 0 = Auto, 1 = Jour, 2 = Nuit (ui.Appearance). */
-    val appearance: Int = 0,
+    /** 0 = Auto, 1 = Jour, 2 = Nuit, 3 = Comme miryo (ui.Appearance). */
+    val appearance: Int = dev.miraiijo.lumentube.ui.APPEARANCE_DEFAULT,
     /** "Taille de l'interface", in % (ui.UI_SCALE_MIN..UI_SCALE_MAX). */
     val uiScale: Int = UI_SCALE_DEFAULT,
     /** "Recevoir même miryo tube fermé": the phone link listens in the background (remote.CastService). */
@@ -178,6 +178,8 @@ data class UiState(
     /** The kids profile exists (its parental code is set) and the channels it may watch. */
     val kidsExists: Boolean = false,
     val kidChannels: List<KidChannel> = emptyList(),
+    /** The kids profile is guarded by miryo's parental code (the suite's), not one of its own. */
+    val kidsMiryoCode: Boolean = false,
     /** Parental code dialog open. */
     val pin: PinPrompt? = null,
 ) {
@@ -884,10 +886,13 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
 
     // ---- Kids profile ---------------------------------------------------------------------------
 
-    private fun kidsUi() = _state.update { it.copy(kidsExists = kidsStore.exists, kidChannels = kidsStore.channels) }
+    private fun kidsUi() = _state.update { it.copy(kidsExists = kidsStore.exists, kidChannels = kidsStore.channels, kidsMiryoCode = kidsStore.usesMiryoCode) }
 
     /** At start: true when the kids profile is on (miryo's current profile, or left on here). */
     private suspend fun startKids(): Boolean {
+        // miryo's parental code (the suite's) may guard the kids profile: read whether it has one; and its look.
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { kidsStore.refreshSuite(); dev.miraiijo.lumentube.link.MirazukiLook.refresh(getApplication()) }
+        kidsUi()
         val mirazukiKids = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MirazukiProfile.currentIsKids(getApplication()) }
         return kidsMutex.withLock {
             when {
@@ -907,6 +912,8 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     /** Back on screen: miryo's profile may have changed meanwhile (kids ↔ adult). */
     private fun checkMirazukiProfile() {
         viewModelScope.launch {
+            kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { kidsStore.refreshSuite(); dev.miraiijo.lumentube.link.MirazukiLook.refresh(getApplication()) }
+            kidsUi()
             val mirazukiKids = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MirazukiProfile.currentIsKids(getApplication()) } ?: return@launch
             kidsMutex.withLock {
                 val s = _state.value
@@ -974,14 +981,23 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     fun chooseKids() {
         if (_state.value.kids) return
         if (!kidsStore.exists) {
-            _state.update { it.copy(pin = PinPrompt(PinStep.CREATE)) }
-            return
+            // miryo's parental code is the suite's: no second code to choose.
+            if (kidsStore.usesMiryoCode) {
+                kidsStore.createWithMiryoCode()
+                kidsUi()
+            } else {
+                _state.update { it.copy(pin = PinPrompt(PinStep.CREATE)) }
+                return
+            }
         }
         viewModelScope.launch { kidsMutex.withLock { beginKids(fromMirazuki = false) } }
     }
 
     /** Réglages › Enfant. */
-    fun changeKidsPin() = _state.update { it.copy(pin = PinPrompt(PinStep.CHANGE_CHECK)) }
+    fun changeKidsPin() {
+        if (kidsStore.usesMiryoCode) return showNotice("C’est le code parental de miryo : il se change dans miryo › Réglages › Contrôle parental.")
+        _state.update { it.copy(pin = PinPrompt(PinStep.CHANGE_CHECK)) }
+    }
 
     fun deleteKids() = _state.update { it.copy(pin = PinPrompt(PinStep.DELETE_CHECK)) }
 
@@ -1040,6 +1056,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                 }
                 PinResult.Wrong -> "Code incorrect."
                 is PinResult.Locked -> "Trop d’essais : réessaie dans ${result.minutes} min."
+                PinResult.Unavailable -> "Code non vérifié, réessaie dans un instant."
             }
         }
     }

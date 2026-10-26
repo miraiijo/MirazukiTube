@@ -211,9 +211,9 @@ fun Root(vm: MainViewModel) {
                 onSettings = vm::openSettings,
                 onRestorePlayer = vm::restore,
                 appearance = state.settings.appearance,
-                // Jour → Nuit → Auto → Jour (0 = Auto, 1 = Jour, 2 = Nuit).
+                // Jour → Nuit → Auto (→ Comme miryo when miryo is there) → Jour (0 = Auto, 1 = Jour, 2 = Nuit, 3 = Comme miryo).
                 onAppearance = {
-                    val next = when (state.settings.appearance) { 1 -> 2; 2 -> 0; else -> 1 }
+                    val next = when (state.settings.appearance) { 1 -> 2; 2 -> 0; 0 -> if (dev.miraiijo.lumentube.link.MirazukiLook.current != null) 3 else 1; else -> 1 }
                     vm.updateSettings(state.settings.copy(appearance = next))
                 },
                 updateFound = state.update.found,
@@ -316,6 +316,7 @@ fun Root(vm: MainViewModel) {
                 onPair = vm::openPairing,
                 onSignOut = vm::signOut,
                 onDismiss = vm::closeSettings,
+                onSignIn = { vm.closeSettings(); vm.startSignIn() },
                 pairingOpen = state.pairing != null,
                 update = state.update,
                 onCheckUpdate = vm::checkUpdate,
@@ -324,6 +325,7 @@ fun Root(vm: MainViewModel) {
                 kidChannels = state.kidChannels.takeIf { state.kidsExists },
                 onRemoveKidChannel = vm::removeKidChannel,
                 onChangeKidsPin = vm::changeKidsPin,
+                kidsMiryoCode = state.kidsMiryoCode,
                 onDeleteKids = vm::deleteKids,
             )
         } else if (state.cardMenu != null) {

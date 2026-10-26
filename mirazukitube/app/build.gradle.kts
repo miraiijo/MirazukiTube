@@ -18,8 +18,8 @@ android {
         applicationId = "dev.miraiijo.lumentube"
         minSdk = 28
         targetSdk = 35
-        versionCode = 79
-        versionName = "1.0 bêta 18"
+        versionCode = 80
+        versionName = "1.0 bêta 19"
         // The Freebox Player POP runs a 32-bit userspace; arm64 kept for other boxes.
         ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a") }
         // Upstream modules have SmartTube's build flavors: use the "stable" one.
@@ -42,6 +42,9 @@ android {
             }
         }
     }
+
+    // AGP 9 makes unit tests for the tested build type only: CI tests the release one (testReleaseUnitTest).
+    testBuildType = "release"
 
     buildTypes {
         release {
@@ -109,4 +112,7 @@ dependencies {
     implementation("com.github.bumptech.glide:compose:1.0.0-beta10")
     // QR code of the sign-in, drawn on the box (no web QR service sees the activation code).
     implementation("com.google.zxing:core:3.5.4")
+
+    // Pure JVM unit tests (parental code, appearance), run by the CI before the APK.
+    testImplementation("junit:junit:4.13.2")
 }

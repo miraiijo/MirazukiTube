@@ -350,7 +350,7 @@ private fun ProfileTile(name: String, caption: String?, modifier: Modifier, onCl
 }
 
 /** Réglages' categories (left column). */
-private enum class SettingsPage(val label: String) { PLAYBACK("Lecture"), DISPLAY("Affichage"), PHONE("Téléphone"), ACCOUNT("Compte"), KIDS("Enfant"), UPDATES("Mises à jour"), ABOUT("À propos") }
+private enum class SettingsPage(val label: String) { SEARCH("Rechercher"), PLAYBACK("Lecture"), DISPLAY("Affichage"), PHONE("Téléphone"), ACCOUNT("Compte"), KIDS("Enfant"), UPDATES("Mises à jour"), ABOUT("À propos") }
 
 /**
  * Réglages (the redesign: full screen, like miryo's): the categories on the left (the one focused
@@ -365,6 +365,8 @@ fun SettingsDialog(
     onPair: () -> Unit,
     onSignOut: () -> Unit,
     onDismiss: () -> Unit,
+    /** Réglages › Compte when signed out: the TV code sign-in. */
+    onSignIn: () -> Unit = {},
     /** The pairing dialog is open over Réglages: when it closes, the focus goes back to "Lier un téléphone". */
     pairingOpen: Boolean = false,
     update: UpdateUi = UpdateUi(),
@@ -376,6 +378,8 @@ fun SettingsDialog(
     onRemoveKidChannel: (String) -> Unit = {},
     onChangeKidsPin: () -> Unit = {},
     onDeleteKids: () -> Unit = {},
+    /** The kids profile uses miryo's parental code: it is changed in miryo, not here. */
+    kidsMiryoCode: Boolean = false,
 ) {
     MirazukiDialog(onDismissRequest = onDismiss) {
         val first = remember { FocusRequester() }
@@ -391,7 +395,9 @@ fun SettingsDialog(
             }
         }
         var page by remember { mutableStateOf(SettingsPage.PLAYBACK) }
-        val pages = SettingsPage.entries.filter { (it != SettingsPage.ACCOUNT || accountName != null) && (it != SettingsPage.KIDS || kidChannels != null) }
+        val pages = SettingsPage.entries.filter { it != SettingsPage.KIDS || kidChannels != null }
+        // Rechercher › a result: its page's menu item takes the focus (which shows the page).
+        val navFocus = remember { SettingsPage.entries.associateWith { FocusRequester() } }
         Column(Modifier.fillMaxSize().mirazukiBackground().safePadding()) {
             Text("Réglages", fontSize = 44.sp, lineHeight = 50.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.03).em, color = Palette.TextPrimary)
             Row(Modifier.weight(1f).padding(top = 22.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
@@ -407,11 +413,12 @@ fun SettingsDialog(
                         .focusGroup(),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
-                    pages.forEachIndexed { index, item ->
+                    pages.forEach { item ->
                         SettingsNavItem(
                             item.label,
                             current = item == page,
-                            modifier = if (index == 0) Modifier.focusRequester(first) else Modifier,
+                            // Réglages opens on Lecture: Rechercher is right above it.
+                            modifier = Modifier.focusRequester(if (item == SettingsPage.PLAYBACK) first else navFocus.getValue(item)),
                             onFocus = { page = item },
                         )
                     }
@@ -422,6 +429,10 @@ fun SettingsDialog(
                     verticalArrangement = Arrangement.spacedBy(11.dp),
                 ) {
                     when (page) {
+                        SettingsPage.SEARCH -> SettingsSearch(pages = pages.map { it.name }.toSet()) { name ->
+                            val target = SettingsPage.valueOf(name)
+                            (if (target == SettingsPage.PLAYBACK) first else navFocus.getValue(target)).tryRequestFocus()
+                        }
                         SettingsPage.PLAYBACK -> {
                             SettingCard("Lecture automatique", "À la fin d’une vidéo, la suivante démarre après un court compte à rebours.") {
                                 Choice("Activée", settings.autoplay) { onSettings(settings.copy(autoplay = true)) }
@@ -437,7 +448,12 @@ fun SettingsDialog(
                             }
                         }
                         SettingsPage.DISPLAY -> {
-                            SettingCard("Apparence", "Auto : clair de 7 h 30 à 19 h 30, sombre le reste du temps.") {
+                            val miryo = dev.miraiijo.lumentube.link.MirazukiLook.current != null
+                            SettingCard(
+                                "Apparence",
+                                if (miryo) "Comme miryo suit le profil de miryo. Auto : clair de 7 h à 20 h." else "Auto : clair de 7 h à 20 h, sombre le reste du temps.",
+                            ) {
+                                if (miryo || settings.appearance == 3) Choice("Comme miryo", settings.appearance == 3) { onSettings(settings.copy(appearance = 3)) }
                                 Choice("Jour", settings.appearance == 1) { onSettings(settings.copy(appearance = 1)) }
                                 Choice("Nuit", settings.appearance == 2) { onSettings(settings.copy(appearance = 2)) }
                                 Choice("Auto", settings.appearance == 0) { onSettings(settings.copy(appearance = 0)) }
@@ -460,24 +476,38 @@ fun SettingsDialog(
                                 Choice("Désactivé", !settings.remote) { onSettings(settings.copy(remote = false)) }
                                 MirazukiButton("Lier un téléphone", modifier = Modifier.focusRequester(pair), icon = MirazukiIcon.PLUS, onClick = onPair)
                             }
-                            // Opening miryo tube from the background needs the overlay permission (adb, once).
+                            // Opening miryo tube from the background needs the overlay permission: Android's
+                            // screen for it, read again while it is open (no lifecycle event to wait for here).
                             val context = androidx.compose.ui.platform.LocalContext.current
-                            val canOpen = remember(settings.backgroundCast) { android.provider.Settings.canDrawOverlays(context) }
+                            var canOpen by remember { mutableStateOf(android.provider.Settings.canDrawOverlays(context)) }
+                            if (settings.backgroundCast && !canOpen) LaunchedEffect(Unit) {
+                                while (!canOpen) {
+                                    kotlinx.coroutines.delay(1_500)
+                                    canOpen = android.provider.Settings.canDrawOverlays(context)
+                                }
+                            }
                             SettingCard(
                                 "Recevoir même miryo tube fermé",
                                 if (settings.backgroundCast && !canOpen) {
-                                    "Autorisation à donner une fois depuis l’ordinateur : adb shell appops set dev.miraiijo.lumentube SYSTEM_ALERT_WINDOW allow"
+                                    "Une autorisation d’Android est nécessaire une fois : « Autoriser », puis active miryo tube."
                                 } else {
                                     "miryo tube reste prêt en arrière-plan et s’ouvre quand le téléphone envoie une vidéo. Garde environ 50 à 80 Mo de mémoire."
                                 },
                             ) {
                                 Choice("Activé", settings.backgroundCast) { onSettings(settings.copy(backgroundCast = true, remote = true)) }
                                 Choice("Désactivé", !settings.backgroundCast) { onSettings(settings.copy(backgroundCast = false)) }
+                                if (settings.backgroundCast && !canOpen) MirazukiButton("Autoriser", contentColor = Palette.ChipText) { openOverlayPermission(context) }
                             }
                         }
                         SettingsPage.ACCOUNT -> {
-                            SettingCard("Compte YouTube", "Les autres comptes liés restent sur la box (« Qui regarde ? »).") {
-                                MirazukiButton("Se déconnecter de ${accountName.orEmpty()}", icon = MirazukiIcon.CLOSE, onClick = onSignOut)
+                            if (accountName != null) {
+                                SettingCard("Compte YouTube", "Les autres comptes liés restent sur la box (« Qui regarde ? »).") {
+                                    MirazukiButton("Se déconnecter de $accountName", icon = MirazukiIcon.CLOSE, onClick = onSignOut)
+                                }
+                            } else {
+                                SettingCard("Compte YouTube", "Pour retrouver tes abonnements, ton historique et tes playlists. Un code s’affiche, à saisir sur le téléphone.") {
+                                    MirazukiButton("Se connecter", icon = MirazukiIcon.PLUS, contentColor = Palette.ChipText, onClick = onSignIn)
+                                }
                             }
                         }
                         SettingsPage.KIDS -> {
@@ -495,8 +525,12 @@ fun SettingsDialog(
                                     }
                                 }
                             }
-                            SettingCard("Code parent", "Demandé pour quitter le profil enfant. Le profil enfant de miryo se quitte dans miryo.") {
-                                MirazukiButton("Changer le code", contentColor = Palette.ChipText, onClick = onChangeKidsPin)
+                            SettingCard(
+                                "Code parent",
+                                if (kidsMiryoCode) "C'est le code parental de miryo. Il se change dans miryo › Réglages › Contrôle parental."
+                                else "Demandé pour quitter le profil enfant. Le profil enfant de miryo se quitte dans miryo.",
+                            ) {
+                                if (!kidsMiryoCode) MirazukiButton("Changer le code", contentColor = Palette.ChipText, onClick = onChangeKidsPin)
                                 MirazukiButton("Supprimer le profil enfant", icon = MirazukiIcon.CLOSE, onClick = onDeleteKids)
                             }
                         }
@@ -557,6 +591,73 @@ fun SettingsDialog(
         LaunchedEffect(Unit) {
             withFrameNanos { }
             first.tryRequestFocus()
+        }
+    }
+}
+
+/**
+ * Réglages › Rechercher: a pill that opens the keyboard, then the matching settings (SettingsIndex),
+ * « name · page »; OK on one goes to its page.
+ */
+@Composable
+private fun SettingsSearch(pages: Set<String>, onOpen: (String) -> Unit) {
+    val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+    var text by remember { mutableStateOf("") }
+    var editing by remember { mutableStateOf(false) }
+    val pill = remember { FocusRequester() }
+    val field = remember { FocusRequester() }
+    val hits = remember(text, pages) { SettingsIndex.search(text, pages) }
+    fun done() {
+        keyboard?.hide()
+        editing = false
+        pill.tryRequestFocus()
+    }
+    SettingCard("Rechercher un réglage", if (text.isBlank()) "Par exemple : sombre, volume, bêta, enfant, téléphone." else if (hits.isEmpty()) "Aucun réglage ne correspond." else "OK sur un réglage ouvre sa page.") {
+        Surface(
+            onClick = { editing = true },
+            modifier = Modifier.width(440.dp).height(48.dp).focusRequester(pill),
+            shape = ClickableSurfaceDefaults.shape(shape = CircleShape),
+            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f, pressedScale = 1f),
+            colors = ClickableSurfaceDefaults.colors(
+                containerColor = Palette.ControlIdle,
+                contentColor = Palette.TextPrimary,
+                focusedContainerColor = Palette.ControlIdle,
+                focusedContentColor = Palette.TextPrimary,
+            ),
+            border = ClickableSurfaceDefaults.border(
+                focusedBorder = androidx.tv.material3.Border(androidx.compose.foundation.BorderStroke(2.dp, Palette.FocusRing), shape = CircleShape),
+            ),
+        ) {
+            Row(Modifier.fillMaxSize().padding(horizontal = 18.dp), verticalAlignment = Alignment.CenterVertically) {
+                Icon(MirazukiIcon.SEARCH, size = 16.dp, color = Palette.TextSecondary)
+                Spacer(Modifier.width(12.dp))
+                if (editing) {
+                    androidx.compose.foundation.text.BasicTextField(
+                        value = text,
+                        onValueChange = { text = it.take(40) },
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Palette.TextPrimary, fontSize = 18.sp, fontFamily = InterFamily),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Palette.Highlight),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
+                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { done() }, onDone = { done() }),
+                        modifier = Modifier.weight(1f).focusRequester(field),
+                    )
+                    LaunchedEffect(Unit) {
+                        withFrameNanos { }
+                        field.tryRequestFocus()
+                        // As in Rechercher: the box ignored a keyboard asked for at once.
+                        kotlinx.coroutines.delay(150)
+                        keyboard?.show()
+                    }
+                } else {
+                    Text(text.ifBlank { "Nom d’un réglage" }, fontSize = 18.sp, color = if (text.isBlank()) Palette.TextSecondary else Palette.TextPrimary, maxLines = 1)
+                }
+            }
+        }
+    }
+    hits.forEach { hit ->
+        SettingCard(hit.label, SettingsIndex.PAGES[hit.page].orEmpty()) {
+            MirazukiButton("Ouvrir", contentColor = Palette.ChipText) { onOpen(hit.page) }
         }
     }
 }
@@ -656,3 +757,13 @@ internal fun DialogRow(
     }
 }
 
+
+/** Android's "Afficher par-dessus les autres applis" screen for miryo tube (the general list if a box has no per-app one). */
+private fun openOverlayPermission(context: android.content.Context) {
+    val app = android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION, android.net.Uri.parse("package:${context.packageName}"))
+    val all = android.content.Intent(android.provider.Settings.ACTION_MANAGE_OVERLAY_PERMISSION)
+    for (intent in listOf(app, all)) {
+        if (runCatching { context.startActivity(intent.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess) return
+    }
+    android.widget.Toast.makeText(context, "Cette box n’a pas l’écran d’autorisation : active-le depuis Paramètres › Applications.", android.widget.Toast.LENGTH_LONG).show()
+}

@@ -13,6 +13,8 @@ sealed interface PinResult {
     data object Ok : PinResult
     data object Wrong : PinResult
     data class Locked(val minutes: Int) : PinResult
+    /** miryo couldn't check the code this time (its Keystore was busy): try again. */
+    data object Unavailable : PinResult
 }
 
 /**
@@ -23,9 +25,26 @@ sealed interface PinResult {
  * [MAX_TRIES] the code is refused for [LOCK_MS] (the 10 000 codes can't be tried in a row).
  */
 class KidsStore(context: Context) {
-    private val prefs = context.applicationContext.getSharedPreferences("kids", Context.MODE_PRIVATE)
+    private val appContext = context.applicationContext
+    private val prefs = appContext.getSharedPreferences("kids", Context.MODE_PRIVATE)
 
-    val exists: Boolean get() = prefs.getString(KEY_PIN, null) != null
+    /**
+     * miryo has a parental code: it is the suite's, so it guards this kids profile too (one code,
+     * one count of wrong tries). Read with [refreshSuite]; the app's own code is used without miryo.
+     */
+    @Volatile
+    var usesMiryoCode: Boolean = false
+        private set
+
+    /** Reads again whether miryo has a parental code. Blocking (a provider call): off the main thread. */
+    fun refreshSuite() {
+        usesMiryoCode = dev.miraiijo.lumentube.link.MirazukiParental.hasPin(appContext) == true
+    }
+
+    val exists: Boolean get() = prefs.getString(KEY_PIN, null) != null || (prefs.getBoolean(KEY_SUITE, false) && usesMiryoCode)
+
+    /** The kids profile created under miryo's code (no code of its own to choose). */
+    fun createWithMiryoCode() = prefs.edit().putBoolean(KEY_SUITE, true).apply()
 
     var active: Boolean
         get() = prefs.getBoolean(KEY_ACTIVE, false)
@@ -73,6 +92,16 @@ class KidsStore(context: Context) {
 
     /** Checks the parental code, counting wrong ones. Off the main thread. */
     fun verify(pin: String): PinResult {
+        if (usesMiryoCode) {
+            when (val answer = dev.miraiijo.lumentube.link.MirazukiParental.check(appContext, pin)) {
+                dev.miraiijo.lumentube.link.MirazukiParental.Answer.Ok -> return PinResult.Ok
+                dev.miraiijo.lumentube.link.MirazukiParental.Answer.Wrong -> return PinResult.Wrong
+                is dev.miraiijo.lumentube.link.MirazukiParental.Answer.Locked -> return PinResult.Locked(answer.minutes)
+                // Keystore busy on miryo's side: not counted, the same answer as a wrong try would be misleading.
+                dev.miraiijo.lumentube.link.MirazukiParental.Answer.Unavailable -> return PinResult.Unavailable
+                null -> usesMiryoCode = false
+            }
+        }
         val now = System.currentTimeMillis()
         val lockedUntil = prefs.getLong(KEY_LOCKED_UNTIL, 0L)
         // A clock set back never extends the lock beyond LOCK_MS.
@@ -98,6 +127,7 @@ class KidsStore(context: Context) {
 
     private companion object {
         const val KEY_PIN = "pin"
+        const val KEY_SUITE = "suite_code"
         const val KEY_ACTIVE = "active"
         const val KEY_FROM_MIRAZUKI = "from_lumen"
         const val KEY_PREVIOUS = "previous_account"

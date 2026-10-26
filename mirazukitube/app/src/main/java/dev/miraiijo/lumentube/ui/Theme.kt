@@ -168,41 +168,49 @@ private val MirazukiTypography: Typography = Typography().let { t ->
     )
 }
 
-/** "Apparence": Auto (day from 7:30 to 19:30, night otherwise), Jour, Nuit. */
-enum class Appearance { AUTO, DAY, NIGHT }
+/**
+ * "Apparence": Auto (day from 7 h to 20 h, like miryo without a city), Jour, Nuit, and Comme miryo
+ * (the look of miryo's current profile, its sun included; Auto without miryo). Stored by ordinal.
+ */
+enum class Appearance { AUTO, DAY, NIGHT, MIRYO }
 
-/** Day or night now, for Auto (re-checked every minute). */
-private fun isDaytime(): Boolean {
-    val now = java.util.Calendar.getInstance()
-    val minutes = now.get(java.util.Calendar.HOUR_OF_DAY) * 60 + now.get(java.util.Calendar.MINUTE)
-    return minutes in DAY_START_MIN until DAY_END_MIN
+/** The stored "Apparence" for a new install: Comme miryo. */
+const val APPEARANCE_DEFAULT = 3
+
+/** Day or night now, for Auto / Comme miryo (re-checked every minute). */
+private fun isDaytime(appearance: Appearance = Appearance.AUTO): Boolean {
+    val now = java.time.LocalDateTime.now()
+    if (appearance == Appearance.MIRYO) dev.miraiijo.lumentube.link.MirazukiLook.current?.let { return it.isLight(now) }
+    return (now.hour * 60 + now.minute) in DAY_START_MIN until DAY_END_MIN
 }
 
 /**
- * The window's color for an "Apparence" setting (0 = Auto, 1 = Jour, 2 = Nuit): set before Compose
+ * The window's color for an "Apparence" setting (0 = Auto, 1 = Jour, 2 = Nuit, 3 = Comme miryo): set before Compose
  * draws its first frame, so a day start never flashes black.
  */
-fun windowBackground(appearance: Int): Color = when (Appearance.entries.getOrElse(appearance) { Appearance.AUTO }) {
+fun windowBackground(appearance: Int): Color = when (val mode = Appearance.entries.getOrElse(appearance) { Appearance.AUTO }) {
     Appearance.DAY -> DayColors.background
     Appearance.NIGHT -> NightColors.background
-    Appearance.AUTO -> if (isDaytime()) DayColors.background else NightColors.background
+    Appearance.AUTO, Appearance.MIRYO -> if (isDaytime(mode)) DayColors.background else NightColors.background
 }
 
-private const val DAY_START_MIN = 7 * 60 + 30
+private const val DAY_START_MIN = 7 * 60
 /** "Taille de l'interface", in %: from [UI_SCALE_MIN] to [UI_SCALE_MAX] by [UI_SCALE_STEP]. */
 const val UI_SCALE_DEFAULT = 100
 const val UI_SCALE_MIN = 60
 const val UI_SCALE_MAX = 120
 const val UI_SCALE_STEP = 5
-private const val DAY_END_MIN = 19 * 60 + 30
+private const val DAY_END_MIN = 20 * 60
 
 @Composable
 fun MirazukiTubeTheme(appearance: Appearance = Appearance.NIGHT, uiScale: Int = UI_SCALE_DEFAULT, content: @Composable () -> Unit) {
-    var daytime by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(isDaytime()) }
-    if (appearance == Appearance.AUTO) {
-        androidx.compose.runtime.LaunchedEffect(Unit) {
+    var daytime by androidx.compose.runtime.remember { androidx.compose.runtime.mutableStateOf(isDaytime(appearance)) }
+    // Comme miryo: read again as soon as miryo's look is (it is Compose state).
+    val miryoLook = dev.miraiijo.lumentube.link.MirazukiLook.current
+    if (appearance == Appearance.AUTO || appearance == Appearance.MIRYO) {
+        androidx.compose.runtime.LaunchedEffect(appearance, miryoLook) {
             while (true) {
-                daytime = isDaytime()
+                daytime = isDaytime(appearance)
                 kotlinx.coroutines.delay(60_000)
             }
         }
@@ -210,7 +218,7 @@ fun MirazukiTubeTheme(appearance: Appearance = Appearance.NIGHT, uiScale: Int = 
     val light = when (appearance) {
         Appearance.DAY -> true
         Appearance.NIGHT -> false
-        Appearance.AUTO -> daytime
+        Appearance.AUTO, Appearance.MIRYO -> daytime
     }
     val target = if (light) DayColors else NightColors
     androidx.compose.runtime.SideEffect {
