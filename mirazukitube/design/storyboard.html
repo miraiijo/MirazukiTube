@@ -343,7 +343,7 @@ svg{display:block}
 </style>
 
 <div class="wrap">
-  <div class="eyebrow">Storyboard · miryo tube · 1.0 bêta 2</div>
+  <div class="eyebrow">Storyboard · miryo tube · 1.0 bêta 16</div>
   <h1>miryo tube</h1>
   <p class="lead">Chaque écran est montré en Jour et en Nuit, sur un canevas de 1080 × 608 (une TV 1080p de 960 × 540 dp, l’interface à sa taille par défaut de 100 %). « Zone sûre » trace la marge que les TV peuvent rogner (48 dp sur les côtés et en bas, 32 dp en haut) : rien d’important n’en sort. Les séquences se rejouent touche par touche : clique une étape, ou lance la lecture. Libellés, ordre, tailles et couleurs viennent du code actuel de miryo tube (thème Opale de miryo, fond « Neutre »). Chaînes, vidéos et comptes sont des exemples inventés.</p>
   <p class="lead">miryo tube marche seul. Quand le launcher miryo est installé et que son certificat correspond à celui attendu, miryo tube lui fournit en plus ses rangées YouTube (dernier écran).</p>
@@ -364,7 +364,7 @@ svg{display:block}
   <section class="screen" id="demarrage">
     <div class="eyebrow">Référence</div>
     <h2>Démarrage</h2>
-    <p class="lead"><span class="status">En place</span> dans la prochaine bêta : l'animation du logo miryo tube. au lancement (BrandIntro). Elle tourne ici en boucle.</p>
+    <p class="lead"><span class="status">En place</span> dans la 1.0 bêta 16 : l'animation du logo miryo tube. au lancement (BrandIntro). Elle tourne ici en boucle.</p>
     <style>
 #demarrage .intro-stage{position:relative;aspect-ratio:16/9;max-width:640px;background:#10121A;border-radius:14px;display:grid;place-items:center;overflow:hidden}
 #demarrage .intro-lockup{position:relative;width:368px;height:102px;animation:i-center 3600ms infinite;}
@@ -478,7 +478,13 @@ const R_PLV=[['Le tour du lac Blanc','Rando Alpine','22:40',140],['Trois jours �
 const TABS=[['home','Pour toi'],['subs','Abonnements'],['music','Musique'],['gaming','Gaming'],['news','Actus'],['sport','Sport'],['live','Direct'],['hist','Historique'],['pl','Playlists']];
 // Apparence: one round button showing the current look (« A » Auto, sun Jour, moon Nuit); OK: the next one.
 const apBtn=()=>`<div class="rb" data-id="btn-ap"><span class="apa" data-id="ap-a">A</span><span class="api" data-id="ap-d">${I.sun}</span><span class="api" data-id="ap-n">${I.moon}</span></div>`;
+// ALIGN (section « Cohérence avec miryo »): miryo's bar: profile far left, Apparence as miryo's
+// half moon, weather before the time.
+let ALIGN=0;
+const alignView=v=>()=>{ALIGN=1;try{return V[v]()}finally{ALIGN=0}};
 function header(cur,o={}){
+ if(ALIGN)return `<div class="hdr"><div class="lft"><div class="rb av" data-id="btn-acc">${av('Moi',30,13,'hav')}</div><div class="tabs"><div class="tin" data-id="tin" data-grp="tb">${TABS.map(([id,l])=>`<div class="tab ${id===cur?'sel':''}" data-id="tab-${id}">${l}</div>`).join('')}</div></div><div class="rb" data-id="btn-search">${I.search}</div></div>
+ <div class="right"><div class="rb" data-id="btn-ap"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg></div><div class="rb" data-id="btn-set">${I.gear}<i class="tg udot" data-id="udot"></i></div><div style="display:flex;gap:5px;align-items:center;font-size:13px;font-weight:600"><svg viewBox="0 0 24 24" fill="currentColor" style="width:15px;height:15px"><path d="M7 19a5 5 0 0 1-.6-10A6.5 6.5 0 0 1 19 9.6 4.7 4.7 0 0 1 18 19z"/></svg><span>12°</span></div><div class="clock">20:45</div></div></div>`;
  return `<div class="hdr"><div class="lft"><div class="tabs"><div class="tin" data-id="tin" data-grp="tb">${TABS.map(([id,l])=>`<div class="tab ${id===cur?'sel':''}" data-id="tab-${id}">${l}</div>`).join('')}</div></div><div class="rb" data-id="btn-search">${I.search}</div></div>
  <div class="right">${o.mini?`<div class="btn glass" data-id="btn-now">${I.pip}Lecture en cours</div>`:''}<div class="rb av" data-id="btn-acc">${av('Moi',30,13,'hav')}</div>${apBtn()}<div class="rb" data-id="btn-set">${I.gear}<i class="tg udot" data-id="udot"></i></div><div class="clock">20:45</div></div></div>`;
 }
@@ -502,6 +508,7 @@ const cardMenu=(v=R_RECO[2])=>`<div class="ovl pop tg full" data-id="cmenu"><div
  ${[[I.play,'Lire'],[I.history,'À regarder plus tard'],[I.user,'Ouvrir la chaîne'],[I.eyeoff,'Pas intéressé'],[I.close,'Ne pas recommander cette chaîne']].map(([ic,l],i)=>`<div class="drow" data-id="cm-${i}">${ic}<span>${l}</span></div>`).join('')}
  </div></div></div>`;
 const HOME_ROWS=[['Reprendre',R_RESUME],['Recommandations',R_RECO],['Nouveautés des abonnements',R_SUBS],['Musique · Titres du moment',R_MUSIC]];
+V.homeAl=alignView('home');
 V.home=()=>`${header('home')}
  <div class="rows" data-id="pg-home"><div class="rin" data-id="rin">${rowsOf(HOME_ROWS,'h')}</div></div>
  <div class="rows" data-id="pg-gaming" style="opacity:0"><div class="rin">${rowsOf([['Jeux en direct',R_G1],['Vidéos de jeux populaires',R_G2]],'g')}</div></div>
@@ -815,6 +822,12 @@ const SCREENS=[
  {k:'⟳',t:'Exemple stable',txt:{'u-msg':'Nouvelle version : 1.0.','u-ft':'STABLE · 1.0','u-notes':'Version stable.','u-inst-l':'Installer 1.0'},st:{'u-found':SHOW},n:'Exemple : quand une 1.0 stable sera publiée, elle sera proposée, marquée STABLE.'},
  {k:'▼',t:'Bas',f:'u-inst'},
  {k:'OK',t:'Installer',txt:{'u-inst-l':'Téléchargement… 46 %'},n:'Téléchargement (progression par pas de 2 %), puis taille, empreinte SHA-256, paquet, version et certificat vérifiés ; l’installateur d’Android demande ensuite confirmation.'},
+ ]},
+{id:'coherence',status:'Prévu',title:'Cohérence avec miryo',desc:'La barre alignée sur celle de miryo, en avant / après : le compte tout à gauche, Apparence avec la demi-lune de miryo (au lieu de « A »), la météo avant l’heure. Le reste (anneau de focus à 35 %, boutons de 30 dp, verre liquide) est déjà commun.',
+ notes:['Référence : la barre de miryo (Opale et Horizon).','Les onglets ne bougent plus quand le focus ou la sélection change : leur largeur est celle du texte en gras.'],
+ steps:[
+ {view:'home',f:'tab-home',k:'1',t:'Accueil · avant',n:'Compte à droite, Apparence « A », pas de météo.'},
+ {view:'homeAl',f:'tab-home',k:'1',t:'Accueil · après',n:'Compte à gauche, demi-lune, météo puis heure, comme miryo.'},
  ]},
 {id:'mirazuki',title:'Dans miryo',desc:'miryo tube marche seul. Quand le launcher miryo est installé et que son certificat correspond à l’empreinte attendue, miryo tube lui fournit ses rangées « À reprendre » et « Abonnements », pour le compte choisi dans miryo. OK dans miryo ouvre la vidéo directement dans miryo tube.',
  notes:['Fournisseur en lecture seule (contrat mirazuki-link v3, données v2) : /continue, /subscriptions, /search et /accounts, réservés au paquet de miryo signé avec le certificat attendu. Empreintes vides : aucun lien.','miryo n’attend jamais : les rangées viennent du cache tout de suite ; trop vieilles (30 min), elles sont rafraîchies en fond, une seule fois à la fois, et miryo est prévenu.','« Sans Qui regarde ? » et le compte choisi ne valent que pour un lien venu de miryo (paquet et certificat) ; d’une autre appli, la vidéo s’ouvre normalement.','La vidéo lancée depuis miryo est créditée au compte choisi dans miryo (historique, position) ; à l’arrêt, miryo tube revient à son propre compte.','L’écran de miryo est esquissé : seules les rangées fournies par miryo tube sont le sujet ici.'],
