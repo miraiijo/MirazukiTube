@@ -24,6 +24,7 @@ object SettingsIndex {
         e("Volume stable", "PLAYBACK", "volume", "son", "fort", "niveau sonore"),
         e("Petite fenêtre (image dans l'image)", "PLAYBACK", "pip", "image dans l'image", "arrière-plan", "réduire", "fenêtre", "accueil"),
         e("Apparence (Jour, Nuit, Auto, Comme miryo)", "DISPLAY", "thème", "clair", "sombre", "mode sombre", "nuit", "jour", "miryo"),
+        e("Sons de navigation", "DISPLAY", "son", "sons", "clic", "bip", "bruit", "touches", "télécommande", "muet", "couper"),
         e("Taille de l'interface", "DISPLAY", "taille", "zoom", "grand", "petit", "texte", "lisible"),
         e("DeArrow (titres sans racolage)", "DISPLAY", "titres", "miniatures", "clickbait", "racolage"),
         e("Regarder sur la TV (depuis le téléphone)", "PHONE", "cast", "caster", "envoyer", "télécommande", "youtube du téléphone", "chromecast"),

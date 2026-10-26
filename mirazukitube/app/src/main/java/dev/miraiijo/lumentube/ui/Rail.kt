@@ -470,6 +470,14 @@ fun SettingsDialog(
                                 Choice("Nuit", settings.appearance == 2) { onSettings(settings.copy(appearance = 2)) }
                                 Choice("Auto", settings.appearance == 0) { onSettings(settings.copy(appearance = 0)) }
                             }
+                            SettingCard(
+                                "Sons de navigation",
+                                if (miryo) "Le petit clic des flèches et de OK. Comme miryo suit son réglage." else "Le petit clic des flèches et de OK de la télécommande.",
+                            ) {
+                                if (miryo) Choice("Comme miryo", settings.navSounds == 0) { onSettings(settings.copy(navSounds = 0)) }
+                                Choice("Activés", settings.navSounds == 1 || (!miryo && settings.navSounds == 0)) { onSettings(settings.copy(navSounds = 1)) }
+                                Choice("Coupés", settings.navSounds == 2) { onSettings(settings.copy(navSounds = 2)) }
+                            }
                             // The size in the title: the pills never move under the focus as it changes.
                             val size = settings.uiScale
                             SettingCard("Taille de l’interface · $size %", "De $UI_SCALE_MIN à $UI_SCALE_MAX % par pas de $UI_SCALE_STEP %, appliqué tout de suite. Par défaut : $UI_SCALE_DEFAULT %.") {

@@ -77,11 +77,16 @@ class PlayerPrefs(context: Context) {
     var background: String
         get() = prefs.getString(KEY_BACKGROUND, null)?.takeIf { it in PictureInPicture.all } ?: PictureInPicture.HOME
         set(value) = prefs.edit().putString(KEY_BACKGROUND, value).apply()
+    /** "Sons de navigation": 0 = Comme miryo (the default), 1 = Activés, 2 = Coupés. */
+    var navSounds: Int
+        get() = prefs.getInt(KEY_NAV_SOUNDS, 0)
+        set(value) = prefs.edit().putInt(KEY_NAV_SOUNDS, value).apply()
 
     fun settings() = Settings(
         sponsorBlock = sponsorBlock, autoplay = autoplay, stableVolume = stableVolume, deArrow = deArrow,
         remote = remote, appearance = appearance, uiScale = uiScale, backgroundCast = backgroundCast,
         background = background,
+        navSounds = navSounds,
     )
 
     private companion object {
@@ -100,5 +105,6 @@ class PlayerPrefs(context: Context) {
         const val KEY_UI_SCALE = "ui_scale"
         const val KEY_BACKGROUND_CAST = "background_cast"
         const val KEY_BACKGROUND = "background"
+        const val KEY_NAV_SOUNDS = "nav_sounds"
     }
 }

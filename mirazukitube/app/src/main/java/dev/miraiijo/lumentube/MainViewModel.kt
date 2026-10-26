@@ -99,7 +99,17 @@ data class Settings(
     val backgroundCast: Boolean = false,
     /** « Petite fenêtre »: when the video goes on in the system's picture-in-picture window (player.PictureInPicture). */
     val background: String = dev.miraiijo.lumentube.player.PictureInPicture.HOME,
-)
+    /** "Sons de navigation": 0 = Comme miryo (the default; on without miryo), 1 = Activés, 2 = Coupés. */
+    val navSounds: Int = 0,
+) {
+    /** The clicks of the remote's arrows and OK are heard. */
+    val navSoundsOn: Boolean
+        get() = when (navSounds) {
+            1 -> true
+            2 -> false
+            else -> dev.miraiijo.lumentube.link.MirazukiLook.current?.navSounds ?: true
+        }
+}
 
 /**
  * Réglages › Mises à jour: the installed version, « Recevoir les versions bêta », and the version
@@ -1234,6 +1244,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         prefs.uiScale = settings.uiScale
         prefs.backgroundCast = settings.backgroundCast
         prefs.background = settings.background
+        prefs.navSounds = settings.navSounds
         if (settings.remote != _state.value.settings.remote) {
             if (settings.remote && foreground) RemoteControl.start(getApplication()) else if (!settings.remote) RemoteControl.stop()
         }
