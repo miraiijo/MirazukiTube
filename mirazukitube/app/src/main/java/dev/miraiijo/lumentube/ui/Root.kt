@@ -145,6 +145,8 @@ fun Root(vm: MainViewModel) {
             .mirazukiBackground()
             // Shortcut: the remote's play / pause key brings the small window back to full screen.
             .onPreviewKeyEvent { event ->
+                // Profile switch: nothing moves under the cover (it lifts within 1.5 s).
+                if (state.switchingTo != null) return@onPreviewKeyEvent true
                 val native = event.nativeKeyEvent
                 if (native.action != android.view.KeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
                 // An arrow held down (like YouTube's TV app): the focus walks on at a steady pace,
@@ -294,6 +296,7 @@ fun Root(vm: MainViewModel) {
             }
         }
         }
+        ProfileSwitchCover(state.switchingTo)
         // Sign-in and pairing open over the dialog they come from ("Qui regarde ?", Réglages): a
         // dialog is its own window, the one composed last is on top.
         if (state.choosingAccount || state.accountsOpen) {
