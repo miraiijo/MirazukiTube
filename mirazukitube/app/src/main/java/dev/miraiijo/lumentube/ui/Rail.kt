@@ -823,3 +823,44 @@ private fun openOverlayPermission(context: android.content.Context) {
     }
     android.widget.Toast.makeText(context, "Cette box n’a pas l’écran d’autorisation : active-le depuis Paramètres › Applications.", android.widget.Toast.LENGTH_LONG).show()
 }
+
+/**
+ * Profile switch: covers the page at once (no fade in, so the previous account's rows and name
+ * never show) with the new profile's picture and name, then fades out once its Accueil is in.
+ * One opaque layer and an alpha: light on the Freebox Player POP.
+ */
+@Composable
+fun ProfileSwitchCover(cover: dev.miraiijo.lumentube.SwitchCover?) {
+    var shown by remember { mutableStateOf(cover) }
+    val alpha = remember { androidx.compose.animation.core.Animatable(0f) }
+    LaunchedEffect(cover) {
+        if (cover != null) {
+            shown = cover
+            alpha.snapTo(1f)
+        } else if (alpha.value > 0f) {
+            alpha.animateTo(0f, tween(SWITCH_FADE_MS))
+            shown = null
+        }
+    }
+    val current = cover ?: shown ?: return
+    // Visible from the first frame the cover is set (the effect above runs one frame later).
+    val visible = if (cover != null) 1f else alpha.value
+    if (visible <= 0f) return
+    Column(
+        Modifier.fillMaxSize().graphicsLayer { this.alpha = visible }.mirazukiBackground(),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        when (current.kind) {
+            dev.miraiijo.lumentube.SwitchCover.Kind.ACCOUNT -> AvatarPicture(current.avatar, current.name, SWITCH_AVATAR, 52.sp)
+            else -> Box(Modifier.size(SWITCH_AVATAR).clip(CircleShape).background(Palette.ControlIdle), contentAlignment = Alignment.Center) {
+                Icon(if (current.kind == dev.miraiijo.lumentube.SwitchCover.Kind.KIDS) MirazukiIcon.SMILE else MirazukiIcon.USER, size = 48.dp)
+            }
+        }
+        Spacer(Modifier.height(24.dp))
+        Text(current.name, fontSize = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.03).em, color = Palette.TextPrimary)
+    }
+}
+
+private val SWITCH_AVATAR = 132.dp
+private const val SWITCH_FADE_MS = 220
