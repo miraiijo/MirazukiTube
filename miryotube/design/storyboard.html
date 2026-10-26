@@ -609,7 +609,6 @@ V.set=()=>`<div class="stitle">Réglages</div>
   ${scard('Lecture automatique',choice('la',['Activée','Désactivée'],0,'la'),'À la fin d’une vidéo, la suivante démarre après un court compte à rebours.')}
   ${scard('Passer les sponsors (SponsorBlock)',choice('lb',['Activé','Désactivé'],0,'lb'),'Sponsors, autopromo et rappels d’abonnement sautés automatiquement.')}
   ${scard('Volume stable',choice('lc',['Activé','Désactivé'],1,'lc'),'Même niveau sonore d’une vidéo à l’autre.')}
-  ${scard('Petite fenêtre (image dans l’image)',choice('pf',['Accueil','Accueil ou Retour','Retour','Désactivée'],0,'pf'),'La vidéo continue dans un coin de l’écran, par-dessus miryo ou une autre appli, avec la touche choisie (si elle est en pause, elle s’arrête). ▶︎ ⏸ de la télécommande la met en pause, rouvrir miryo tube la remet en plein écran.')}</div>
  <div class="spage" data-id="sp-1" style="opacity:0">
   ${scard('Apparence',choice('ap',['Comme miryo','Jour','Nuit','Auto'],0,'ap'),'Comme miryo suit le profil de miryo. Auto : clair de 7 h à 20 h.')}
   ${scard('Sons de navigation',choice('ns',['Comme miryo','Activés','Coupés'],0,'ns'),'Le petit clic des flèches et de OK. Comme miryo suit son réglage.')}
@@ -802,7 +801,7 @@ const SCREENS=[
  {k:'⌂',t:'Accueil',view:'syspip',f:null,on:[],n:'La vidéo continue dans la fenêtre, par-dessus miryo, avec le son.'},
  {k:'⏯',t:'Pause',f:null,n:'▶︎ ⏸ de la télécommande : pause, puis reprise.'},
  {k:'OK',t:'miryo tube',view:'player',f:'pb',on:['ctl'],n:'Rouvrir miryo tube depuis miryo : plein écran à la même position.'},
- {view:'set',f:'pf-1',k:'OK',t:'Réglage',sel:{pf:'pf-1'},n:'Réglages › Lecture › Petite fenêtre : Accueil (par défaut), Accueil ou Retour, Retour, Désactivée. Absent si la box ne propose pas l’image dans l’image.'},
+ {view:'set',f:null,k:'—',t:'Plus de réglage',n:'Plus de réglage « Petite fenêtre » (1.0 bêta 22) : le bouton du lecteur met la vidéo dans un coin, Retour ferme toujours le lecteur, Accueil ouvre l’image dans l’image d’Android si la box le propose.'},
  ]},
 {id:'petite-fenetre',title:'Petite fenêtre',desc:'Le bouton petite fenêtre réduit la vidéo dans le coin en bas à droite (un tiers de la largeur, 16:9) : elle continue pendant qu’on parcourt les pages. Fenêtre interne à miryo tube, pas l’image dans l’image d’Android (Accueil depuis la petite fenêtre ouvre celle d’Android, voir « Image dans l’image »).',
  notes:['Passage en petite fenêtre et retour en plein écran : un voile court à la couleur de la page (0,14 s puis 0,22 s) pendant que la vidéo change de taille, plus de saut d’image ni de l’en-tête qui gagne « Lecture en cours ».','La petite fenêtre ne capte ni Gauche / Droite ni OK : la page garde la télécommande. Avec elle, le message du bas passe à gauche.','« Lecture en cours » apparaît dans l’en-tête avant les boutons ronds ; les onglets défilent s’ils manquent de place.'],

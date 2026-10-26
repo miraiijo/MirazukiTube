@@ -135,10 +135,10 @@ class MainActivity : ComponentActivity() {
         MiryoPip.tell(this, false)
     }
 
-    /** Accueil during a video: the system's window, if chosen (Réglages › Lecture › Petite fenêtre). */
+    /** Accueil during a video: the system's window, over miryo (if the box offers it). */
     override fun onUserLeaveHint() {
         super.onUserLeaveHint()
-        if (leftByUser() && PictureInPicture.onHome(vm.state.value.settings.background)) enterPip()
+        if (leftByUser()) enterPip()
     }
 
     /** When this app last opened a screen of its own (installer, Android's settings, dictation). */

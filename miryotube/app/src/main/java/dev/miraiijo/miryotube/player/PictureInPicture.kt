@@ -61,22 +61,8 @@ object PictureInPicture {
         session = player?.let { PipSession(context.applicationContext, it) }
     }
 
-    /** « Petite fenêtre » choices, as in miryo iptv. */
-    const val OFF = "off"
+    /** Former « Petite fenêtre » setting value (kept only so that saved settings still read). */
     const val HOME = "pip_home"
-    const val HOME_BACK = "pip_home_back"
-    const val BACK = "pip_back"
-    val all = listOf(HOME, HOME_BACK, BACK, OFF)
-
-    fun label(mode: String) = when (mode) {
-        HOME -> "Accueil"
-        HOME_BACK -> "Accueil ou Retour"
-        BACK -> "Retour"
-        else -> "Désactivée"
-    }
-
-    fun onHome(mode: String) = mode == HOME || mode == HOME_BACK
-    fun onBack(mode: String) = mode == BACK || mode == HOME_BACK
 }
 
 /**

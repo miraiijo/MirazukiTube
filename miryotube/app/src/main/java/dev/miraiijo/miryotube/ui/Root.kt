@@ -433,12 +433,10 @@ fun Root(vm: MainViewModel) {
                     // (never the pages in a corner of the screen).
                     if (PictureInPicture.active) PictureInPicture.dismiss()
                 },
-                // Retour: the system's window when chosen (Réglages › Lecture › Petite fenêtre).
+                // Retour closes the player and stays in miryo tube (the bar's button gives the small window).
                 onBack = {
-                    if (!(PictureInPicture.onBack(state.settings.background) && PictureInPicture.enter())) {
-                        vm.stopPlaying()
-                        returnFocusTick++
-                    }
+                    vm.stopPlaying()
+                    returnFocusTick++
                 },
                 // In the system's window too: no controls nor panels, only the video.
                 minimized = state.minimized || PictureInPicture.active,

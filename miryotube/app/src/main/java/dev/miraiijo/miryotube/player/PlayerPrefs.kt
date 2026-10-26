@@ -75,7 +75,7 @@ class PlayerPrefs(context: Context) {
 
     /** « Petite fenêtre » (PictureInPicture.HOME…): Accueil by default, as in miryo iptv. */
     var background: String
-        get() = prefs.getString(KEY_BACKGROUND, null)?.takeIf { it in PictureInPicture.all } ?: PictureInPicture.HOME
+        get() = prefs.getString(KEY_BACKGROUND, null) ?: PictureInPicture.HOME
         set(value) = prefs.edit().putString(KEY_BACKGROUND, value).apply()
     /** "Sons de navigation": 0 = Comme miryo (the default), 1 = Activés, 2 = Coupés. */
     var navSounds: Int
