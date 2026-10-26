@@ -1,0 +1,82 @@
+import org.jetbrains.kotlin.gradle.dsl.JvmTarget
+import org.jetbrains.kotlin.gradle.dsl.KotlinVersion
+import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
+
+// SmartTube's shared versions (minSdk, compileSdk, library versions) on the root project, like
+// SmartTube's own root build: the ExoPlayer modules read them through project.properties.
+apply from: new File(gradle.ext.upstreamRoot, 'SharedModules/constants.gradle')
+
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+        gradlePluginPortal()
+    }
+    dependencies {
+        classpath 'com.android.tools.build:gradle:9.4.1'
+        classpath 'org.jetbrains.kotlin:kotlin-gradle-plugin:2.4.21'
+        classpath 'org.jetbrains.kotlin:compose-compiler-gradle-plugin:2.4.21'
+    }
+}
+
+allprojects {
+    repositories {
+        google()
+        mavenCentral()
+        maven { url 'https://jitpack.io' }
+    }
+    configurations.configureEach {
+        resolutionStrategy {
+            // Same pins as SmartTube's build: the engine is written against OkHttp 3.
+            force 'com.squareup.okhttp3:okhttp:3.12.13'
+            force 'com.squareup.okhttp3:okhttp-dnsoverhttps:3.12.13'
+            force 'com.squareup.okhttp3:logging-interceptor:3.12.13'
+            // Same as SmartTube: the Cronet API must match the embedded Cronet (105), else it crashes at runtime.
+            force 'org.chromium.net:cronet-api:105.5195.68'
+            eachDependency { details ->
+                // Upstream asks for kotlinx-coroutines "1.8.10" (its Kotlin version, not a coroutines one).
+                // Only that bogus version is replaced: Compose and lifecycle keep the version they need.
+                if (details.requested.group == 'org.jetbrains.kotlinx' && details.requested.name.startsWith('kotlinx-coroutines') && details.requested.version == '1.8.10') {
+                    details.useVersion '1.8.1'
+                }
+            }
+        }
+        // SmartTube replaces leanback with a modded copy; miryo tube doesn't use leanback at all.
+        exclude group: 'androidx.leanback', module: 'leanback'
+    }
+}
+
+/*
+ * Upstream modules are written for AGP 7. Instead of editing them (merge conflicts at every
+ * SmartTube update), each one is adapted here when it's configured:
+ *  - namespace from its manifest's package, and a copy of the manifest without that attribute;
+ *  - BuildConfig generated (AGP 8 turned it off by default);
+ *  - Kotlin compiled for Java 8 like their Java code, at language level 2.0 (oldest one Kotlin 2.4 supports).
+ */
+def upstreamRoot = gradle.ext.upstreamRoot.canonicalPath
+subprojects { p ->
+    if (!p.projectDir.canonicalPath.startsWith(upstreamRoot) || p.projectDir.canonicalPath.startsWith(rootDir.canonicalPath)) return
+    p.plugins.withId('com.android.library') {
+        def manifest = p.file('src/main/AndroidManifest.xml')
+        if (manifest.exists()) {
+            def text = manifest.getText('UTF-8')
+            def m = text =~ /package\s*=\s*"([^"]+)"/
+            if (m.find()) {
+                p.android.namespace = m.group(1)
+                def stripped = new File(p.layout.buildDirectory.get().asFile, 'miryotube/AndroidManifest.xml')
+                stripped.parentFile.mkdirs()
+                stripped.setText(text.replaceFirst(/\s+package\s*=\s*"[^"]+"/, ''), 'UTF-8')
+                p.android.sourceSets.main.manifest.srcFile stripped
+            }
+        }
+        p.android.buildFeatures.buildConfig = true
+        p.android.lint.abortOnError = false
+    }
+    p.tasks.withType(KotlinCompile).configureEach {
+        compilerOptions.jvmTarget.set(JvmTarget.JVM_1_8)
+        // Upstream Kotlin (youtubeapi: ~190 files) is written for Kotlin 1.8. Kotlin 2.4 dropped the K1
+        // frontend (language 1.9): compiled at the oldest level left, 2.0.
+        compilerOptions.languageVersion.set(KotlinVersion.KOTLIN_2_0)
+        compilerOptions.apiVersion.set(KotlinVersion.KOTLIN_2_0)
+    }
+}

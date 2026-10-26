@@ -6,14 +6,14 @@ plusieurs comptes, un profil Invité et un profil Enfant.
 ## Un fork de SmartTube
 
 miryo tube est un **fork de [SmartTube](https://github.com/yuliskov/SmartTube)**, de yuliskov.
-Son interface est nouvelle (Compose for TV, dans [`mirazukitube/`](mirazukitube/)). La lecture et
+Son interface est nouvelle (Compose for TV, dans [`miryotube/`](miryotube/)). La lecture et
 l'accès à YouTube viennent du moteur de SmartTube, utilisé tel quel :
 
 - `MediaServiceCore` et `SharedModules` (sous-modules du dépôt de SmartTube) ;
 - l'ExoPlayer modifié de SmartTube, qui sait lire SABR.
 
-À part ce README, les fichiers de SmartTube ne sont pas modifiés : tout le travail de miryo tube est dans `mirazukitube/`
-et `.github/workflows/mirazukitube.yml`. Le README d'origine de SmartTube est conservé dans
+À part ce README, les fichiers de SmartTube ne sont pas modifiés : tout le travail de miryo tube est dans `miryotube/`
+et `.github/workflows/miryotube.yml`. Le README d'origine de SmartTube est conservé dans
 [README-SmartTube.md](README-SmartTube.md).
 
 miryo tube est une appli **non officielle**. Elle n'a aucun lien avec SmartTube, YouTube ou Google.
@@ -30,5 +30,5 @@ Merci de ne pas signaler les problèmes de miryo tube à SmartTube.
 
 ## Construire
 
-Voir [mirazukitube/README.md](mirazukitube/README.md) : build, CI, mises à jour, lien avec miryo et
+Voir [miryotube/README.md](miryotube/README.md) : build, CI, mises à jour, lien avec miryo et
 synchronisation avec SmartTube.

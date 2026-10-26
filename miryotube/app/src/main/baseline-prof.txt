@@ -1,0 +1,2 @@
+HSPLdev/miraiijo/miryotube/**;->**(**)**
+Ldev/miraiijo/miryotube/**;
