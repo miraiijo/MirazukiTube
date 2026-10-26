@@ -81,8 +81,8 @@ td kbd{min-width:26px;height:24px;font-size:11px}
 /* Theme.kt NightColors / DayColors */
 .stage.nuit{--tp:#F5F5F7;--ts:#98989D;--sel:rgba(255,255,255,.16);--ctl:rgba(255,255,255,.10);--focus:#F5F5F7;--onf:#0A0A0B;--fring:rgba(245,245,247,.35);--ring:#F5F5F7;
   --glass:rgba(255,255,255,.08);--gb:rgba(255,255,255,.10);--tile:#1C1C1E;--tilef:#2C2C2E;--panel:#161618;--shadow:rgba(0,0,0,.55);--div:rgba(255,255,255,.08);--track:rgba(255,255,255,.22);--chip:#E4E5E9;--help:#A3A5AD;--addt:rgba(255,255,255,.10)}
-.stage.jour{--tp:#16171A;--ts:#505257;--sel:rgba(243,238,225,.90);--ctl:rgba(0,0,0,.06);--focus:#16171A;--onf:#F3EEE1;--fring:rgba(22,23,26,.35);--ring:#16171A;
-  --glass:rgba(243,238,225,.62);--gb:rgba(243,238,225,.90);--tile:#D9D5CB;--tilef:#F3EEE1;--panel:#F3EEE1;--shadow:rgba(42,36,24,.20);--div:rgba(0,0,0,.08);--track:rgba(0,0,0,.14);--chip:#2A2C33;--help:#505257;--addt:#F3EEE1}
+.stage.jour{--tp:#16171A;--ts:#505257;--sel:rgba(0,0,0,.08);--ctl:rgba(0,0,0,.06);--focus:#16171A;--onf:#F3EEE1;--fring:rgba(22,23,26,.35);--ring:#16171A;
+  --glass:rgba(243,238,225,.70);--gb:rgba(243,238,225,.90);--tile:#D8D5CC;--tilef:#F3EEE1;--panel:#F3EEE1;--shadow:rgba(42,36,24,.20);--div:rgba(0,0,0,.08);--track:rgba(0,0,0,.14);--chip:#2A2C33;--help:#505257;--addt:#F3EEE1}
 .layer{position:absolute;left:0;top:0;width:960px;height:540px;zoom:1.125;overflow:hidden;animation:lin .45s ease both}
 .layer.out{animation:lout .4s ease both}
 @keyframes lin{from{opacity:0;transform:scale(1.015)}to{opacity:1;transform:none}}
@@ -90,16 +90,25 @@ td kbd{min-width:26px;height:24px;font-size:11px}
 .page{position:absolute;inset:0;transition:opacity .22s}
 .tab,.rb,.btn,.card,.chr,.sitem,.drow,.mr,.cb,.pt .pring,.cmr,.sbar{transition:transform .22s ease,background-color .22s,color .22s,box-shadow .22s,opacity .3s,border-color .22s}
 svg{display:block}
-/* ---- Verre liquide (same as miryo): almost clear glass, a thin rim lit at the top-left and
-   bottom-right corners and fading along the sides, a soft shadow under it. Gradients only (no blur
-   on the box). By day a milky body and a hairline of shade, or the glass vanishes. ---- */
+/* ---- Verre miryo (Glass.kt, the same file in miryo, miryo iptv and miryo tube): at night almost
+   clear glass, a thin rim lit at the top-left and bottom-right corners. By day light comes from
+   above: a white rim along the top, a hint of warm shade along the bottom, a milky body a step
+   lighter than the page and a short soft shadow (1 dp, 3 dp). Gradients only (no blur). ---- */
 .btn,.dlg{position:relative}
 .rb:not(.f),.btn:not(.f),.dlg{background-image:linear-gradient(160deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 45%);box-shadow:0 10px 26px rgba(0,0,0,.22);border-color:transparent}
 .rb:not(.f)::after,.btn:not(.f)::after,.dlg::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.2px;pointer-events:none;z-index:3;
   background:linear-gradient(125deg,rgba(255,255,255,.95) 0%,rgba(255,255,255,.3) 16%,rgba(255,255,255,.07) 38%,rgba(255,255,255,.07) 62%,rgba(255,255,255,.3) 84%,rgba(255,255,255,.9) 100%);
   -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
-.stage:not(.nuit) .rb:not(.f),.stage:not(.nuit) .btn:not(.f),.stage:not(.nuit) .dlg{background-image:linear-gradient(160deg,rgba(255,255,255,.55) 0%,rgba(255,255,255,.18) 50%,rgba(255,255,255,.3) 100%);
-  box-shadow:0 0 0 .6px rgba(60,45,20,.16),0 12px 28px rgba(60,45,20,.14),0 2px 4px rgba(60,45,20,.08)}
+.stage:not(.nuit) .rb:not(.f),.stage:not(.nuit) .btn:not(.f),.stage:not(.nuit) .dlg{background-image:linear-gradient(180deg,rgba(255,255,255,.42) 0%,rgba(255,255,255,.08) 50%,rgba(255,255,255,0) 100%);
+  box-shadow:0 1px 0 rgba(60,45,20,.10),0 3px 0 rgba(60,45,20,.05)}
+.stage:not(.nuit) .rb:not(.f)::after,.stage:not(.nuit) .btn:not(.f)::after,.stage:not(.nuit) .dlg::after{background:linear-gradient(180deg,rgba(255,255,255,.95) 0%,rgba(255,255,255,.45) 30%,rgba(60,45,20,.05) 60%,rgba(60,45,20,.18) 100%)}
+/* Réglages: the sections panel and each setting card in the same glass. */
+.snav,.scard{background-image:linear-gradient(160deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 45%)}
+.snav::after,.scard::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.2px;pointer-events:none;z-index:3;
+  background:linear-gradient(125deg,rgba(255,255,255,.95) 0%,rgba(255,255,255,.3) 16%,rgba(255,255,255,.07) 38%,rgba(255,255,255,.07) 62%,rgba(255,255,255,.3) 84%,rgba(255,255,255,.9) 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.stage:not(.nuit) .snav,.stage:not(.nuit) .scard{background-image:linear-gradient(180deg,rgba(255,255,255,.42) 0%,rgba(255,255,255,.08) 50%,rgba(255,255,255,0) 100%);box-shadow:0 1px 0 rgba(60,45,20,.10),0 3px 0 rgba(60,45,20,.05)}
+.stage:not(.nuit) .snav::after,.stage:not(.nuit) .scard::after{background:linear-gradient(180deg,rgba(255,255,255,.95) 0%,rgba(255,255,255,.45) 30%,rgba(60,45,20,.05) 60%,rgba(60,45,20,.18) 100%)}
 /* Focused cards: the same corner-lit rim, over the usual ring. */
 .card.f::before{content:"";position:absolute;inset:0;border-radius:inherit;z-index:4;pointer-events:none;padding:1.8px;
   background:linear-gradient(125deg,#fff 0%,rgba(255,255,255,.35) 18%,rgba(255,255,255,.08) 40%,rgba(255,255,255,.08) 60%,rgba(255,255,255,.35) 82%,#fff 100%);
@@ -147,6 +156,9 @@ svg{display:block}
 @keyframes shine{from{background-position:110% 0}to{background-position:-10% 0}}
 .ct{font-size:14px;line-height:18px;font-weight:600;height:36px;margin-top:10px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
 .cs{font-size:13px;line-height:16px;height:16px;margin-top:2px;color:var(--ts);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cs:has(.csn){display:flex}
+.csn{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.csa{flex:none}
 .bdg{position:absolute;right:8px;bottom:8px;font-size:13px;line-height:16px;font-weight:600;color:#fff;background:rgba(0,0,0,.72);border-radius:6px;padding:2px 6px;z-index:1}
 .bdg.w{bottom:14px}
 .bdg.live{background:#E5383B}
@@ -222,7 +234,7 @@ svg{display:block}
 .sitem.sel{background:var(--sel)}
 .sitem.f{background:var(--focus);color:var(--onf)}
 .spage{position:absolute;left:300px;right:48px;top:104px;display:flex;flex-direction:column;gap:11px;transition:opacity .3s}
-.scard{background:var(--glass);border-radius:16px;padding:16px 18px;overflow:hidden;transition:max-height .45s,opacity .45s,padding .45s}
+.scard{position:relative;background:var(--glass);border-radius:16px;padding:16px 18px;overflow:hidden;transition:max-height .45s,opacity .45s,padding .45s}
 .scard h5{margin:0;font-size:15px;line-height:19px;font-weight:700}
 .scard .chs{display:flex;gap:6px;margin-top:10px;align-items:center}
 .scard .hp{font-size:13px;line-height:17px;color:var(--help);margin-top:8px}
@@ -490,7 +502,9 @@ function header(cur,o={}){
 const AGES=['il y a 2 h','il y a 9 h','il y a 1 jour','il y a 3 jours','il y a 5 jours','il y a 1 semaine','il y a 2 semaines','il y a 1 mois','il y a 4 mois','il y a 1 an'];
 const withAge=(t,c,b,live)=>live||/il y a|vues|spectateurs|^Moi$/.test(c)||/vidéos/.test(b||'')?c:`${c} · ${AGES[[...t].reduce((a,ch)=>a+ch.charCodeAt(0),0)%AGES.length]}`;
 const vcard=(v,id)=>{let [t,c,b,h,w,live]=v;c=withAge(t,c,b,live);const wt=w>0&&w<100;
- return `<div class="cw" data-id="${id}w"><div class="card scene" data-id="${id}" style="--h:${h}">${b?`<span class="bdg ${live?'live':''} ${wt?'w':''}">${b}</span>`:''}${wt?`<div class="lane"><i style="width:${w}%"></i></div>`:''}</div><div class="ct">${t}</div><div class="cs">${c}</div></div>`};
+ return `<div class="cw" data-id="${id}w"><div class="card scene" data-id="${id}" style="--h:${h}">${b?`<span class="bdg ${live?'live':''} ${wt?'w':''}">${b}</span>`:''}${wt?`<div class="lane"><i style="width:${w}%"></i></div>`:''}</div><div class="ct">${t}</div>${csLine(c)}</div>`};
+/* Channel · age: only the channel name is cut (« … »), « il y a 3 jours » always stays whole (KeepEndLine). */
+const csLine=c=>{const k=c.lastIndexOf(' · ');return k<0?`<div class="cs">${c}</div>`:`<div class="cs"><span class="csn">${c.slice(0,k)}</span><span class="csa">&nbsp;· ${c.slice(k+3)}</span></div>`};
 const ccard=(name,id)=>`<div class="chw"><div class="chr" data-id="${id}">${av(name,96,36)}</div><div class="chn">${name}</div></div>`;
 const vrow=(title,items,pre,i,top=i*235)=>`<div class="vrow" style="top:${top}px"><div class="rt">${title}</div><div class="rc" data-id="${pre}${i}">${items}</div></div>`;
 const rowsOf=(defs,pre)=>defs.map(([title,list],i)=>vrow(title,list.map((v,k)=>vcard(v,`${pre}${i}-${k}`)).join(''),pre+'r',i)).join('');
@@ -648,7 +662,7 @@ V.firstrun=()=>`<div style="position:absolute;inset:0">
  ${codeDlg('fsi','Connecter un compte YouTube','Scanne le QR code avec ton téléphone, ou ouvre youtube.com/activate et saisis ce code :','Rien à taper sur la télécommande : la fenêtre se ferme seule une fois le compte lié.',cbtn('fsi-0','','Plus tard'),11)}</div>`;
 const SCREENS=[
 {id:'accueil',title:'Accueil et sections',desc:'Une seule barre en haut : le compte tout à gauche comme le profil de miryo, les sections en texte (« Pour toi » pour Accueil), Rechercher juste après, et à droite les boutons ronds en verre de miryo (Apparence Jour / Nuit / Auto, Réglages), la météo de miryo puis l’heure. Dessous, les rangées : « Reprendre », l’Accueil de YouTube, puis deux rangées de chaque fil (abonnements, Musique, Gaming, Actus, Sport, Direct), chargées seulement quand on arrive en bas de l’Accueil.',
- notes:['Au lancement : écran de démarrage, le logo miryo tube sur le fond nuit des bannières (#10121A, comme miryo iptv), jusqu’aux premières rangées de l’Accueil, à « Qui regarde ? » ou à la vidéo d’un lien (3 s au plus), sans animation de sortie.','Flèche maintenue (comme l’app YouTube TV) : le focus avance à pas réguliers, une carte toutes les 130 ms à Gauche / Droite, une rangée toutes les 280 ms à Haut / Bas (le temps de charger ses miniatures). Haut / Bas, comme sur Apple TV : la page glisse jusqu’à la rangée sur un ressort doux, sans rebond (environ 0,4 s) ; maintenu, c’est un seul glissé continu, sans arrêt à chaque rangée. Un écran de rangées en dessous est préparé à l’avance, un demi-écran au-dessus est gardé. Pas sur la vidéo plein écran, où une flèche maintenue avance de plus en plus vite.','Sections : Pour toi, Abonnements, Musique, Gaming, Actus, Sport, Direct, Historique, Playlists. Abonnements, Historique et Playlists seulement avec un compte connecté. Pas de « Tendances » (page retirée par YouTube).','Abonnements : une rangée par période (En direct, Bientôt, Aujourd’hui, Hier, Cette semaine, Ce mois-ci, Plus ancien). Historique : « À reprendre » puis « Déjà vues ». Les titres des autres rangées viennent de YouTube.','Cartes 16:9 de 204 dp à 100 % (4 par rangée ; 6 à 60 %, 5 à 80 %, 3 à 120 %), coins de 13 dp, titre sur 2 lignes et chaîne sur 1 à hauteur fixe : les rangées ne bougent jamais. Badge : durée, EN DIRECT (rouge) ou BIENTÔT ; trait blanc = déjà vu. Shorts exclus.','Page en erreur : message (« Pas de connexion à Internet. », « YouTube ne répond pas. Réessaie. ») et « Réessayer ». Les onglets défilent quand ils ne tiennent pas (grandes tailles, petite fenêtre).','Retour : rangées → onglets → Accueil (« Pour toi ») → ferme la petite fenêtre s’il y en a une → quitte.'],
+ notes:['Sous chaque vidéo : « chaîne · il y a 3 jours ». Si le nom de la chaîne est trop long, c’est lui qui finit en « … » : la date reste toujours entière, au bout de la ligne (pareil pour l’auteur et la date d’un commentaire).','Verre miryo : le même verre que miryo (Glass.kt), sur les boutons ronds, les boutons au repos et les panneaux des Réglages ; de jour, un bord blanc en haut, une pointe d’ombre en bas et une petite ombre dessous.','Au lancement : écran de démarrage, le logo miryo tube sur le fond nuit des bannières (#10121A, comme miryo iptv), jusqu’aux premières rangées de l’Accueil, à « Qui regarde ? » ou à la vidéo d’un lien (3 s au plus), sans animation de sortie.','Flèche maintenue (comme l’app YouTube TV) : le focus avance à pas réguliers, une carte toutes les 130 ms à Gauche / Droite, une rangée toutes les 280 ms à Haut / Bas (le temps de charger ses miniatures). Haut / Bas, comme sur Apple TV : la page glisse jusqu’à la rangée sur un ressort doux, sans rebond (environ 0,4 s) ; maintenu, c’est un seul glissé continu, sans arrêt à chaque rangée. Un écran de rangées en dessous est préparé à l’avance, un demi-écran au-dessus est gardé. Pas sur la vidéo plein écran, où une flèche maintenue avance de plus en plus vite.','Sections : Pour toi, Abonnements, Musique, Gaming, Actus, Sport, Direct, Historique, Playlists. Abonnements, Historique et Playlists seulement avec un compte connecté. Pas de « Tendances » (page retirée par YouTube).','Abonnements : une rangée par période (En direct, Bientôt, Aujourd’hui, Hier, Cette semaine, Ce mois-ci, Plus ancien). Historique : « À reprendre » puis « Déjà vues ». Les titres des autres rangées viennent de YouTube.','Cartes 16:9 de 204 dp à 100 % (4 par rangée ; 6 à 60 %, 5 à 80 %, 3 à 120 %), coins de 13 dp, titre sur 2 lignes et chaîne sur 1 à hauteur fixe : les rangées ne bougent jamais. Badge : durée, EN DIRECT (rouge) ou BIENTÔT ; trait blanc = déjà vu. Shorts exclus.','Page en erreur : message (« Pas de connexion à Internet. », « YouTube ne répond pas. Réessaie. ») et « Réessayer ». Les onglets défilent quand ils ne tiennent pas (grandes tailles, petite fenêtre).','Retour : rangées → onglets → Accueil (« Pour toi ») → ferme la petite fenêtre s’il y en a une → quitte.'],
  steps:[
  {view:'home',f:null,on:['msg-load'],st:{'pg-home':{opacity:'0'}},k:'▶',t:'Lancement',n:'Un seul compte lié : pas de « Qui regarde ? ». « Chargement… » tant qu’aucune rangée n’est arrivée.'},
  {k:'⏱',t:'Rangées',f:'h0-0',on:[],st:{'pg-home':{opacity:'1'}},n:'Chaque partie de l’Accueil s’affiche dès qu’elle arrive. Focus sur la 1re carte ; « Pour toi » en gras avec une barre discrète (section en cours).'},

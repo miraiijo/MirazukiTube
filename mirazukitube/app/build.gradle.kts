@@ -18,8 +18,8 @@ android {
         applicationId = "dev.miraiijo.lumentube"
         minSdk = 28
         targetSdk = 35
-        versionCode = 78
-        versionName = "1.0 bêta 17"
+        versionCode = 80
+        versionName = "1.0 bêta 19"
         // The Freebox Player POP runs a 32-bit userspace; arm64 kept for other boxes.
         ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a") }
         // Upstream modules have SmartTube's build flavors: use the "stable" one.

@@ -134,7 +134,7 @@ fun SearchPage(
                     MirazukiButton(
                         if (current == 0) filter.label else "${filter.label} : $name",
                         modifier = chip(index),
-                        containerColor = if (current == 0) Palette.ControlIdle else Palette.Selected,
+                        containerColor = if (current == 0) null else Palette.Selected,
                         contentColor = Palette.ChipText,
                     ) {
                         // OK = the next choice of this filter (then back to "all").

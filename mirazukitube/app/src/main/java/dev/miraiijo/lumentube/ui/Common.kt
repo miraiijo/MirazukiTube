@@ -62,13 +62,16 @@ fun FocusRequester.tryRequestFocus(): Boolean = try {
     false
 }
 
-/** Primary button, as in miryo: filled pill, white when focused. */
+/**
+ * Button, as in miryo: the suite's glass when idle (Glass.kt), the solid focus capsule when
+ * focused. A [containerColor] (the red S'abonner, a selected choice) replaces the glass.
+ */
 @Composable
 fun MirazukiButton(
     text: String,
     modifier: Modifier = Modifier,
     icon: MirazukiIcon? = null,
-    containerColor: Color = Palette.ControlIdle,
+    containerColor: Color? = null,
     /** Text and icon when not focused (white on the red S'abonner, by day too). */
     contentColor: Color = Palette.TextPrimary,
     /** 13 dp on choice pills (sorts, suggestions), the redesign's. */
@@ -82,13 +85,14 @@ fun MirazukiButton(
         shape = ButtonDefaults.shape(shape = CircleShape),
         scale = ButtonDefaults.scale(focusedScale = FocusScale.Control, pressedScale = FocusScale.Control),
         colors = ButtonDefaults.colors(
-            containerColor = containerColor,
+            containerColor = containerColor ?: Palette.Glass,
             contentColor = contentColor,
             focusedContainerColor = Palette.Focus,
             focusedContentColor = Palette.OnFocus,
             pressedContainerColor = Palette.Focus,
             pressedContentColor = Palette.OnFocus,
         ),
+        border = if (containerColor == null) ButtonDefaults.border(border = androidx.tv.material3.Border(glassRim(), shape = CircleShape), focusedBorder = androidx.tv.material3.Border.None) else ButtonDefaults.border(),
     ) {
         icon?.let {
             Icon(it, size = iconSize)
@@ -96,6 +100,31 @@ fun MirazukiButton(
         }
         // One line; too long for the room ("Se déconnecter de <a long name>" at 120 %): an ellipsis.
         Text(text, fontSize = 14.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+/**
+ * One line « [start] · [end] » where only [start] is cut: a long channel or author name ends in
+ * « … » and « il y a 3 jours » always stays whole at the end of the line.
+ */
+@Composable
+fun KeepEndLine(
+    start: String,
+    end: String?,
+    modifier: Modifier = Modifier,
+    fontSize: androidx.compose.ui.unit.TextUnit = 13.sp,
+    lineHeight: androidx.compose.ui.unit.TextUnit = androidx.compose.ui.unit.TextUnit.Unspecified,
+    color: Color = Palette.TextSecondary,
+    fontWeight: FontWeight? = null,
+    separator: String = " · ",
+) {
+    androidx.compose.foundation.layout.Row(modifier) {
+        if (start.isNotBlank()) {
+            Text(start, fontSize = fontSize, lineHeight = lineHeight, color = color, fontWeight = fontWeight, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f, fill = false))
+        }
+        if (!end.isNullOrBlank()) {
+            Text(if (start.isBlank()) end else separator + end, fontSize = fontSize, lineHeight = lineHeight, color = color, fontWeight = fontWeight, maxLines = 1, softWrap = false)
+        }
     }
 }
 
