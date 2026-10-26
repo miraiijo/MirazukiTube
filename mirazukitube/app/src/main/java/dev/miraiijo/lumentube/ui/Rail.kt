@@ -10,6 +10,12 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.focusGroup
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.focusable
+import androidx.compose.foundation.gestures.animateScrollBy
+import androidx.compose.ui.input.key.key
+import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.input.key.type
+import kotlinx.coroutines.launch
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -395,6 +401,9 @@ fun SettingsDialog(
             }
         }
         var page by remember { mutableStateOf(SettingsPage.PLAYBACK) }
+        // Rechercher can't take the focus before Lecture has it: Android's own first focus would
+        // land on it for a frame and show its page, then Lecture's (the menu and the page jumped).
+        var settled by remember { mutableStateOf(false) }
         val pages = SettingsPage.entries.filter { it != SettingsPage.KIDS || kidChannels != null }
         // Rechercher › a result: its page's menu item takes the focus (which shows the page).
         val navFocus = remember { SettingsPage.entries.associateWith { FocusRequester() } }
@@ -418,14 +427,24 @@ fun SettingsDialog(
                             item.label,
                             current = item == page,
                             // Réglages opens on Lecture: Rechercher is right above it.
-                            modifier = Modifier.focusRequester(if (item == SettingsPage.PLAYBACK) first else navFocus.getValue(item)),
-                            onFocus = { page = item },
+                            modifier = Modifier
+                                .focusRequester(if (item == SettingsPage.PLAYBACK) first else navFocus.getValue(item))
+                                .focusProperties { canFocus = settled || item != SettingsPage.SEARCH },
+                            onFocus = { if (settled || item == SettingsPage.PLAYBACK) page = item },
                         )
                     }
                 }
                 // One scroll per page: a page scrolled down doesn't make the next one open scrolled.
-                androidx.compose.runtime.key(page) { Column(
-                    Modifier.weight(1f).fillMaxHeight().verticalScroll(rememberScrollState()),
+                androidx.compose.runtime.key(page) {
+                val scroll = rememberScrollState()
+                val scope = androidx.compose.runtime.rememberCoroutineScope()
+                Column(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        // À propos has nothing to focus: Right enters the page, Up and Down scroll it.
+                        .then(if (page == SettingsPage.ABOUT) Modifier.dpadScroll(scroll, scope) else Modifier)
+                        .verticalScroll(scroll),
                     verticalArrangement = Arrangement.spacedBy(11.dp),
                 ) {
                     when (page) {
@@ -591,9 +610,26 @@ fun SettingsDialog(
         LaunchedEffect(Unit) {
             withFrameNanos { }
             first.tryRequestFocus()
+            settled = true
         }
     }
 }
+
+/** A page without buttons, focusable as a whole: Up and Down scroll it, then leave it at either end. */
+private fun Modifier.dpadScroll(scroll: androidx.compose.foundation.ScrollState, scope: kotlinx.coroutines.CoroutineScope): Modifier = this
+    .onPreviewKeyEvent { event ->
+        if (event.type != androidx.compose.ui.input.key.KeyEventType.KeyDown) return@onPreviewKeyEvent false
+        val step = when (event.key) {
+            androidx.compose.ui.input.key.Key.DirectionDown -> if (scroll.canScrollForward) SCROLL_STEP else return@onPreviewKeyEvent false
+            androidx.compose.ui.input.key.Key.DirectionUp -> if (scroll.canScrollBackward) -SCROLL_STEP else return@onPreviewKeyEvent false
+            else -> return@onPreviewKeyEvent false
+        }
+        scope.launch { scroll.animateScrollBy(step) }
+        true
+    }
+    .focusable()
+
+private const val SCROLL_STEP = 260f
 
 /**
  * Réglages › Rechercher: a pill that opens the keyboard, then the matching settings (SettingsIndex),
