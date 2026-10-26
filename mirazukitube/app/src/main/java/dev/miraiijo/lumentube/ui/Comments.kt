@@ -260,14 +260,8 @@ private fun CommentRow(comment: Comment, reply: Boolean, expanded: Boolean, modi
             }
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 val secondary = LocalContentColor.current.copy(alpha = 0.65f)
-                Text(
-                    listOfNotNull(comment.author.takeIf { it.isNotBlank() }, comment.published?.takeIf { it.isNotBlank() }).joinToString("  ·  "),
-                    fontSize = 13.sp,
-                    fontWeight = FontWeight.Medium,
-                    color = secondary,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                // A long author name is cut, never the date after it.
+                KeepEndLine(comment.author, comment.published, fontWeight = FontWeight.Medium, color = secondary, separator = "  ·  ")
                 Text(
                     comment.text,
                     fontSize = 15.sp,

@@ -77,14 +77,14 @@ val NightColors = MirazukiColors(
 private val MOONLIGHT = Color(0xFFF3EEE1)
 
 val DayColors = MirazukiColors(
-    background = Color(0xFFE4E1D9), panel = MOONLIGHT, tile = Color(0xFFD9D5CB), tileFocused = MOONLIGHT,
+    background = Color(0xFFE4E1D9), panel = MOONLIGHT, tile = Color(0xFFD8D5CC), tileFocused = MOONLIGHT,
     textPrimary = Color(0xFF16171A), textSecondary = Color(0xFF505257),
-    controlIdle = Color.Black.copy(alpha = 0.06f), selected = MOONLIGHT.copy(alpha = 0.90f), outline = Color.Black.copy(alpha = 0.16f),
+    controlIdle = Color.Black.copy(alpha = 0.06f), selected = Color.Black.copy(alpha = 0.08f), outline = Color.Black.copy(alpha = 0.16f),
     track = Color.Black.copy(alpha = 0.14f), divider = Color.Black.copy(alpha = 0.08f),
     focus = Color(0xFF16171A), onFocus = MOONLIGHT, focusRing = Color(0xFF16171A),
     glowWarm = Color(0x4DC8A46A), glowCool = Color(0x1F5A8CFF), isLight = true,
     backgroundMid = Color(0xFFDFDBD2), backgroundEnd = Color(0xFFDAD6CC),
-    glass = MOONLIGHT.copy(alpha = 0.62f), glassBorder = MOONLIGHT.copy(alpha = 0.90f), shadow = Color(0xFF2A2418).copy(alpha = 0.20f),
+    glass = MOONLIGHT.copy(alpha = 0.70f), glassBorder = MOONLIGHT.copy(alpha = 0.90f), shadow = Color(0xFF2A2418).copy(alpha = 0.20f),
 )
 
 object Palette {
