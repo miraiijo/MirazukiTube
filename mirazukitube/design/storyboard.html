@@ -621,6 +621,27 @@ const CODE_ST={'font-size':'40px','line-height':'48px','font-weight':'700','lett
 const SHOW={'max-height':'140px',opacity:'1','padding-top':'16px','padding-bottom':'16px','margin-bottom':'0px'};
 const HIDE={'max-height':'0px',opacity:'0','padding-top':'0px','padding-bottom':'0px','margin-bottom':'-11px'};
 const PANEL_ON={pclock:{opacity:'0'},ptitle:{right:'440px'}},PANEL_OFF={pclock:{opacity:'1'},ptitle:{right:'130px'}};
+/* player sub-menus: speed, picture format */
+V.playerSub=()=>V.player()+`
+ <div class="ovl from-r tg pmenu" data-id="pm-sp"><h4>Vitesse</h4><div data-grp="sps">${['0,5×','0,75×','Normale','1,25×','1,5×','1,75×','2×'].map((l,i)=>mrow('sp-'+i,l,null,{sel:i===2})).join('')}</div></div>
+ <div class="ovl from-r tg pmenu" data-id="pm-fmt"><h4>Format de l’image</h4><div data-grp="fms">${['Image entière','Remplir l’écran','Étirer'].map((l,i)=>mrow('fm-'+i,l,null,{sel:i===0})).join('')}</div></div>`;
+/* kids profile: parent code */
+const pinDlg=(id,title,hint)=>`<div class="ovl pop tg full" data-id="${id}"><div class="dim"><div class="dlg" style="width:460px;padding:30px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center">
+ <h4 style="margin:0;font-size:22px;font-weight:600" data-id="${id}-t">${title}</h4><div style="font-size:15px;line-height:21px;color:var(--ts)" data-id="${id}-h">${hint}</div>
+ <div style="display:flex;gap:14px">${[0,1,2,3].map(i=>`<div class="btn c" data-id="${id}-${i}" style="width:54px;height:62px;justify-content:center;font-size:26px;font-weight:700"><span data-id="${id}-d${i}"></span></div>`).join('')}</div>
+ <div style="font-size:13px;color:var(--ts)">Chiffres de la télécommande, ou ↑ ↓ puis OK · Retour efface</div></div></div></div>`;
+V.kidsHome=()=>`${header('home').replace(/<div class="tab [^s][^>]*>[^<]*<\/div>/g,'').replace(/<div class="rb" data-id="btn-search">.*?<\/div>/,'').replace(/<div class="rb" data-id="btn-set">.*?<\/i><\/div>/,'')}
+ <div class="rows"><div class="rin">${rowsOf([['Cuisine du Dimanche',R_SUBS],['Dessins animés du Mercredi',R_RECO]],'k')}</div></div>
+ ${pinDlg('pin','Quitter le profil enfant','Code parent à 4 chiffres')}${notice('ntc','Retour encore pour quitter')}`;
+/* first launch (planned) */
+const FR=(i,body)=>`<div data-id="fr-${i}" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;transition:opacity .3s;${i?'opacity:0':''}">${body}</div>`;
+const frDots=i=>`<div style="display:flex;gap:8px;margin-top:6px">${[0,1,2,3].map(k=>`<i style="width:8px;height:8px;border-radius:50%;background:${k===i?'var(--tp)':'var(--ts)'};opacity:${k===i?1:.35}"></i>`).join('')}</div>`;
+V.firstrun=()=>`<div style="position:absolute;inset:0">
+ ${FR(0,`<div style="font-size:56px;font-weight:700;letter-spacing:-.03em">miryo tube<span style="color:#E5484D">.</span></div><div style="font-size:18px;color:var(--ts);max-width:620px">YouTube sur ta TV, sans pub et sans sponsors. Deux minutes pour le régler.</div><div style="display:flex;gap:12px">${cbtn('fr0-0',I.user,'Connecter mon compte YouTube')}${cbtn('fr0-1','','Continuer sans compte')}</div>${frDots(0)}`)}
+ ${FR(1,`<div style="font-size:34px;font-weight:700">Qui regarde sur cette TV ?</div><div style="font-size:16px;color:var(--ts);max-width:640px">Ajoute d’autres comptes YouTube maintenant ou plus tard. Chacun garde son Accueil, ses abonnements et son historique.</div><div style="display:flex;gap:12px">${cbtn('fr1-0',I.plus,'Ajouter un compte')}${cbtn('fr1-1','','Créer un profil enfant')}${cbtn('fr1-2','','Suivant')}</div>${frDots(1)}`)}
+ ${FR(2,`<div style="font-size:34px;font-weight:700">Ton confort</div><div style="display:flex;flex-direction:column;gap:14px;align-items:center">${scard('Apparence',choice('fra',['Jour','Nuit','Auto'],2,'fra'),'Auto : clair le jour, sombre le soir.')}${scard('Passer les sponsors',choice('frs',['Activé','Désactivé'],0,'frs'),'Sponsors et rappels d’abonnement sautés.')}</div>${cbtn('fr2-0','','Suivant')}${frDots(2)}`)}
+ ${FR(3,`<div style="font-size:34px;font-weight:700">C’est prêt.</div><div style="font-size:16px;color:var(--ts);max-width:640px">Tout se retrouve dans Réglages (roue en haut à droite). Le téléphone peut envoyer ses vidéos ici : Réglages › Téléphone.</div>${cbtn('fr3-0','','Commencer')}${frDots(3)}`)}
+ ${codeDlg('fsi','Connecter un compte YouTube','Scanne le QR code avec ton téléphone, ou ouvre youtube.com/activate et saisis ce code :','Rien à taper sur la télécommande : la fenêtre se ferme seule une fois le compte lié.',cbtn('fsi-0','','Plus tard'),11)}</div>`;
 const SCREENS=[
 {id:'accueil',title:'Accueil et sections',desc:'Une seule barre en haut : les sections en texte à gauche (« Pour toi » pour Accueil), Rechercher juste après, et à droite les boutons ronds en verre de miryo (compte, Apparence Jour / Nuit / Auto, Réglages) puis l’heure. Dessous, les rangées : « Reprendre », l’Accueil de YouTube, puis deux rangées de chaque fil (abonnements, Musique, Gaming, Actus, Sport, Direct), chargées seulement quand on arrive en bas de l’Accueil.',
  notes:['Au lancement : écran de démarrage, le logo miryo tube sur le fond nuit des bannières (#10121A, comme miryo iptv), jusqu’aux premières rangées de l’Accueil, à « Qui regarde ? » ou à la vidéo d’un lien (3 s au plus), sans animation de sortie.','Flèche maintenue (comme l’app YouTube TV) : le focus avance à pas réguliers, une carte toutes les 130 ms à Gauche / Droite, une rangée toutes les 280 ms à Haut / Bas (le temps de charger ses miniatures). Haut / Bas, comme sur Apple TV : la page glisse jusqu’à la rangée sur un ressort doux, sans rebond (environ 0,4 s) ; maintenu, c’est un seul glissé continu, sans arrêt à chaque rangée. Un écran de rangées en dessous est préparé à l’avance, un demi-écran au-dessus est gardé. Pas sur la vidéo plein écran, où une flèche maintenue avance de plus en plus vite.','Sections : Pour toi, Abonnements, Musique, Gaming, Actus, Sport, Direct, Historique, Playlists. Abonnements, Historique et Playlists seulement avec un compte connecté. Pas de « Tendances » (page retirée par YouTube).','Abonnements : une rangée par période (En direct, Bientôt, Aujourd’hui, Hier, Cette semaine, Ce mois-ci, Plus ancien). Historique : « À reprendre » puis « Déjà vues ». Les titres des autres rangées viennent de YouTube.','Cartes 16:9 de 204 dp à 100 % (4 par rangée ; 6 à 60 %, 5 à 80 %, 3 à 120 %), coins de 13 dp, titre sur 2 lignes et chaîne sur 1 à hauteur fixe : les rangées ne bougent jamais. Badge : durée, EN DIRECT (rouge) ou BIENTÔT ; trait blanc = déjà vu. Shorts exclus.','Page en erreur : message (« Pas de connexion à Internet. », « YouTube ne répond pas. Réessaie. ») et « Réessayer ». Les onglets défilent quand ils ne tiennent pas (grandes tailles, petite fenêtre).','Retour : rangées → onglets → Accueil (« Pour toi ») → ferme la petite fenêtre s’il y en a une → quitte.'],
@@ -822,6 +843,50 @@ const SCREENS=[
  {k:'⟳',t:'Exemple stable',txt:{'u-msg':'Nouvelle version : 1.0.','u-ft':'STABLE · 1.0','u-notes':'Version stable.','u-inst-l':'Installer 1.0'},st:{'u-found':SHOW},n:'Exemple : quand une 1.0 stable sera publiée, elle sera proposée, marquée STABLE.'},
  {k:'▼',t:'Bas',f:'u-inst'},
  {k:'OK',t:'Installer',txt:{'u-inst-l':'Téléchargement… 46 %'},n:'Téléchargement (progression par pas de 2 %), puis taille, empreinte SHA-256, paquet, version et certificat vérifiés ; l’installateur d’Android demande ensuite confirmation.'},
+ ]},
+{id:'telecommande',title:'Télécommande : sections et quitter',desc:'Les mêmes touches que dans miryo et miryo iptv. ◀◀ / ▶▶ (L1 / R1 sur une manette) passent à la section d’avant / d’après, focus sur son onglet, sans boucler aux bouts. Un seul Retour ne quitte jamais : « Retour encore pour quitter ».',
+ notes:['Touche options (Menu, Y, Select, touche rouge, menu contextuel TV) : ouvre le menu de la carte, partout pareil. Sur la Freebox Player POP (sans Menu) : appui long sur OK.','Flèche maintenue : un pas toutes les 120 ms à Gauche / Droite, une rangée toutes les 280 ms à Haut / Bas.','◀◀ / ▶▶ ne changent pas de section dans le lecteur : là, ils reculent / avancent dans la vidéo.'],
+ steps:[
+ {view:'home',f:'h0-0',k:'▶',t:'Accueil'},
+ {k:'▶▶',t:'Avance',f:'tab-subs',sel:{tb:'tab-subs'},on:['msg-load'],st:{'pg-home':{opacity:'0'}},n:'Section suivante : Abonnements. Le focus monte sur son onglet, comme un OK sur l’onglet.'},
+ {k:'◀◀',t:'Recul',f:'tab-home',sel:{tb:'tab-home'},on:[],st:{'pg-home':{opacity:'1'}},n:'Section d’avant : Accueil.'},
+ {k:'◀◀',t:'Recul',n:'Déjà sur la première : rien ne bouge (pas de saut vers Playlists).'},
+ {k:'B',t:'Retour',on:['ntc'],n:'Sur l’Accueil, dans les onglets : « Retour encore pour quitter », 3 s.'},
+ {k:'B',t:'Retour',f:null,n:'Deuxième Retour dans les 3 s : l’appli se ferme. Avec une vidéo en petite fenêtre, Retour la ferme d’abord.'},
+ ]},
+{id:'menus-lecteur',title:'Lecteur : vitesse et format',desc:'Les deux listes de la section LECTURE pas encore montrées. Chaque liste s’ouvre sur le choix en cours ; OK applique et revient à la liste principale.',
+ notes:['Vitesse : de 0,5× à 2×, le son garde sa hauteur. Remise à Normale à chaque nouvelle vidéo.','Format : Image entière (bandes noires si besoin), Remplir l’écran (rogne), Étirer. Gardé pour les vidéos suivantes.','Piste audio : la ligne n’apparaît que si la vidéo en a plusieurs (doublages), avec Auto en premier.'],
+ steps:[
+ {view:'playerSub',f:'pm-2',on:['ctl','pm-main'],st:PANEL_ON,k:'☰',t:'Réglages'},
+ {k:'OK',t:'Vitesse',f:'sp-2',on:['ctl','pm-sp']},
+ {k:'▼▼',t:'Bas ×2',f:'sp-4'},
+ {k:'OK',t:'1,5×',f:'pm-2',on:['ctl','pm-main'],sel:{sps:'sp-4'},n:'Retour sur la ligne Vitesse.'},
+ {k:'▼',t:'Bas',f:'pm-3'},
+ {k:'OK',t:'Format',f:'fm-0',on:['ctl','pm-fmt']},
+ {k:'▼',t:'Bas',f:'fm-1'},
+ {k:'OK',t:'Remplir',f:'pm-3',on:['ctl','pm-main'],sel:{fms:'fm-1'},n:'L’image remplit l’écran tout de suite.'},
+ ]},
+{id:'enfant-code',title:'Profil enfant : code parent',desc:'Quitter le profil enfant (avatar « Enfant » de l’en-tête) demande le code parent. Le même clavier sert à le créer, le confirmer, le changer et à supprimer le profil.',
+ notes:['Titres : « Profil enfant : choisis un code parent », « Confirme le code parent », « Quitter le profil enfant », « Code parent actuel », « Nouveau code parent ».','Erreurs : « Code incorrect. », « Trop d’essais : réessaie dans 5 min. » (après 5 essais), « Les deux codes étaient différents : recommence. ».'],
+ steps:[
+ {view:'kidsHome',f:'k0-0',k:'▶',t:'Enfant',n:'Une rangée par chaîne autorisée, rien d’autre.'},
+ {k:'▲',t:'Haut',f:'btn-acc'},
+ {k:'OK',t:'Compte',f:'pin-0',on:['pin'],n:'Code parent, 4 cases.'},
+ {k:'1 2',t:'Chiffres',f:'pin-2',txt:{'pin-d0':'•','pin-d1':'•'}},
+ {k:'5 9',t:'Chiffres',txt:{'pin-d0':'','pin-d1':'','pin-h':'Code incorrect.'},f:'pin-0',n:'Faux : les cases se vident et le message remplace l’aide.'},
+ {k:'B',t:'Retour',f:'btn-acc',on:[],n:'Retour sur une case vide ferme ; on reste en Enfant.'},
+ ]},
+{id:'premier-lancement',status:'Prévu',title:'Premier lancement',desc:'À la toute première ouverture, quatre écrans courts au lieu d’arriver sur un Accueil vide : connecter un compte par code ou QR (ou continuer sans), les autres personnes de la TV, le confort, et où tout retrouver. Aucun code à taper : tout se fait au téléphone.',
+ notes:['Passé une fois : ne revient plus. Tout reste dans Réglages.','Ouvert depuis miryo avec un compte déjà choisi : ce parcours est sauté.','« Continuer sans compte » : Accueil en Invité ; « Connecter un compte » reste dans l’avatar.'],
+ steps:[
+ {view:'firstrun',f:'fr0-0',k:'▶',t:'Ouverture',n:'Un seul choix à faire, gros boutons.'},
+ {k:'OK',t:'Connecter',f:'fsi-0',on:['fsi'],n:'Même fenêtre que « Ajouter » : code et QR code.'},
+ {k:'⏱',t:'Code',txt:{'fsi-code':'QRM-7HD-KTA'},st:{'fsi-code':CODE_ST,'fsi-qr':{opacity:'1'}}},
+ {k:'📱',t:'Lié',f:'fr1-2',on:[],st:{'fr-0':{opacity:'0'},'fr-1':{opacity:'1'}},n:'Compte lié : la fenêtre se ferme seule et l’écran suivant arrive.'},
+ {k:'OK',t:'Suivant',f:'fra-2',st:{'fr-1':{opacity:'0'},'fr-2':{opacity:'1'}},n:'Les choix par défaut sont déjà cochés : OK sur Suivant suffit.'},
+ {k:'▼▼',t:'Bas ×2',f:'fr2-0'},
+ {k:'OK',t:'Suivant',f:'fr3-0',st:{'fr-2':{opacity:'0'},'fr-3':{opacity:'1'}}},
+ {k:'OK',t:'Commencer',view:'home',f:'h0-0',n:'L’Accueil du compte.'},
  ]},
 {id:'coherence',status:'Prévu',title:'Cohérence avec miryo',desc:'La barre alignée sur celle de miryo, en avant / après : le compte tout à gauche, Apparence avec la demi-lune de miryo (au lieu de « A »), la météo avant l’heure. Le reste (anneau de focus à 35 %, boutons de 30 dp, verre liquide) est déjà commun.',
  notes:['Référence : la barre de miryo (Opale et Horizon).','Les onglets ne bougent plus quand le focus ou la sélection change : leur largeur est celle du texte en gras.'],
