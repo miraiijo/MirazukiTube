@@ -1,0 +1,1018 @@
+<title>Storyboard miryo tube</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: storyboard document, one section per screen; each section = sequence player + Jour/Nuit frames (1080×608 canvas, scaled). */
+:root{
+  --pg:#EEF0F4; --card:#FFFFFF; --ink:#16171A; --muted:#62656D; --line:rgba(22,23,26,.10);
+  --accent:#5B48D9; --accent-soft:rgba(91,72,217,.10);
+  --f-ui:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --pg:#0B0C10; --card:#15161B; --ink:#F2F3F5; --muted:#9A9CA3; --line:rgba(255,255,255,.09);
+  --accent:#A496FF; --accent-soft:rgba(164,150,255,.14); color-scheme:dark}}
+:root[data-theme="dark"]{
+  --pg:#0B0C10; --card:#15161B; --ink:#F2F3F5; --muted:#9A9CA3; --line:rgba(255,255,255,.09);
+  --accent:#A496FF; --accent-soft:rgba(164,150,255,.14); color-scheme:dark}
+body{background:var(--pg);color:var(--ink);font-family:var(--f-ui);font-size:15px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:1360px;margin:0 auto;padding-block:32px 80px}
+h1,h2{text-wrap:balance;letter-spacing:-.022em;margin:0}
+h1{font-size:clamp(28px,4vw,40px);font-weight:800}
+h2{font-size:22px;font-weight:700;display:flex;flex-wrap:wrap;align-items:center;gap:10px}
+.eyebrow{font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.lead{color:var(--muted);max-width:72ch;margin:10px 0 0}
+.toolbar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center;
+  background:color-mix(in srgb,var(--pg) 88%,transparent);backdrop-filter:blur(10px);padding:12px 0;margin-top:20px;border-bottom:1px solid var(--line)}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--pg)}
+.tgroup{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tlabel{font-size:12px;color:var(--muted);font-weight:600;margin-right:4px}
+.pill{border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:999px;padding:6px 12px;font:600 13px var(--f-ui);cursor:pointer}
+.pill[aria-pressed="true"]{background:var(--ink);color:var(--pg);border-color:var(--ink)}
+.pill:focus-visible,.ctl:focus-visible,.steps button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toc{display:flex;flex-wrap:wrap;gap:6px;margin-top:14px}
+.toc a{font-size:13px;font-weight:600;color:var(--ink);text-decoration:none;padding:5px 11px;border-radius:999px;background:var(--accent-soft)}
+section.screen{margin-top:48px;padding-top:24px;border-top:1px solid var(--line)}
+.shead{display:flex;flex-wrap:wrap;gap:12px 24px;align-items:end;justify-content:space-between}
+.shead p{margin:6px 0 0;color:var(--muted);max-width:70ch}
+.stag{font-size:11px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:3px 9px;border-radius:999px;background:rgba(47,163,107,.14);color:#1F8A57}
+.stag.plan{background:rgba(255,159,10,.16);color:#B35F00}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .stag{color:#5FD39A}:root:not([data-theme="light"]) .stag.plan{color:#FFB340}}
+:root[data-theme="dark"] .stag{color:#5FD39A}
+.ctls{display:flex;gap:6px}
+.ctl{width:38px;height:38px;border-radius:50%;border:1px solid var(--line);background:var(--card);color:var(--ink);display:grid;place-items:center;cursor:pointer}
+.ctl svg{width:16px;height:16px}
+.ctl.play[aria-pressed="true"]{background:var(--ink);color:var(--pg)}
+.frames{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-top:16px}
+@media (max-width:900px){.frames{grid-template-columns:1fr}}
+.fcol{min-width:0}
+.flabel{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted);margin-bottom:6px}
+.frame{position:relative;width:100%;aspect-ratio:1080/608;border-radius:12px;overflow:hidden;background:#000;box-shadow:0 1px 0 var(--line),0 10px 30px rgba(10,12,20,.12);max-width:100%}
+.now{display:flex;gap:14px;align-items:flex-start;margin-top:14px;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:12px}
+.now kbd{flex:none}
+.now b{display:block;font-size:14px}
+.now span{color:var(--muted);font-size:14px}
+kbd{font:700 13px var(--f-mono);min-width:30px;height:30px;padding:0 8px;border-radius:8px;display:inline-grid;place-items:center;
+  background:var(--ink);color:var(--pg)}
+.steps{list-style:none;display:flex;flex-wrap:wrap;gap:6px;padding:0;margin:12px 0 0;counter-reset:s}
+.steps button{display:flex;gap:8px;align-items:center;border:1px solid var(--line);background:var(--card);color:var(--ink);border-radius:10px;padding:4px 10px 4px 5px;font:500 13px var(--f-ui);cursor:pointer}
+.steps button kbd{min-width:24px;height:24px;font-size:11px;background:var(--accent-soft);color:var(--accent)}
+.steps button[aria-current="step"]{border-color:var(--accent);box-shadow:0 0 0 1px var(--accent)}
+.steps button[aria-current="step"] kbd{background:var(--accent);color:#fff}
+.notes{margin-top:12px;color:var(--muted);font-size:14px;max-width:80ch}
+.notes li{margin:3px 0}
+table{border-collapse:collapse;width:100%;font-size:14px}
+.tbl{overflow-x:auto;margin-top:14px;background:var(--card);border:1px solid var(--line);border-radius:12px}
+th,td{text-align:left;padding:10px 14px;border-bottom:1px solid var(--line)}
+th{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+tr:last-child td{border-bottom:none}
+td kbd{min-width:26px;height:24px;font-size:11px}
+
+/* ===================== TV canvas (1080 × 608) =====================
+   The stage is the TV screen. miryo tube's layout is drawn in its own dp (a 1080p TV is 960 × 540 dp,
+   which the app lays out at the default « Taille de l'interface » of 100 %), zoomed to fit (×1.125).
+   Safe zone (Theme.kt Safe, system dp): 48 on the sides, 32 at the top, 48 at the bottom. */
+@property --h{syntax:"<number>";inherits:true;initial-value:210}
+.stage{position:absolute;left:0;top:0;width:1080px;height:608px;transform-origin:0 0;overflow:hidden;font-family:var(--f-ui);letter-spacing:-.011em;
+  background:radial-gradient(circle 788px at 100% 0%,var(--g1),transparent),radial-gradient(circle 675px at 0% 100%,var(--g2),transparent),linear-gradient(to bottom right,var(--a0) 0%,var(--a1) 55%,var(--a2) 100%);
+  color:var(--tp);-webkit-font-smoothing:antialiased}
+/* Theme.kt NightColors / DayColors */
+.stage.nuit{--tp:#F5F5F7;--ts:#98989D;--sel:rgba(255,255,255,.16);--ctl:rgba(255,255,255,.10);--focus:#F5F5F7;--onf:#0A0A0B;--fring:rgba(245,245,247,.35);--ring:#F5F5F7;
+  --glass:rgba(255,255,255,.08);--gb:rgba(255,255,255,.10);--tile:#1C1C1E;--tilef:#2C2C2E;--panel:#161618;--shadow:rgba(0,0,0,.55);--div:rgba(255,255,255,.08);--track:rgba(255,255,255,.22);--chip:#E4E5E9;--help:#A3A5AD;--addt:rgba(255,255,255,.10)}
+.stage.jour{--tp:#16171A;--ts:#505257;--sel:rgba(0,0,0,.08);--ctl:rgba(0,0,0,.06);--focus:#16171A;--onf:#F3EEE1;--fring:rgba(22,23,26,.35);--ring:#16171A;
+  --glass:rgba(243,238,225,.70);--gb:rgba(243,238,225,.90);--tile:#D8D5CC;--tilef:#F3EEE1;--panel:#F3EEE1;--shadow:rgba(42,36,24,.20);--div:rgba(0,0,0,.08);--track:rgba(0,0,0,.14);--chip:#2A2C33;--help:#505257;--addt:#F3EEE1}
+.layer{position:absolute;left:0;top:0;width:960px;height:540px;zoom:1.125;overflow:hidden;animation:lin .45s ease both}
+.layer.out{animation:lout .4s ease both}
+@keyframes lin{from{opacity:0;transform:scale(1.015)}to{opacity:1;transform:none}}
+@keyframes lout{to{opacity:0}}
+.page{position:absolute;inset:0;transition:opacity .22s}
+.tab,.rb,.btn,.card,.chr,.sitem,.drow,.mr,.cb,.pt .pring,.cmr,.sbar{transition:transform .22s ease,background-color .22s,color .22s,box-shadow .22s,opacity .3s,border-color .22s}
+svg{display:block}
+/* ---- Verre miryo (Glass.kt, the same file in miryo, miryo iptv and miryo tube): at night almost
+   clear glass, a thin rim lit at the top-left and bottom-right corners. By day light comes from
+   above: a white rim along the top, a hint of warm shade along the bottom, a milky body a step
+   lighter than the page and a short soft shadow (1 dp, 3 dp). Gradients only (no blur). ---- */
+.btn,.dlg{position:relative}
+.rb:not(.f),.btn:not(.f),.dlg{background-image:linear-gradient(160deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 45%);box-shadow:0 10px 26px rgba(0,0,0,.22);border-color:transparent}
+.rb:not(.f)::after,.btn:not(.f)::after,.dlg::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.2px;pointer-events:none;z-index:3;
+  background:linear-gradient(125deg,rgba(255,255,255,.95) 0%,rgba(255,255,255,.3) 16%,rgba(255,255,255,.07) 38%,rgba(255,255,255,.07) 62%,rgba(255,255,255,.3) 84%,rgba(255,255,255,.9) 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.stage:not(.nuit) .rb:not(.f),.stage:not(.nuit) .btn:not(.f),.stage:not(.nuit) .dlg{background-image:linear-gradient(180deg,rgba(255,255,255,.42) 0%,rgba(255,255,255,.08) 50%,rgba(255,255,255,0) 100%);
+  box-shadow:0 1px 0 rgba(60,45,20,.10),0 3px 0 rgba(60,45,20,.05)}
+.stage:not(.nuit) .rb:not(.f)::after,.stage:not(.nuit) .btn:not(.f)::after,.stage:not(.nuit) .dlg::after{background:linear-gradient(180deg,rgba(255,255,255,.95) 0%,rgba(255,255,255,.45) 30%,rgba(60,45,20,.05) 60%,rgba(60,45,20,.18) 100%)}
+/* Réglages: the sections panel and each setting card in the same glass. */
+.snav,.scard{background-image:linear-gradient(160deg,rgba(255,255,255,.10) 0%,rgba(255,255,255,0) 45%)}
+.snav::after,.scard::after{content:"";position:absolute;inset:0;border-radius:inherit;padding:1.2px;pointer-events:none;z-index:3;
+  background:linear-gradient(125deg,rgba(255,255,255,.95) 0%,rgba(255,255,255,.3) 16%,rgba(255,255,255,.07) 38%,rgba(255,255,255,.07) 62%,rgba(255,255,255,.3) 84%,rgba(255,255,255,.9) 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+.stage:not(.nuit) .snav,.stage:not(.nuit) .scard{background-image:linear-gradient(180deg,rgba(255,255,255,.42) 0%,rgba(255,255,255,.08) 50%,rgba(255,255,255,0) 100%);box-shadow:0 1px 0 rgba(60,45,20,.10),0 3px 0 rgba(60,45,20,.05)}
+.stage:not(.nuit) .snav::after,.stage:not(.nuit) .scard::after{background:linear-gradient(180deg,rgba(255,255,255,.95) 0%,rgba(255,255,255,.45) 30%,rgba(60,45,20,.05) 60%,rgba(60,45,20,.18) 100%)}
+/* Focused cards: the same corner-lit rim, over the usual ring. */
+.card.f::before{content:"";position:absolute;inset:0;border-radius:inherit;z-index:4;pointer-events:none;padding:1.8px;
+  background:linear-gradient(125deg,#fff 0%,rgba(255,255,255,.35) 18%,rgba(255,255,255,.08) 40%,rgba(255,255,255,.08) 60%,rgba(255,255,255,.35) 82%,#fff 100%);
+  -webkit-mask:linear-gradient(#000 0 0) content-box,linear-gradient(#000 0 0);-webkit-mask-composite:xor;mask-composite:exclude}
+/* « Zone sûre » toggle: the TV safe zone (48 / 32 / 48 dp, ×1.125 on the stage) */
+.stage.safe::after{content:"";position:absolute;left:54px;right:54px;top:36px;bottom:54px;border:1.5px dashed rgba(229,56,59,.85);border-radius:4px;pointer-events:none;z-index:60}
+
+/* header (Header.kt, miryo's bar): tabs as text, Recherche right after them; on the right the account,
+   Jour / Nuit / Auto, Réglages (red dot: update) and the time. 30 dp round glass buttons, 14 dp icons, 10 dp gaps */
+.hdr{position:absolute;top:32px;left:48px;right:48px;height:34px;display:flex;align-items:center;justify-content:space-between}
+.lft{flex:0 1 auto;min-width:0;display:flex;align-items:center;gap:28px}
+.tabs{flex:0 1 auto;min-width:0;overflow:hidden}
+.tin{display:flex;gap:28px;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.tab{padding-top:8px;font-size:15px;line-height:18px;font-weight:500;color:var(--ts);white-space:nowrap;display:flex;flex-direction:column;flex:none}
+.tab::after{content:"";margin-top:5px;height:3px;border-radius:2px;background:transparent;transition:background-color .22s}
+.tab.sel{color:var(--tp);font-weight:700}
+.tab.sel::after{background:color-mix(in srgb,var(--tp) 25%,transparent)}
+.tab.f{color:var(--tp)}
+.tab.f::after{background:var(--focus)}
+.right{display:flex;gap:10px;align-items:center;margin-left:24px;flex:none}
+.rb{position:relative;width:30px;height:30px;border-radius:50%;background:var(--glass);border:1px solid var(--gb);box-sizing:border-box;display:grid;place-items:center;color:var(--tp);flex:none}
+.rb svg{width:14px;height:14px}
+.rb .apa{font-size:13px;line-height:16px;font-weight:600}
+.rb .api{display:none}
+.udot{position:absolute;right:0;top:0;width:7px;height:7px;border-radius:50%;background:#E5383B;opacity:0;transition:opacity .3s}
+.udot.on{opacity:1}
+.rb.f{background:var(--focus);color:var(--onf);border-color:transparent;transform:scale(1.1);box-shadow:0 10px 24px var(--shadow)}
+.rb.av{background:none;border:none}
+.rb.av.f{background:none;box-shadow:0 0 0 3px var(--a0),0 0 0 6px var(--focus)}
+.clock{font-size:14px;font-weight:600;font-variant-numeric:tabular-nums;padding-left:2px}
+.avp{border-radius:50%;display:grid;place-items:center;color:#fff;font-weight:700;flex:none;letter-spacing:0}
+
+/* rows and cards (Browse.kt): 4 cards of 204 dp at 100 %, 16 dp gap, rows 235 dp apart */
+.rows{position:absolute;left:0;right:0;top:80px;bottom:0;overflow:hidden;transition:opacity .22s}
+.rin{position:absolute;left:0;right:0;top:0;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.vrow{position:absolute;left:0;right:0;height:237px}
+/* Thin full-width rule above every row but the first (Palette.Divider, 1 px, inset by the gutter). */
+.vrow+.vrow::before{content:'';position:absolute;left:48px;right:48px;top:0;height:1px;background:var(--div)}
+.rt{position:absolute;left:48px;top:8px;font-size:16px;line-height:20px;font-weight:700;white-space:nowrap}
+.rc{position:absolute;left:48px;top:44px;display:flex;gap:16px;transition:transform .45s cubic-bezier(.2,.8,.2,1)}
+.cw{width:204px;flex:none;transition:width .35s,opacity .3s,margin .35s}
+.card{position:relative;height:115px;border-radius:13px;overflow:hidden;background:var(--tile);isolation:isolate}
+.card.f{transform:scale(1.05);box-shadow:0 0 0 3px var(--fring),0 18px 40px var(--shadow);z-index:2}
+.card.f::after{content:"";position:absolute;inset:0;background:linear-gradient(115deg,transparent 35%,rgba(255,255,255,.16) 50%,transparent 65%);background-size:300% 100%;animation:shine .6s ease both;pointer-events:none}
+@keyframes shine{from{background-position:110% 0}to{background-position:-10% 0}}
+.ct{font-size:14px;line-height:18px;font-weight:600;height:36px;margin-top:10px;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.cs{font-size:13px;line-height:16px;height:16px;margin-top:2px;color:var(--ts);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cs:has(.csn){display:flex}
+.csn{min-width:0;overflow:hidden;text-overflow:ellipsis}
+.csa{flex:none}
+.bdg{position:absolute;right:8px;bottom:8px;font-size:13px;line-height:16px;font-weight:600;color:#fff;background:rgba(0,0,0,.72);border-radius:6px;padding:2px 6px;z-index:1}
+.bdg.w{bottom:14px}
+.bdg.live{background:#E5383B}
+.lane{position:absolute;left:9px;right:9px;bottom:6px;height:3px;border-radius:2px;background:rgba(255,255,255,.3);overflow:hidden;z-index:1}
+.lane i{display:block;height:100%;background:#fff}
+.chw{width:120px;flex:none;display:flex;flex-direction:column;align-items:center;padding-top:4px}
+.chr{width:109px;height:109px;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;border:2.5px solid transparent}
+.chr.f{border-color:var(--ring);transform:scale(1.06)}
+.chn{font-size:13px;line-height:17px;font-weight:500;text-align:center;margin-top:4px;color:color-mix(in srgb,var(--tp) 85%,transparent)}
+.msg{position:absolute;left:48px;top:24px;font-size:16px;color:var(--ts)}
+.scene{background:
+  radial-gradient(55% 65% at 26% 36%,hsl(var(--h) 70% 55% / .85),transparent 70%),
+  radial-gradient(50% 60% at 78% 70%,hsl(calc(var(--h) + 42) 65% 42% / .9),transparent 70%),
+  radial-gradient(30% 30% at 60% 25%,hsl(calc(var(--h) - 30) 80% 70% / .35),transparent 70%),
+  linear-gradient(135deg,hsl(var(--h) 45% 12%),hsl(calc(var(--h) + 25) 50% 22%));
+  background-size:170% 170%;animation:drift 16s ease-in-out infinite alternate;transition:--h 1.1s ease}
+@keyframes drift{0%{background-position:0% 0%}100%{background-position:100% 80%}}
+
+/* buttons & pills (Common.kt MiryoButton: 36 dp, 14 sp, 14 dp padding) */
+.btn{height:36px;padding:0 14px;border-radius:18px;display:inline-flex;align-items:center;gap:7px;font-size:14px;font-weight:500;background:var(--ctl);color:var(--tp);white-space:nowrap;box-sizing:border-box;flex:none}
+.btn svg{width:15px;height:15px}
+.btn.c{color:var(--chip)}
+.btn.c svg{width:13px;height:13px}
+.btn.sel{background:var(--sel)}
+.btn .ck{display:none}
+.btn.sel .ck{display:block}
+.btn.red{background:#E5383B;color:#fff;min-width:116px}
+.btn.red .on{display:none}
+.btn.red.sel{background:var(--ctl);color:var(--tp)}
+.btn.red.sel .on{display:block}
+.btn.red.sel .off{display:none}
+.btn.glass{background:var(--glass)}
+.btn.f,.btn.red.f,.btn.red.sel.f,.btn.sel.f{background:var(--focus);color:var(--onf);transform:scale(1.05)}
+.pills{position:absolute;left:48px;display:flex;gap:10px;align-items:center}
+.gp{display:contents}
+
+/* dialogs (MiryoDialog: Panel, 24 dp corners, window dim) */
+.dim{position:absolute;inset:0;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:32px 48px 48px;box-sizing:border-box}
+.dlg{background:var(--panel);border-radius:24px;color:var(--tp);box-sizing:border-box}
+.drow{height:52px;border-radius:14px;padding:0 12px;display:flex;align-items:center;gap:12px;font-size:15px;font-weight:500}
+.drow svg{width:20px;height:20px;flex:none}
+.drow.f{background:var(--focus);color:var(--onf)}
+.codedlg{width:760px;max-width:100%;padding:32px;display:flex;gap:32px;align-items:center}
+.codedlg .l{flex:1;display:flex;flex-direction:column;gap:14px}
+.codedlg h4{margin:0;font-size:22px;font-weight:600}
+.codedlg .p{font-size:15px;line-height:21px;color:var(--ts)}
+.codedlg .slot{height:52px;display:flex;align-items:center}
+.codedlg .code{font-size:40px;line-height:48px;font-weight:700;letter-spacing:4px;white-space:nowrap}
+.codedlg .wait{font-size:28px;line-height:34px;color:var(--ts)}
+.codedlg .s{font-size:13px;line-height:18px;color:var(--ts)}
+.qr{width:220px;height:220px;border-radius:14px;background:#fff;flex:none;display:grid;place-items:center}
+.qr svg{width:192px;height:192px;transition:opacity .3s}
+.notice{position:absolute;left:0;right:0;bottom:48px;display:flex;justify-content:center}
+.notice span{font-size:15px;font-weight:500;color:#fff;background:rgba(0,0,0,.85);border-radius:14px;padding:10px 18px;white-space:nowrap}
+.notice.lft{justify-content:flex-start;left:48px}
+
+/* full-screen dialogs: « Qui regarde ? », Réglages */
+.who{position:absolute;inset:0;padding:32px 48px 48px;box-sizing:border-box;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.who h3{margin:0;font-size:44px;line-height:52px;font-weight:700;letter-spacing:-.03em}
+.ptiles{display:flex;gap:40px;margin-top:40px}
+.pt{width:140px;display:flex;flex-direction:column;align-items:center}
+.pring{width:128px;height:128px;border-radius:50%;display:grid;place-items:center;box-sizing:border-box;border:3px solid transparent}
+.pt.f .pring{border-color:var(--ring);transform:scale(1.1)}
+.padd{width:110px;height:110px;border-radius:50%;display:grid;place-items:center;background:var(--addt)}
+.padd svg{width:34px;height:34px}
+.pn{font-size:16px;font-weight:500;color:var(--ts);margin-top:7px}
+.pt.f .pn{font-weight:700;color:var(--tp)}
+.pc{font-size:13px;color:var(--ts);height:18px;margin-top:2px}
+.wfoot{font-size:13px;color:var(--ts);margin-top:36px}
+.stitle{position:absolute;left:48px;top:32px;font-size:44px;line-height:50px;font-weight:700;letter-spacing:-.03em}
+.snav{position:absolute;left:48px;top:104px;bottom:48px;width:230px;box-sizing:border-box;background:var(--glass);border-radius:18px;padding:11px;display:flex;flex-direction:column;gap:4px}
+.sitem{height:40px;flex:none;border-radius:12px;padding:0 14px;display:flex;align-items:center;font-size:15px;font-weight:600;color:var(--tp)}
+.sitem.sel{background:var(--sel)}
+.sitem.f{background:var(--focus);color:var(--onf)}
+.spage{position:absolute;left:300px;right:48px;top:104px;display:flex;flex-direction:column;gap:11px;transition:opacity .3s}
+.scard{position:relative;background:var(--glass);border-radius:16px;padding:16px 18px;overflow:hidden;transition:max-height .45s,opacity .45s,padding .45s}
+.scard h5{margin:0;font-size:15px;line-height:19px;font-weight:700}
+.scard .chs{display:flex;gap:6px;margin-top:10px;align-items:center}
+.scard .hp{font-size:13px;line-height:17px;color:var(--help);margin-top:8px}
+.scard.hide{max-height:0;opacity:0;padding-top:0;padding-bottom:0;margin-bottom:-11px}
+
+/* search (Search.kt): 56 dp pill, 22 sp */
+.sbar{position:absolute;left:48px;top:32px;height:56px;border-radius:28px;background:var(--ctl);display:flex;align-items:center;gap:14px;padding:0 22px;box-sizing:border-box;font-size:22px;font-weight:500}
+.jour .sbar{background:var(--panel)}
+.sbar svg{width:18px;height:18px;color:var(--ts);flex:none}
+.sbar.f{box-shadow:0 0 0 2px var(--ring)}
+.sbar .ph{color:var(--ts);white-space:nowrap}
+.caret{width:2px;height:26px;background:var(--tp);margin-left:-12px;opacity:0}
+.caret.on{animation:blink 1s steps(1) infinite}
+@keyframes blink{0%{opacity:1}50%{opacity:0}}
+
+/* player (Player.kt) — controls always white on the dark gradients; panels use the theme */
+.isl{color:#fff}
+.full{position:absolute;inset:0}
+.ptop{position:absolute;left:0;right:0;top:0;height:150px;background:linear-gradient(rgba(0,0,0,.7),transparent)}
+.pbot{position:absolute;left:0;right:0;bottom:0;height:220px;background:linear-gradient(transparent,rgba(0,0,0,.85))}
+.ptitle{position:absolute;left:48px;top:32px;right:130px;transition:right .3s}
+.ptitle b{display:block;font-size:18px;line-height:23px;font-weight:600}
+.pmeta{display:flex;gap:14px;align-items:center;margin-top:4px;font-size:13px;line-height:16px;color:rgba(255,255,255,.85)}
+.cnt{display:flex;align-items:center;gap:5px;color:rgba(255,255,255,.72)}
+.cnt svg{width:13px;height:13px}
+.pclock{position:absolute;top:32px;right:48px;height:23px;display:flex;align-items:center;font-size:15px;font-weight:500;color:rgba(255,255,255,.92);transition:opacity .3s}
+.pctl{position:absolute;left:48px;right:48px;bottom:48px}
+.pbar{position:relative;height:20px;display:flex;align-items:center}
+.trk{position:relative;width:100%;height:4px;border-radius:4px;background:rgba(255,255,255,.22);overflow:hidden;transition:height .15s}
+.pbar.f .trk{height:7px}
+.trk i{position:absolute;left:0;top:0;bottom:0}
+.trk .bf{background:rgba(255,255,255,.35)}
+.trk .pl{background:#fff;transition:width .35s}
+.trk .sp{background:#F2C230}
+.trk .cg{width:2px;background:rgba(0,0,0,.6)}
+.hdl{position:absolute;top:3px;width:14px;height:14px;margin-left:-7px;border-radius:50%;background:#fff;box-shadow:0 0 0 3px rgba(255,255,255,.3);opacity:0;transition:left .35s,opacity .15s}
+.pbar.f .hdl{opacity:1}
+.pbtns{display:flex;justify-content:space-between;align-items:center;margin-top:8px}
+.cbs{display:flex;gap:10px}
+.cb{width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.12);color:#fff;display:grid;place-items:center;flex:none}
+.cb svg{width:24px;height:24px}
+.cb .on,.ci .on{display:none}
+.cb.sel{background:#fff;color:#000}
+.cb.thumb.sel{background:rgba(255,255,255,.3);color:#fff}
+.cb.thumb.sel .on,.ci.sel .on{display:block}
+.cb.thumb.sel .off,.ci.sel .off{display:none}
+.cb.f,.cb.thumb.sel.f{background:#fff;color:#000;transform:scale(1.1)}
+.ci{display:inline-flex}
+.ci svg{width:13px;height:13px}
+.mr .ck{display:none}
+.mr.sel .ck{display:block}
+.ptime{font-size:15px;color:rgba(255,255,255,.9);font-variant-numeric:tabular-nums}
+.sbp{position:absolute;bottom:86px;width:256px;display:flex;flex-direction:column;align-items:center;transition:left .35s}
+.sbp .fr{width:256px;height:144px;border-radius:14px;overflow:hidden}
+.sbp span{font-size:14px;font-weight:500;margin-top:6px}
+.sline{position:absolute;left:0;right:0;bottom:0;padding:0 48px 48px;background:linear-gradient(transparent,rgba(0,0,0,.7))}
+.sline .trk{height:4px;background:rgba(255,255,255,.3)}
+.sline .t{text-align:right;margin-top:7px;font-size:15px;color:rgba(255,255,255,.9);font-variant-numeric:tabular-nums}
+.loadv{position:absolute;inset:0}
+.loadv .v{position:absolute;inset:0;background:rgba(0,0,0,.6)}
+.ldots{position:absolute;left:50%;top:50%;display:flex;gap:10px;transform:translate(-50%,-50%)}
+.ldots i{width:10px;height:10px;border-radius:50%;background:#fff;opacity:.35;animation:dot 0.9s steps(1) infinite}
+.ldots i:nth-child(2){animation-delay:.3s}.ldots i:nth-child(3){animation-delay:.6s}
+@keyframes dot{0%{opacity:1}33%{opacity:.35}}
+.skipn{position:absolute;left:48px;bottom:48px;font-size:15px;font-weight:500;color:#fff;background:rgba(0,0,0,.7);border-radius:14px;padding:8px 14px}
+.pmenu{position:absolute;right:0;top:0;bottom:0;width:400px;box-sizing:border-box;background:color-mix(in srgb,var(--panel) 97%,transparent);padding:32px 48px 48px 20px;color:var(--tp);overflow:hidden}
+.pmenu h4{margin:0 0 12px 12px;font-size:20px;line-height:24px;font-weight:600}
+.mhd{font-size:13px;font-weight:600;color:var(--ts);padding:12px 12px 2px}
+.mr{height:48px;border-radius:14px;padding:0 12px;display:flex;align-items:center;margin-bottom:4px;font-size:15px;font-weight:500}
+.mr .lb{flex:none;max-width:220px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mr .lb.w{flex:1;max-width:none}
+.mr .vl{flex:1;text-align:right;font-size:14px;opacity:.65;padding-left:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mr .mk{width:18px;margin-left:10px;display:grid;place-items:center;font-size:20px;opacity:.65}
+.mr .mk svg{width:18px;height:18px}
+.mr.sel{background:var(--sel)}
+.mr.sel .mk{opacity:1}
+.mr.f{background:var(--focus);color:var(--onf)}
+.pinfo{padding:0 12px;font-size:13px;line-height:19px;transition:transform .45s}
+.pinfo .fg{color:var(--ts);margin-bottom:12px}
+.pinfo p{margin:0 0 12px;color:color-mix(in srgb,var(--tp) 90%,transparent)}
+.pinfo.f{outline:none}
+.cmts{position:absolute;right:0;top:0;bottom:0;width:384px;box-sizing:border-box;background:color-mix(in srgb,var(--panel) 97%,transparent);padding:32px 48px 0 20px;color:var(--tp);overflow:hidden}
+.cmts h4{margin:0 0 12px 12px;font-size:20px;line-height:24px;font-weight:600}
+.cmr{display:flex;gap:12px;padding:12px;border-radius:14px;margin-bottom:4px}
+.cmr.rp{margin-left:40px}
+.cmr .tx{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.cmr .hd{font-size:13px;color:var(--ts)}
+.cmr .bd{font-size:15px;line-height:21px}
+.cmr .ft{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--ts);margin-top:2px}
+.cmr .ft svg{width:14px;height:14px}
+.cmr.f{background:var(--focus);color:var(--onf)}
+.cmr.f .hd,.cmr.f .ft{color:inherit;opacity:.7}
+.reps{overflow:hidden;max-height:0;transition:max-height .45s}
+.reps.on{max-height:300px}
+.stats{position:absolute;top:32px;left:48px;max-width:340px;background:rgba(0,0,0,.72);border-radius:14px;padding:10px 14px;display:flex;flex-direction:column;gap:2px;color:#fff}
+.stats div{display:flex;font-size:13px;line-height:17px}
+.stats div span{width:120px;flex:none;color:rgba(255,255,255,.65)}
+.stats div b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.upn{position:absolute;right:48px;bottom:48px;background:color-mix(in srgb,var(--panel) 95%,transparent);border-radius:24px;padding:12px;display:flex;gap:14px;align-items:center;color:var(--tp)}
+.upn .th{width:144px;height:81px;border-radius:14px;flex:none}
+.upn .cl{width:198px;display:flex;flex-direction:column;gap:5px}
+.upn .cl small{font-size:13px;font-weight:600;color:var(--ts)}
+.upn .cl b{font-size:14px;line-height:18px;font-weight:600}
+.perr{position:absolute;inset:0;background:rgba(0,0,0,.5);display:grid;place-items:center}
+.perr .bx{max-width:560px;background:color-mix(in srgb,var(--panel) 95%,transparent);border-radius:24px;padding:28px;display:flex;flex-direction:column;align-items:center;gap:14px;color:var(--tp)}
+.perr h4{margin:0;font-size:20px;font-weight:600}
+.perr p{margin:0;font-size:15px;color:var(--ts);text-align:center}
+.miniw{position:absolute;right:48px;bottom:48px;width:317px;height:178px;box-shadow:0 24px 60px rgba(0,0,0,.6);z-index:5}
+
+/* panels & overlays (engine toggles .on) */
+.tg.ovl{z-index:6;opacity:0;pointer-events:none;transition:opacity .3s,transform .4s cubic-bezier(.2,.8,.2,1)}
+.ovl.from-b{transform:translateY(50px)}
+.ovl.from-r{transform:translateX(70px)}
+.ovl.pop{transform:scale(.94)}
+.ovl.fade{transform:none}
+.ovl.on{opacity:1;transform:none}
+@media (prefers-reduced-motion:reduce){.scene{animation:none}.layer,.layer.out{animation-duration:.01s}.card.f::after{animation:none}}
+</style>
+
+<div class="wrap">
+  <div class="eyebrow">Storyboard · miryo tube · 1.0 bêta 16</div>
+  <h1>miryo tube</h1>
+  <p class="lead">Chaque écran est montré en Jour et en Nuit, sur un canevas de 1080 × 608 (une TV 1080p de 960 × 540 dp, l’interface à sa taille par défaut de 100 %). « Zone sûre » trace la marge que les TV peuvent rogner (48 dp sur les côtés et en bas, 32 dp en haut) : rien d’important n’en sort. Les séquences se rejouent touche par touche : clique une étape, ou lance la lecture. Libellés, ordre, tailles et couleurs viennent du code actuel de miryo tube (thème Opale de miryo, fond « Neutre »). Chaînes, vidéos et comptes sont des exemples inventés.</p>
+  <p class="lead">miryo tube marche seul. Quand le launcher miryo est installé et que son certificat correspond à celui attendu, miryo tube lui fournit en plus ses rangées YouTube (dernier écran).</p>
+
+  <div class="toolbar" role="toolbar" aria-label="Réglages du storyboard">
+    <div class="tgroup" id="ambs"><span class="tlabel">Ambiance</span></div>
+    <div class="tgroup"><span class="tlabel">Vitesse</span>
+      <button class="pill" data-speed="1.8" aria-pressed="false">Lente</button>
+      <button class="pill" data-speed="1.25" aria-pressed="true">Normale</button>
+      <button class="pill" data-speed="0.8" aria-pressed="false">Rapide</button>
+    </div>
+    <div class="tgroup"><button class="pill" id="auto" aria-pressed="false">Lecture auto à l'écran</button></div>
+    <div class="tgroup"><button class="pill" id="safe" aria-pressed="false">Zone sûre</button></div>
+  </div>
+  <nav class="toc" id="toc" aria-label="Écrans"></nav>
+  <div id="screens"></div>
+
+  <section class="screen" id="demarrage">
+    <div class="eyebrow">Référence</div>
+    <h2>Démarrage</h2>
+    <p class="lead"><span class="status">En place</span> dans la 1.0 bêta 16 : l'animation du logo miryo tube. au lancement (BrandIntro). Elle tourne ici en boucle.</p>
+    <style>
+#demarrage .intro-stage{position:relative;aspect-ratio:16/9;max-width:640px;background:#10121A;border-radius:14px;display:grid;place-items:center;overflow:hidden}
+#demarrage .intro-lockup{position:relative;width:368px;height:102px;animation:i-center 3600ms infinite;}
+#demarrage .intro-layer{position:absolute;inset:0;width:100%;height:100%}
+#demarrage .i-word{animation:i-word 3600ms infinite}
+#demarrage .i-suffix{opacity:0;animation:i-suffix 3600ms infinite both}
+#demarrage .i-dot{opacity:0;transform-origin:96.51% 65.6%;animation:i-dot 3600ms infinite both}
+#demarrage .intro-wrap{animation:i-fade 3600ms infinite}
+@keyframes i-center{0%,6.9%{transform:translateX(56.3px)}24.4%,28.8%{transform:translateX(0.4px)}37.2%,100%{transform:translateX(-7.5px)}}
+@keyframes i-word{0%,100%{clip-path:none}}
+@keyframes i-suffix{0%,12.6%{opacity:0}17.7%,95%{opacity:1}96%,100%{opacity:0}}
+@keyframes i-dot{0%,28.8%{opacity:0;transform:translateY(-11px) scale(0)}33.8%{opacity:1;transform:translateY(1px) scale(1.25)}37.2%,95%{opacity:1;transform:none}96%,100%{opacity:0;transform:none}}
+@keyframes i-fade{0%,88%{opacity:1}96%,100%{opacity:0}}
+@media (prefers-reduced-motion: reduce){#demarrage *{animation:none!important}#demarrage .intro-lockup{transform:translateX(-7.5px)}}
+</style>
+    <div class="intro-wrap"><div class="intro-stage" role="img" aria-label="Animation de démarrage de miryo tube."><div class="intro-lockup"><svg class="intro-layer i-mark" viewBox="0 0 230 64" aria-hidden="true"><g transform="translate(32.0 32.0) scale(0.56 0.56) translate(-54.0 -54.0)"><path d="M87.48,48.1A34,34 0 1 1 59.82,20.5" fill="none" stroke="#FF5F52" stroke-opacity="0.75" stroke-width="3.5" stroke-linecap="round"/><path d="M30,54a24,24 0 1 1 48,0a24,24 0 1 1 -48,0z" fill="#FF5F52" fill-opacity="0.16"/><path d="M56.06,30.09A24,24 0 1 0 74.37,66.7A21,21 0 1 1 56.06,30.09z" fill="#FF5F52" fill-opacity="1.0"/></g></svg><svg class="intro-layer i-word" viewBox="0 0 230 64" aria-hidden="true"><path d="M67.89 42V27.12H71.3V42ZM77.78 42V33.13Q77.78 31.65 76.85 30.82Q75.92 30 74.56 30Q73.63 30 72.9 30.38Q72.17 30.75 71.73 31.44Q71.3 32.14 71.3 33.13L69.97 32.39Q69.97 30.69 70.71 29.45Q71.46 28.2 72.73 27.51Q74 26.81 75.58 26.81Q77.16 26.81 78.43 27.49Q79.7 28.17 80.45 29.41Q81.19 30.65 81.19 32.39V42ZM87.67 42V33.13Q87.67 31.65 86.74 30.82Q85.81 30 84.44 30Q83.55 30 82.8 30.38Q82.06 30.75 81.62 31.44Q81.19 32.14 81.19 33.13L79.27 32.39Q79.42 30.69 80.26 29.45Q81.1 28.2 82.41 27.51Q83.73 26.81 85.31 26.81Q86.92 26.81 88.23 27.49Q89.53 28.17 90.3 29.41Q91.08 30.65 91.08 32.39V42ZM94.61 42V27.12H98.02V42ZM96.32 24.39Q95.45 24.39 94.88 23.8Q94.3 23.21 94.3 22.35Q94.3 21.48 94.88 20.89Q95.45 20.3 96.32 20.3Q97.22 20.3 97.78 20.89Q98.33 21.48 98.33 22.35Q98.33 23.21 97.78 23.8Q97.22 24.39 96.32 24.39ZM101.84 42V27.12H105.25V42ZM105.25 33.72 104.07 33.13Q104.07 30.31 105.32 28.56Q106.58 26.81 109.12 26.81Q110.24 26.81 111.14 27.21Q112.04 27.62 112.81 28.52L110.58 30.81Q110.18 30.38 109.68 30.19Q109.18 30 108.53 30Q107.11 30 106.18 30.9Q105.25 31.8 105.25 33.72ZM119.82 42.16 113.46 27.12H117.21L121.55 38.16H120.47L125.06 27.12H128.84L121.92 42.16ZM115.38 48.2 120 38.68 121.92 42.16 119.17 48.2ZM137.89 42.31Q135.72 42.31 133.95 41.27Q132.19 40.23 131.15 38.47Q130.11 36.7 130.11 34.53Q130.11 32.36 131.15 30.62Q132.19 28.89 133.95 27.85Q135.72 26.81 137.89 26.81Q140.09 26.81 141.86 27.83Q143.62 28.86 144.66 30.61Q145.7 32.36 145.7 34.53Q145.7 36.7 144.66 38.47Q143.62 40.23 141.86 41.27Q140.09 42.31 137.89 42.31ZM137.89 39.02Q139.16 39.02 140.14 38.45Q141.11 37.88 141.66 36.85Q142.2 35.83 142.2 34.53Q142.2 33.23 141.64 32.23Q141.08 31.24 140.12 30.67Q139.16 30.1 137.89 30.1Q136.65 30.1 135.67 30.67Q134.7 31.24 134.15 32.23Q133.61 33.23 133.61 34.53Q133.61 35.83 134.15 36.85Q134.7 37.88 135.67 38.45Q136.65 39.02 137.89 39.02Z" fill="#F3EEE1" fill-opacity="1.0"/></svg><svg class="intro-layer i-suffix" viewBox="0 0 230 64" aria-hidden="true"><path d="M159.09 42V21.29H161.26V42ZM155.41 29.38V27.43H164.92V29.38ZM173.67 42.31Q171.9 42.31 170.5 41.49Q169.11 40.67 168.32 39.24Q167.53 37.81 167.53 35.89V27.43H169.73V35.8Q169.73 37.13 170.21 38.12Q170.69 39.12 171.59 39.67Q172.49 40.23 173.67 40.23Q175.49 40.23 176.56 39.02Q177.63 37.81 177.63 35.8V27.43H179.8V35.89Q179.8 37.78 179.03 39.24Q178.25 40.7 176.86 41.5Q175.46 42.31 173.67 42.31ZM191.4 42.31Q189.72 42.31 188.39 41.63Q187.06 40.95 186.2 39.75Q185.35 38.56 185.17 36.98V32.42Q185.35 30.81 186.22 29.62Q187.09 28.42 188.44 27.77Q189.79 27.12 191.4 27.12Q193.41 27.12 195.02 28.13Q196.64 29.13 197.58 30.86Q198.53 32.58 198.53 34.75Q198.53 36.88 197.6 38.59Q196.67 40.3 195.04 41.3Q193.41 42.31 191.4 42.31ZM183.86 42V20.05H186.03V30.99L185.6 34.5L186.03 38.09V42ZM191.03 40.23Q192.58 40.23 193.75 39.54Q194.93 38.84 195.6 37.58Q196.26 36.33 196.26 34.72Q196.26 33.07 195.6 31.83Q194.93 30.59 193.75 29.88Q192.58 29.17 191.06 29.17Q189.54 29.17 188.37 29.88Q187.21 30.59 186.56 31.83Q185.91 33.07 185.91 34.72Q185.91 36.33 186.56 37.58Q187.21 38.84 188.36 39.54Q189.51 40.23 191.03 40.23ZM208.73 42.31Q206.53 42.31 204.79 41.32Q203.05 40.33 202.05 38.59Q201.04 36.85 201.04 34.68Q201.04 32.55 202.03 30.82Q203.02 29.1 204.73 28.11Q206.43 27.12 208.54 27.12Q210.52 27.12 212.06 28.02Q213.59 28.92 214.48 30.51Q215.36 32.11 215.36 34.19Q215.36 34.44 215.33 34.76Q215.3 35.09 215.21 35.52H202.59V33.66H214.03L213.25 34.34Q213.28 32.73 212.71 31.57Q212.14 30.41 211.07 29.77Q210 29.13 208.48 29.13Q206.9 29.13 205.72 29.82Q204.54 30.5 203.87 31.72Q203.21 32.95 203.21 34.62Q203.21 36.3 203.91 37.57Q204.6 38.84 205.86 39.55Q207.11 40.26 208.76 40.26Q210.09 40.26 211.21 39.78Q212.32 39.3 213.1 38.34L214.49 39.77Q213.47 40.98 211.97 41.64Q210.46 42.31 208.73 42.31Z" fill="#FFADB9" fill-opacity="1.0"/></svg><svg class="intro-layer i-dot" viewBox="0 0 230 64" aria-hidden="true"><path d="M221.97 42.31Q220.98 42.31 220.34 41.64Q219.71 40.98 219.71 40.02Q219.71 39.02 220.34 38.37Q220.98 37.72 221.97 37.72Q222.96 37.72 223.6 38.37Q224.23 39.02 224.23 40.02Q224.23 40.98 223.6 41.64Q222.96 42.31 221.97 42.31Z" fill="#FF5F52" fill-opacity="1.0"/></svg></div></div></div>
+    <ol class="lead"><li>La box affiche son écran de démarrage : la lune seule, sur la nuit des bannières.</li><li>« miryo » est là dès le début, avec la lune (0,25 s seuls).</li><li>Le logo fait la place de « tube » (0,46 s) ; « tube » ne se voit pas pendant qu’il sort : il apparaît en fondu, entier, à sa place.</li><li>Le point tombe en dernier, à la couleur de l'appli, avec un petit rebond (0,3 s).</li><li>Le logo reste 0,2 s, puis s'efface dès que l'appli a de quoi afficher (au plus 3 s après le lancement). Pendant ce temps, l'appli charge dessous.</li><li>Ouverte depuis miryo (une chaîne, une vidéo) : pas d'animation, l'écran de démarrage de la box reste seul, pour aller vite.</li></ol>
+  </section>
+
+  <section class="screen" id="touches">
+    <div class="eyebrow">Référence</div>
+    <h2>Charte des touches</h2>
+    <p class="lead">Télécommande de la box et DualSense (boutons lus d’après leur code brut, même sans pilote PlayStation). Dans une version de développement seulement, chaque appui de manette est noté dans <code>adb logcat -s MiryoTube.Pad</code> (jamais dans les versions publiées).</p>
+    <div class="tbl"><table>
+      <thead><tr><th>Action</th><th>Télécommande</th><th>DualSense</th><th>Dans le lecteur</th></tr></thead>
+      <tbody>
+        <tr><td>Valider</td><td><kbd>OK</kbd></td><td>Croix (✕)</td><td>Commandes masquées : les affiche (focus sur la barre) ; sur la barre : lecture / pause ; sur un bouton, l’active</td></tr>
+        <tr><td>Retour</td><td><kbd>B</kbd> Retour</td><td>Rond (○)</td><td>Ferme le panneau ouvert, puis masque les commandes, puis quitte la vidéo</td></tr>
+        <tr><td>Menu</td><td><kbd>☰</kbd> Menu · appui long sur <kbd>OK</kbd></td><td>Triangle (△) · Options</td><td>Réglages du lecteur ; sur une carte : menu de la carte</td></tr>
+        <tr><td>Lecture / pause</td><td><kbd>⏯</kbd></td><td>Carré (□)</td><td>Lecture / pause ; ramène aussi la petite fenêtre en plein écran</td></tr>
+        <tr><td>Reculer / avancer</td><td><kbd>◀</kbd> <kbd>▶</kbd> (commandes masquées, ou sur la barre) · <kbd>◀◀</kbd> <kbd>▶▶</kbd></td><td>L1 / R1</td><td>−10 s / +10 s ; maintenu : ×3 puis ×6</td></tr>
+        <tr><td>Chapitre précédent / suivant</td><td><kbd>⏮</kbd> <kbd>⏭</kbd></td><td>L2 / R2</td><td>Chapitre précédent / suivant (±60 s sans chapitres)</td></tr>
+        <tr><td>Rechercher</td><td><kbd>🎤</kbd> micro (dictée directe) · touche Recherche</td><td>Create</td><td>—</td></tr>
+        <tr><td>Haut / Bas</td><td><kbd>▲</kbd> <kbd>▼</kbd></td><td>Croix directionnelle, stick gauche</td><td>Masquées : affiche les commandes (focus sur la barre). Affichées : Bas descend vers les boutons (ne masque jamais), Haut remonte (boutons → barre → commandes masquées)</td></tr>
+      </tbody></table></div>
+  </section>
+</div>
+
+<script>
+/* ---------- icons (Icons.kt, drawn on a 24 grid) ---------- */
+const sv=(b,extra='')=>`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" ${extra}>${b}</svg>`;
+const spokes=()=>{let s='';for(let i=0;i<8;i++){const a=2*Math.PI*i/8,c=Math.cos(a),n=Math.sin(a);s+=`<path stroke-width="3" d="M${(12+7.2*c).toFixed(2)} ${(12+7.2*n).toFixed(2)}L${(12+9.6*c).toFixed(2)} ${(12+9.6*n).toFixed(2)}"/>`}return s};
+const thumbO='<rect x="3.5" y="10.5" width="3" height="9" rx="1"/><path d="M9 10L12.5 3.5L14.5 4.5L13.5 9.5H20L18.5 20H9Z"/>';
+const thumbF='<rect x="3" y="10" width="4" height="10" rx="1" fill="currentColor" stroke="none"/><path fill="currentColor" d="M9 10L12.5 3.5L14.5 4.5L13.5 9.5H20L18.5 20H9Z"/>';
+const I={
+search:sv('<circle cx="10" cy="10" r="6"/><path stroke-width="2.4" d="M14.5 14.5L20 20"/>'),
+gear:sv('<circle cx="12" cy="12" r="6.5"/><circle cx="12" cy="12" r="2.6"/>'+spokes()),
+play:sv('<path fill="currentColor" stroke="none" d="M8 4.5L20.5 12L8 19.5Z"/>'),
+pause:sv('<rect x="6" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" stroke="none"/><rect x="14" y="4.5" width="4" height="15" rx="1.2" fill="currentColor" stroke="none"/>'),
+pip:sv('<rect x="3" y="5" width="18" height="14" rx="2.5"/><rect x="11.5" y="11.5" width="7" height="5" rx="1" fill="currentColor" stroke="none"/>'),
+subs:sv('<rect x="3" y="5" width="18" height="14" rx="3"/><path d="M6.5 12H10M12.5 12H17.5M6.5 15.5H13M15.5 15.5H17.5"/>'),
+chapters:sv('<path d="M4 6H20M4 12H20M4 18H14"/>'),
+up:sv(thumbO),upf:sv(thumbF),
+down:sv('<g transform="matrix(1 0 0 -1 0 24)">'+thumbO+'</g>'),downf:sv('<g transform="matrix(1 0 0 -1 0 24)">'+thumbF+'</g>'),
+comment:sv('<rect x="3.5" y="4" width="17" height="12" rx="3"/><path fill="currentColor" stroke="none" d="M7.5 15.5V20.5L12.5 15.5Z"/><path d="M7.5 8.5H16.5M7.5 11.5H13.5"/>'),
+info:sv('<circle cx="12" cy="12" r="9"/><path d="M12 11V17"/><circle cx="12" cy="7.8" r="1.3" fill="currentColor" stroke="none"/>'),
+check:sv('<path d="M5 12.5L10 17.5L19 7"/>'),
+sun:sv('<circle cx="12" cy="12" r="4"/>'+[0,1,2,3,4,5,6,7].map(i=>{const a=Math.PI*i/4,c=Math.cos(a),n=Math.sin(a);return `<path d="M${(12+6.8*c).toFixed(2)} ${(12+6.8*n).toFixed(2)}L${(12+9.2*c).toFixed(2)} ${(12+9.2*n).toFixed(2)}"/>`}).join('')),
+moon:sv('<path fill="currentColor" stroke="none" d="M12.09 3.51A8.5 8.5 0 1 0 20.63 14.49A7 7 0 0 1 12.09 3.51Z"/>'),
+plus:sv('<path d="M12 5V19M5 12H19"/>'),
+refresh:sv('<path d="M18.06 15.5A7 7 0 1 1 18.06 8.5"/><path fill="currentColor" stroke="none" d="M19.5 4V10H13.5Z"/>'),
+close:sv('<path d="M6 6L18 18M18 6L6 18"/>'),
+mic:sv('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M18.5 12.5A6.5 5 0 0 1 5.5 12.5M12 17.5V21"/>'),
+user:sv('<circle cx="12" cy="8.5" r="4"/><path d="M4.95 17.45A7.5 6 0 0 1 19.05 17.45"/>'),
+history:sv('<circle cx="12" cy="12" r="8.5"/><path d="M12 7V12L15.5 14"/>'),
+eyeoff:sv('<ellipse cx="12" cy="12" rx="9" ry="5"/><circle cx="12" cy="12" r="2.5"/><path d="M4 4L20 20"/>'),
+restart:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"><path d="M4 12a8 8 0 1 0 2.3-5.7"/><path d="M4 4v4h4"/></svg>',
+prev:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M15 5l-7 7 7 7"/></svg>',
+next:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"><path d="M9 5l7 7-7 7"/></svg>',
+};
+
+/* ---------- helpers ---------- */
+const a=(al,hex)=>{const n=parseInt(hex,16);return `rgba(${n>>16},${(n>>8)&255},${n&255},${(al/255).toFixed(3)})`};
+// miryo's ambiances (miryo tube itself draws « Neutre » only: Header.kt miryoBackground)
+const AMB={
+ 'Neutre':{n:['#0A0B0E','#0E0F13','#111216'],ng:[a(0x24,'C8A46A'),a(0x1A,'5A8CFF')],d:['#E4E1D9','#DFDBD2','#DAD6CC'],dg:[a(0x4D,'C8A46A'),a(0x1F,'5A8CFF')]},
+ 'Crépuscule':{n:['#0B1026','#1B1240','#2A0F3D'],ng:[a(0x2A,'31C3D6'),a(0x22,'7A3CFF')],d:['#ECEAF6','#E4E0F2','#EDE3F0'],dg:[a(0x33,'7A3CFF'),a(0x26,'31C3D6')]},
+ 'Aurore':{n:['#1A0B1E','#3A1230','#4A1F1A'],ng:[a(0x2A,'FF7A59'),a(0x22,'E0407B')],d:['#F6EEEA','#F3E4E2','#F5E9E0'],dg:[a(0x40,'FF7A59'),a(0x30,'E0407B')]},
+ 'Océan':{n:['#041421','#0A2A3F','#06363F'],ng:[a(0x2A,'38D9C9'),a(0x22,'2F6BFF')],d:['#E8F1F4','#DFEDF2','#E3F2F1'],dg:[a(0x38,'38D9C9'),a(0x30,'2F6BFF')]},
+ 'Forêt':{n:['#07140D','#0E2617','#16301C'],ng:[a(0x26,'7BD389'),a(0x1E,'2FA37A')],d:['#EAF2EC','#E2EEE5','#E8F0E2'],dg:[a(0x38,'7BD389'),a(0x30,'2FA37A')]},
+ 'Uni':{n:['#000000','#000000','#000000'],ng:['transparent','transparent'],d:['#F2F3F5','#F2F3F5','#F2F3F5'],dg:['transparent','transparent']},
+};
+// Rail.kt INITIAL_GRADIENTS, picked by the name's Java hashCode
+const GR=[['#F58A6B','#E0466F'],['#F2B45A','#D9772E'],['#7C7CF5','#3F64F0'],['#6CCB8E','#2F9E73'],['#B08CF0','#7A4FD6']];
+const hc=s=>{let h=0;for(let i=0;i<s.length;i++)h=(Math.imul(h,31)+s.charCodeAt(i))|0;return h};
+const grad=n=>{const g=GR[((hc(n)%5)+5)%5];return `linear-gradient(135deg,${g[0]},${g[1]})`};
+const av=(n,size,fs,id)=>`<span class="avp" ${id?`data-id="${id}"`:''} style="width:${size}px;height:${size}px;font-size:${fs}px;background:${grad(n)}">${n.replace(/^@/,'')[0].toUpperCase()}</span>`;
+// deterministic QR-like pattern (the app draws a real one with ZXing)
+function qr(seed){let s=seed;const r=()=>{s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff};const N=29;let p='';
+ const fin=(x,y)=>`<rect x="${x}" y="${y}" width="7" height="7"/><rect x="${x+1}" y="${y+1}" width="5" height="5" fill="#fff"/><rect x="${x+2}" y="${y+2}" width="3" height="3"/>`;
+ for(let y=0;y<N;y++)for(let x=0;x<N;x++){const inF=(x<8&&y<8)||(x>N-9&&y<8)||(x<8&&y>N-9);if(!inF&&r()>.52)p+=`<rect x="${x}" y="${y}" width="1.02" height="1.02"/>`}
+ return `<svg viewBox="-1 -1 31 31" fill="#000">${p}${fin(0,0)}${fin(N-7,0)}${fin(0,N-7)}</svg>`}
+
+/* ---------- content (invented) ---------- */
+// [title, channel line, badge, hue, watched %, live]
+const R_RESUME=[['Pain au levain maison : la méthode complète','Cuisine du Dimanche','18:47',30,22],['Réussir ses photos de nuit sans trépied','Atelier Lumière','12:05',200,64],['Trois jours à pied dans les Cévennes','Voyages Lents','41:12',170,35],['Restaurer une console de 1994','Pixel Rétro','27:30',280,80],['Comprendre les trous noirs en 15 minutes','Science en Poche','15:02',220,48],['Le tour du lac Blanc','Rando Alpine','22:40',140,12],['Mon bureau de développeur, version 2026','Code Café','9:58',250,55]];
+const R_RECO=[['Synthés modulaires : par où commencer ?','Le Labo Sonore','24:16',320],['La meilleure tarte aux pommes (vraiment)','Cuisine du Dimanche','11:30',38],['Changer la chaîne d’un vélo en 5 minutes','Mécanique Douce','6:41',15],['Islande en hiver : le film','Voyages Lents','32:08',190],['Pourquoi le ciel est bleu ?','Science en Poche','8:12',205],['Session live au studio','Studio Nord','EN DIRECT',300,0,1],['Speedrun commenté : niveau 1-1','Pixel Rétro','19:44',270]];
+const R_SUBS=[['Portrait en lumière naturelle','Atelier Lumière','14:22',210],['Focaccia express','Cuisine du Dimanche','7:50',25],['Le refuge le plus haut des Alpes','Rando Alpine','28:15',150],['Rust pour les curieux, épisode 3','Code Café','35:40',240],['Un an de vanlife en 20 minutes','Voyages Lents','20:03',160],['La guitare 12 cordes expliquée','Le Labo Sonore','13:37',330],['Réparer une roue voilée','Mécanique Douce','10:21',20]];
+const R_MUSIC=[['Nuit d’été · album complet','Studio Nord','42:10',310],['Piano calme pour travailler','Le Labo Sonore','1:02:00',290],['Live acoustique au phare','Studio Nord','18:30',200],['Les basses expliquées','Le Labo Sonore','16:45',340],['Ambiance pluie et vinyle','Studio Nord','58:12',260],['Batterie : 5 rythmes faciles','Le Labo Sonore','12:00',10],['Chorale du dimanche','Studio Nord','9:15',45]];
+const R_G1=[['Pixel Rétro joue à « Lune de Fer »','Pixel Rétro','EN DIRECT',280,0,1],['Top 10 des jeux de plateforme oubliés','Pixel Rétro','21:30',260],['Construire une borne d’arcade','Mécanique Douce','33:12',30],['Course rétro : 8 joueurs','Pixel Rétro','1:12:40',300],['Le son des consoles 8 bits','Le Labo Sonore','14:05',320],['Guide : tous les secrets du niveau 3','Pixel Rétro','17:48',240],['Tournoi de casse-briques','Pixel Rétro','46:20',180]];
+const R_G2=[['Histoire des manettes','Science en Poche','25:10',215],['Mon setup de jeu 2026','Code Café','11:11',250],['Les jeux de rythme, comment ça marche','Le Labo Sonore','19:00',330],['Coder un jeu en un week-end','Code Café','52:30',245],['Speedrun commenté : niveau 1-1','Pixel Rétro','19:44',270],['Réparer une cartouche','Mécanique Douce','8:40',25],['Jeux coopératifs à deux','Pixel Rétro','15:15',290]];
+const CHAN_V=[['Pain au levain maison : la méthode complète','48 k vues • il y a 3 jours','18:47',30],['Focaccia express','12 k vues • il y a 1 semaine','7:50',25],['La meilleure tarte aux pommes (vraiment)','96 k vues • il y a 2 semaines','11:30',38],['Brioche filante sans robot','31 k vues • il y a 3 semaines','14:02',42],['Soupe d’automne en 20 minutes','8,4 k vues • il y a 1 mois','9:12',20],['Crêpes : la pâte parfaite','150 k vues • il y a 2 mois','6:30',48],['Le pain de mie maison','22 k vues • il y a 2 mois','12:44',34]];
+const CHAN_L=[['Cuisiner en direct : pains du dimanche','En direct • 1,2 k spectateurs','EN DIRECT',28,0,1],['Questions-réponses : vos levains','5,1 k vues • diffusé il y a 5 jours','1:04:12',36],['Atelier viennoiseries','7,8 k vues • diffusé il y a 3 semaines','58:40',44],['Fournée de Noël','11 k vues • diffusé il y a 10 mois','1:21:05',12],['Pains du monde','4,2 k vues • diffusé il y a 1 an','49:30',22]];
+const CHAN_P=[['Crêpes : la pâte parfaite','150 k vues • il y a 2 mois','6:30',48],['La meilleure tarte aux pommes (vraiment)','96 k vues • il y a 2 semaines','11:30',38],['Pain au levain maison : la méthode complète','48 k vues • il y a 3 jours','18:47',30],['Brioche filante sans robot','31 k vues • il y a 3 semaines','14:02',42],['Le pain de mie maison','22 k vues • il y a 2 mois','12:44',34],['Focaccia express','12 k vues • il y a 1 semaine','7:50',25],['Soupe d’automne en 20 minutes','8,4 k vues • il y a 1 mois','9:12',20]];
+const R_SRCH=[['Pain au levain maison : la méthode complète','Cuisine du Dimanche','18:47',30],['Mon premier levain, jour par jour','Science en Poche','13:20',36],['Levain : les 5 erreurs à éviter','Cuisine du Dimanche','9:41',26],['Pain au levain sans pétrissage','Cuisine du Dimanche','15:08',32],['Le levain au microscope','Science en Poche','11:55',215],['Four à pain dans le jardin','Mécanique Douce','26:30',18],['Pain de campagne au levain','Cuisine du Dimanche','16:12',40]];
+const R_SRCH_SHORT=[['Levain : les 5 erreurs à éviter','Cuisine du Dimanche','3:41',26],['Rafraîchir son levain en 2 minutes','Cuisine du Dimanche','2:05',34],['Grigner un pain comme un pro','Cuisine du Dimanche','1:48',22],['Levain liquide ou dur ?','Science en Poche','3:10',210],['Le geste du rabat','Cuisine du Dimanche','2:44',30],['Mie alvéolée : le secret','Cuisine du Dimanche','3:55',40],['Conserver son pain','Cuisine du Dimanche','1:30',28]];
+const R_PLS=[['À regarder plus tard','Moi','14 vidéos',200],['Pains et viennoiseries','Moi','9 vidéos',30],['Randos 2026','Moi','6 vidéos',140],['Ambiances de travail','Moi','21 vidéos',300],['Réparations maison','Moi','7 vidéos',20]];
+const R_PLV=[['Le tour du lac Blanc','Rando Alpine','22:40',140],['Trois jours à pied dans les Cévennes','Voyages Lents','41:12',170,35],['Le refuge le plus haut des Alpes','Rando Alpine','28:15',150],['Bivouac : le matériel léger','Rando Alpine','16:30',120],['Lire une carte IGN','Rando Alpine','12:10',100],['Randonnée sous la neige','Rando Alpine','19:55',190],['La traversée des crêtes','Rando Alpine','34:00',160]];
+
+/* ---------- building blocks ---------- */
+const TABS=[['home','Pour toi'],['subs','Abonnements'],['music','Musique'],['gaming','Gaming'],['news','Actus'],['sport','Sport'],['live','Direct'],['hist','Historique'],['pl','Playlists']];
+// Apparence: one round button showing the current look (« A » Auto, sun Jour, moon Nuit); OK: the next one.
+const apBtn=()=>`<div class="rb" data-id="btn-ap"><span class="api" data-id="ap-a" style="display:block"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M12 3.5a8.5 8.5 0 0 1 0 17z" fill="currentColor"/></svg></span><span class="api" data-id="ap-d">${I.sun}</span><span class="api" data-id="ap-n">${I.moon}</span></div>`;
+// ALIGN (section « Cohérence avec miryo »): miryo's bar: profile far left, Apparence as miryo's
+// half moon, weather before the time.
+let ALIGN=0;
+const alignView=v=>()=>{ALIGN=1;try{return V[v]()}finally{ALIGN=0}};
+function header(cur,o={}){
+ return `<div class="hdr"><div class="lft"><div class="rb av" data-id="btn-acc">${av('Moi',30,13,'hav')}</div><div class="tabs"><div class="tin" data-id="tin" data-grp="tb">${TABS.map(([id,l])=>`<div class="tab ${id===cur?'sel':''}" data-id="tab-${id}">${l}</div>`).join('')}</div></div><div class="rb" data-id="btn-search">${I.search}</div></div>
+ <div class="right">${o.mini?`<div class="btn glass" data-id="btn-now">${I.pip}Lecture en cours</div>`:''}${apBtn()}<div class="rb" data-id="btn-set">${I.gear}<i class="tg udot" data-id="udot"></i></div><div style="display:flex;gap:5px;align-items:center;font-size:13px;font-weight:600"><svg viewBox="0 0 24 24" fill="currentColor" style="width:15px;height:15px"><path d="M7 19a5 5 0 0 1-.6-10A6.5 6.5 0 0 1 19 9.6 4.7 4.7 0 0 1 18 19z"/></svg><span>12°</span></div><div class="clock">20:45</div></div></div>`;
+}
+// Second line: channel · when it was published (not on a channel page, already dated, nor on lives / playlists).
+const AGES=['il y a 2 h','il y a 9 h','il y a 1 jour','il y a 3 jours','il y a 5 jours','il y a 1 semaine','il y a 2 semaines','il y a 1 mois','il y a 4 mois','il y a 1 an'];
+const withAge=(t,c,b,live)=>live||/il y a|vues|spectateurs|^Moi$/.test(c)||/vidéos/.test(b||'')?c:`${c} · ${AGES[[...t].reduce((a,ch)=>a+ch.charCodeAt(0),0)%AGES.length]}`;
+const vcard=(v,id)=>{let [t,c,b,h,w,live]=v;c=withAge(t,c,b,live);const wt=w>0&&w<100;
+ return `<div class="cw" data-id="${id}w"><div class="card scene" data-id="${id}" style="--h:${h}">${b?`<span class="bdg ${live?'live':''} ${wt?'w':''}">${b}</span>`:''}${wt?`<div class="lane"><i style="width:${w}%"></i></div>`:''}</div><div class="ct">${t}</div>${csLine(c)}</div>`};
+/* Channel · age: only the channel name is cut (« … »), « il y a 3 jours » always stays whole (KeepEndLine). */
+const csLine=c=>{const k=c.lastIndexOf(' · ');return k<0?`<div class="cs">${c}</div>`:`<div class="cs"><span class="csn">${c.slice(0,k)}</span><span class="csa">&nbsp;· ${c.slice(k+3)}</span></div>`};
+const ccard=(name,id)=>`<div class="chw"><div class="chr" data-id="${id}">${av(name,96,36)}</div><div class="chn">${name}</div></div>`;
+const vrow=(title,items,pre,i,top=i*235)=>`<div class="vrow" style="top:${top}px"><div class="rt">${title}</div><div class="rc" data-id="${pre}${i}">${items}</div></div>`;
+const rowsOf=(defs,pre)=>defs.map(([title,list],i)=>vrow(title,list.map((v,k)=>vcard(v,`${pre}${i}-${k}`)).join(''),pre+'r',i)).join('');
+const notice=(id,t,lft)=>`<div class="ovl pop tg notice ${lft?'lft':''}" data-id="${id}"><span data-id="${id}-t">${t}</span></div>`;
+const cbtn=(id,icon,lbl,o={})=>`<div class="btn ${o.cls||''}" data-id="${id}">${icon?icon:''}${lbl}</div>`;
+const choice=(grp,items,sel,pre)=>`<span class="gp" data-grp="${grp}">${items.map((l,i)=>`<div class="btn c ${i===sel?'sel':''}" data-id="${pre}-${i}"><i class="ck">${I.check}</i>${l}</div>`).join('')}</span>`;
+const scard=(title,chs,help,o={})=>`<div class="scard ${o.cls||''}" ${o.id?`data-id="${o.id}"`:''}><h5 ${o.tid?`data-id="${o.tid}"`:''}>${title}</h5><div class="chs">${chs}</div><div class="hp" ${o.hid?`data-id="${o.hid}"`:''}>${help}</div></div>`;
+
+/* ---------- views ---------- */
+const V={};
+const cardMenu=(v=R_RECO[2])=>`<div class="ovl pop tg full" data-id="cmenu"><div class="dim"><div class="dlg" style="width:520px;padding:24px;display:flex;flex-direction:column;gap:6px">
+ <div style="display:flex;gap:16px;align-items:center;padding:0 12px 10px"><div class="scene" data-id="cm-th" style="--h:${v[3]};width:112px;height:63px;border-radius:8px;flex:none"></div><div style="display:flex;flex-direction:column;gap:4px;min-width:0"><b data-id="cm-t" style="font-size:16px;line-height:20px">${v[0]}</b><span data-id="cm-c" style="font-size:13px;color:var(--ts)">${v[1]}</span></div></div>
+ ${[[I.play,'Lire'],[I.history,'À regarder plus tard'],[I.user,'Ouvrir la chaîne'],[I.eyeoff,'Pas intéressé'],[I.close,'Ne pas recommander cette chaîne']].map(([ic,l],i)=>`<div class="drow" data-id="cm-${i}">${ic}<span>${l}</span></div>`).join('')}
+ </div></div></div>`;
+const HOME_ROWS=[['Reprendre',R_RESUME],['Recommandations',R_RECO],['Nouveautés des abonnements',R_SUBS],['Musique · Titres du moment',R_MUSIC]];
+V.homeAl=alignView('home');
+V.home=()=>`${header('home')}
+ <div class="rows" data-id="pg-home"><div class="rin" data-id="rin">${rowsOf(HOME_ROWS,'h')}</div></div>
+ <div class="rows" data-id="pg-gaming" style="opacity:0"><div class="rin">${rowsOf([['Jeux en direct',R_G1],['Vidéos de jeux populaires',R_G2]],'g')}</div></div>
+ <div class="rows ovl fade tg" data-id="msg-load"><div class="msg">Chargement…</div></div>
+ ${cardMenu()}${notice('ntc','Tu ne verras plus cette vidéo.')}`;
+V.homemini=()=>`${header('home',{mini:true})}
+ <div class="rows"><div class="rin">${rowsOf(HOME_ROWS,'h')}</div></div>
+ <div class="miniw scene" data-id="miniw" style="--h:30"></div>
+ ${cardMenu(R_RECO[0])}${notice('ntc','Ajoutée à « À regarder plus tard ».',true)}`;
+V.pls=()=>`${header('pl')}<div class="rows"><div class="rin">${rowsOf([['Playlists',R_PLS]],'p')}</div></div>`;
+V.plist=()=>`<div style="position:absolute;left:48px;top:20px;font-size:34px;line-height:40px;font-weight:700;letter-spacing:-.022em">Randos 2026</div>
+ <div class="rows" style="top:66px"><div class="rin">${rowsOf([['Vidéos',R_PLV]],'v')}</div></div>`;
+V.chan=()=>`<div style="position:absolute;left:48px;top:36px;display:flex;gap:16px;align-items:center">${av('Cuisine du Dimanche',66,28)}<div><div style="font-size:13px;line-height:16px;font-weight:700;letter-spacing:.08em;color:var(--ts)">CHAÎNE</div><div style="font-size:48px;line-height:52px;font-weight:700;letter-spacing:-.035em;white-space:nowrap">Cuisine du Dimanche</div></div></div>
+ <div class="pills" style="top:120px"><span class="gp" data-grp="sb"><div class="btn red" data-id="sub"><i class="off">${I.plus}</i><i class="on">${I.check}</i><span data-id="sub-l">S’abonner</span></div></span><span style="width:12px;flex:none"></span>
+ <span class="gp" data-grp="srt">${['Accueil','Plus récentes','Populaires'].map((l,i)=>`<div class="btn c ${i===0?'sel':''}" data-id="srt-${i}"><i class="ck">${I.check}</i>${l}</div>`).join('')}</span></div>
+ <div class="rows" data-id="cp-home" style="top:210px"><div class="rin">${rowsOf([['Vidéos',CHAN_V],['Diffusions en direct',CHAN_L]],'c')}</div></div>
+ <div class="rows" data-id="cp-pop" style="top:210px;opacity:0"><div class="rin">${rowsOf([['Populaires',CHAN_P]],'p')}</div></div>`;
+const SUGG=['pain au levain','pain au levain maison','pain au levain sans pétrissage','pain au levain facile','pain au levain recette'];
+V.search=()=>`<div class="sbar" data-id="sbar" style="right:150px">${I.search}<span class="ph" data-id="q">Rechercher sur YouTube</span><i class="caret tg" data-id="caret"></i></div>
+ <div class="btn" data-id="dict" style="position:absolute;right:48px;top:42px">${I.mic}Dicter</div>
+ <div class="pills" data-id="sugs" style="top:100px;opacity:0;transition:opacity .25s">${SUGG.map((s,i)=>`<div class="btn c" data-id="sg-${i}">${I.search}${s}</div>`).join('')}</div>
+ <div class="pills" data-id="flts" style="top:100px;transition:opacity .25s">${['Date','Durée','Type','Tri'].map((f,i)=>`<span class="gp" data-grp="fl${i}"><div class="btn c" data-id="fl-${i}">${f}</div></span>`).join('')}</div>
+ <div class="rows" style="top:140px"><div class="msg" data-id="smsg" style="transition:opacity .2s">Cherche une vidéo, une chaîne ou une playlist.</div>
+  <div class="rin" data-id="sres" style="opacity:0;transition:opacity .3s">${vrow('Vidéos',R_SRCH.map((v,k)=>vcard(v,'s0-'+k)).join(''),'sr',0)}${vrow('Chaînes et playlists',ccard('Cuisine du Dimanche','s1-0')+ccard('Science en Poche','s1-1')+R_PLS.slice(1,4).map((v,k)=>vcard([v[0],'Cuisine du Dimanche',v[2],v[3]],'s1-'+(k+2))).join(''),'sr',1)}</div>
+  <div class="rin" data-id="sres2" style="opacity:0;transition:opacity .3s">${vrow('Vidéos',R_SRCH_SHORT.map((v,k)=>vcard(v,'t0-'+k)).join(''),'tr',0)}</div></div>`;
+
+/* player */
+const CHAP=[['Introduction',0],['Le levain',130],['Le pétrissage',405],['La pousse',630],['La cuisson',860],['Dégustation',1025]];
+const DUR=1127,P=s=>(s/DUR*100).toFixed(2)+'%';
+const mm=s=>Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+const mrow=(id,l,v,o={})=>`<div class="mr ${o.sel?'sel':''}" data-id="${id}"><span class="lb ${v==null?'w':''}">${l}</span>${v!=null?`<span class="vl" ${o.vid?`data-id="${o.vid}"`:''}>${v}</span>`:''}<span class="mk">${o.sub?'›':`<i class="ck">${I.check}</i>`}</span></div>`;
+const CBI=[[I.pause],[I.subs],[I.chapters],[I.up,I.upf],[I.down,I.downf],[I.comment],[I.info],[I.pip],[I.gear]];
+const tw=(off,on)=>off.replace('<svg','<svg class="off"')+on.replace('<svg','<svg class="on"');
+const CMTS=[['@petrin_du_nord','il y a 2 jours','Enfin une méthode claire ! Mon levain a doublé en 6 heures en suivant tes étapes.','412','18 réponses'],['@levain42','il y a 3 jours','Petite question : on peut remplacer la T65 par de la T80 sans changer l’hydratation ?','96','2 réponses'],['@cuisine_lente','il y a 1 semaine','Le passage sur la pousse au froid m’a sauvé, merci.','57',null],['@miette_et_croute','il y a 1 semaine','Testé ce week-end, la croûte chante en refroidissant !','33','4 réponses']];
+const cmt=(c,id,rp)=>`<div class="cmr ${rp?'rp':''}" ${id?`data-id="${id}"`:''}>${av(c[0],rp?28:36,14)}<div class="tx"><span class="hd">${c[0]}  ·  ${c[1]}</span><span class="bd">${c[2]}</span><span class="ft">${I.up}${c[3]}${c[4]?`<span style="width:10px"></span><b style="font-weight:500">${c[4]}  ▾</b>`:''}</span></div></div>`;
+V.player=()=>`<div class="scene full" data-id="vid" style="--h:30"></div>
+ <div class="ovl fade tg loadv" data-id="load"><div class="scene full" data-id="lthumb" style="--h:30"></div><div class="v"></div><div class="ldots"><i></i><i></i><i></i></div></div>
+ <div class="ovl fade tg full isl" data-id="ctl"><div class="ptop"></div><div class="pbot"></div>
+  <div class="ptitle" data-id="ptitle"><b data-id="pt-t">Pain au levain maison : la méthode complète</b>
+   <div class="pmeta"><span data-id="pt-c">Cuisine du Dimanche · Chapitre 2 : Le levain</span><span class="cnt"><span class="gp" data-grp="lkc"><i class="ci" data-id="lkc">${tw(I.up,I.upf)}</i></span>12 k<span style="width:10px"></span>${I.down}184</span></div></div>
+  <div class="pclock" data-id="pclock">20:45</div>
+  <div class="pctl">
+   <div class="ovl fade tg sbp" data-id="sbp" style="left:207px"><div class="fr scene" style="--h:40"></div><span data-id="sbp-t">5:42</span></div>
+   <div class="pbar" data-id="pb"><div class="trk"><i class="bf" style="width:${P(390)}"></i><i class="pl" data-id="pb-pl" style="width:${P(252)}"></i><i class="sp" style="left:${P(480)};width:${P(45)}"></i>${CHAP.slice(1).map(c=>`<i class="cg" style="left:${P(c[1])}"></i>`).join('')}</div><i class="hdl" data-id="pb-h" style="left:${P(252)}"></i></div>
+   <div class="pbtns"><div class="cbs">${CBI.map(([ic,on],i)=>`<span class="gp" data-grp="g${i}"><div class="cb ${on?'thumb':''}" data-id="cb-${i}">${on?tw(ic,on):ic}</div></span>`).join('')}</div><span class="ptime" data-id="ptime">4:12 / 18:47</span></div>
+  </div></div>
+ <div class="ovl fade tg sline" data-id="seek"><div class="trk"><i class="pl" data-id="sl-pl" style="width:${P(252)}"></i></div><div class="t" data-id="sl-t">4:12 / 18:47</div></div>
+ <div class="ovl fade tg skipn" data-id="skip">Passé : Sponsor</div>
+ <div class="ovl fade tg stats" data-id="stats">${[['Vidéo n°','qL7xP2mVa9c'],['Flux · client','DASH · TV'],['Démarrage','formats 412 ms · image 1180 ms'],['Vidéo','1920×1080 · 30 i/s · VP9'],['Débit vidéo','2 840 kb/s'],['Audio','Opus · 48 kHz · 2 canaux'],['Débit audio','132 kb/s'],['Images perdues','3 / 7512'],['HDR','non (SDR) · écran : SDR'],['Tampon','28.4 s'],['Connexion','24 600 kb/s'],['Volume','100 %']].map(([l,v])=>`<div><span>${l}</span><b>${v}</b></div>`).join('')}</div>
+ <div class="ovl from-r tg pmenu" data-id="pm-main"><h4>Réglages</h4>
+  <div class="mhd">LECTURE</div>${mrow('pm-0','Qualité','Auto · 1080p60',{sub:1,vid:'pmv-0'})}${mrow('pm-1','Sous-titres','Désactivés',{sub:1})}${mrow('pm-2','Vitesse','Normale',{sub:1})}${mrow('pm-3','Format de l’image','Image entière',{sub:1})}
+  <div class="mhd">VIDÉO ET CHAÎNE</div>${mrow('pm-4','À regarder plus tard',null)}${mrow('pm-5','Voir la chaîne','Cuisine du Dimanche')}${mrow('pm-6','S’abonner','Cuisine du Dimanche')}
+  <div class="mhd">OPTIONS</div>${mrow('pm-7','SponsorBlock','Activé')}${mrow('pm-8','Statistiques pour les curieux','Masquées',{vid:'pmv-8'})}<div data-grp="afr">${mrow('pm-9','Fréquence d’affichage automatique',null)}</div></div>
+ <div class="ovl from-r tg pmenu" data-id="pm-q"><h4>Qualité</h4><div data-grp="qs">${mrow('q-0','Auto','selon la connexion et la box',{sel:1})}${['2160p60 · 4K','1440p60','1080p60','720p60','480p','360p'].map((l,i)=>mrow('q-'+(i+1),l,null)).join('')}</div></div>
+ <div class="ovl from-r tg pmenu" data-id="pm-sub"><h4>Sous-titres</h4><div data-grp="ss">${mrow('st-0','Désactivés',null,{sel:1})}<div class="mhd">PRÉFÉRÉES</div>${mrow('st-1','Français',null)}${mrow('st-2','Anglais (généré automatiquement)',null)}<div class="mhd">AUTRES LANGUES</div>${mrow('st-3','Espagnol',null)}${mrow('st-4','Italien',null)}</div></div>
+ <div class="ovl from-r tg pmenu" data-id="pm-ch"><h4>Chapitres</h4><div data-grp="cs">${CHAP.map(([t,s],i)=>mrow('chp-'+i,t,mm(s),{sel:i===1})).join('')}</div></div>
+ <div class="ovl from-r tg pmenu" data-id="pm-info"><h4>À propos</h4><div class="pinfo" data-id="info"><div class="fg">48 k vues · il y a 3 jours · 12 k J’aime</div>
+  <p>Toutes les étapes d’un pain au levain fait maison, du levain au premier croûton : rafraîchir le levain, autolyse, pétrissage à la main, rabats, pousse au froid, façonnage et cuisson en cocotte.</p>
+  <p>Ingrédients pour un pain : 500 g de farine T65, 350 g d’eau, 100 g de levain actif, 10 g de sel.</p>
+  <p>00:00 Introduction<br>02:10 Le levain<br>06:45 Le pétrissage<br>10:30 La pousse<br>14:20 La cuisson<br>17:05 Dégustation</p>
+  <p>Matériel : une cocotte en fonte, un banneton, une lame. Pas de robot nécessaire.</p></div></div>
+ <div class="ovl from-r tg cmts" data-id="cmts"><h4>Commentaires</h4>${cmt(CMTS[0],'cm-0')}${cmt(CMTS[1],'cm-1')}
+  <div class="tg reps" data-id="reps">${cmt(['@CuisineDuDimanche','il y a 3 jours','Oui, ajoute 3 à 5 % d’eau : la T80 boit plus.','41',null],null,1)}${cmt(['@levain42','il y a 2 jours','Merci, je teste ça demain !','5',null],null,1)}<div style="margin-left:40px;padding:10px 12px;font-size:14px;font-weight:500;color:var(--ts)">Plus de réponses</div></div>
+  ${cmt(CMTS[2],'cm-2')}${cmt(CMTS[3],'cm-3')}</div>
+ <div class="ovl fade tg upn" data-id="upn"><div class="th scene" style="--h:38"></div><div class="cl"><small data-id="un-s">À suivre · 10 s</small><b>La meilleure tarte aux pommes (vraiment)</b><div style="display:flex;gap:8px;margin-top:4px">${cbtn('un-0','','Lire')}${cbtn('un-1','','Annuler')}</div></div></div>
+ <div class="ovl fade tg perr" data-id="err"><div class="bx"><h4>Lecture impossible</h4><p data-id="er-m">YouTube ne répond pas.</p><div style="display:flex;gap:10px">${cbtn('er-0','','Réessayer')}${cbtn('er-1','','Fermer')}</div></div></div>`;
+
+/* accounts, sign-in, pairing */
+const codeDlg=(id,title,p,s,btns,seed)=>`<div class="ovl pop tg full" data-id="${id}"><div class="dim"><div class="dlg codedlg"><div class="l"><h4>${title}</h4><div class="p">${p}</div><div class="slot"><span class="wait" data-id="${id}-code">Code en cours…</span></div><div class="s">${s}</div><div style="display:flex;gap:10px">${btns}</div></div><div class="qr"><span data-id="${id}-qr" style="opacity:0;transition:opacity .3s">${qr(seed)}</span></div></div></div></div>`;
+V.who=()=>`<div class="who"><h3>Qui regarde ?</h3><div class="ptiles">
+ ${[['Moi','Compte actuel'],['Alex','']].map(([n,c],i)=>`<div class="pt" data-id="pf-${i}"><div class="pring">${av(n,110,46)}</div><div class="pn">${n}</div><div class="pc">${c}</div></div>`).join('')}
+ <div class="pt" data-id="pf-guest"><div class="pring"><div class="padd">${I.user}</div></div><div class="pn">Invité</div><div class="pc">Sans compte</div></div>
+ <div class="pt" data-id="pf-kids"><div class="pring"><div class="padd">${I.smile||I.user}</div></div><div class="pn">Enfant</div><div class="pc">Chaînes choisies</div></div>
+ <div class="pt" data-id="pf-add"><div class="pring"><div class="padd">${I.plus}</div></div><div class="pn">Ajouter</div><div class="pc"></div></div></div>
+ <div class="wfoot">Le compte change ton Accueil, tes abonnements, ton historique et le flux de miryo.</div></div>
+ ${codeDlg('si','Connecter un compte YouTube','Scanne le QR code avec ton téléphone, ou ouvre youtube.com/activate et saisis ce code :','miryo tube reste connecté ensuite. Tu peux lier plusieurs comptes et choisir lequel à l’ouverture.',cbtn('si-0','','Annuler'),7)}`;
+const HINT='Les bêtas arrivent plus tôt mais peuvent planter ou contenir des bugs. Sans elles, seules les versions stables sont proposées.';
+V.set=()=>`<div class="stitle">Réglages</div>
+ <div class="snav" data-grp="sn">${[['Rechercher','s'],['Lecture',0],['Affichage',1],['Téléphone',2],['Compte',3],['Mises à jour',4],['À propos',5]].map(([l,i])=>`<div class="sitem ${i===0?'sel':''}" data-id="sn-${i}">${l}</div>`).join('')}</div>
+ <div class="spage" data-id="sp-s" style="opacity:0">
+  ${scard('Rechercher un réglage',`<div class="btn c" data-id="fd-field" style="width:440px;justify-content:flex-start">${I.search}<span data-id="fd-q">Nom d’un réglage</span></div>`,'Par exemple : sombre, volume, bêta, enfant, téléphone.',{hid:'fd-h'})}
+  <div data-id="fd-hits" style="opacity:0;display:flex;flex-direction:column;gap:11px">
+  ${scard('Passer les sponsors (SponsorBlock)','<div class="btn c" data-id="fd-0">Ouvrir</div>','Lecture')}
+  ${scard('Volume stable','<div class="btn c" data-id="fd-1">Ouvrir</div>','Lecture')}</div></div>
+ <div class="spage" data-id="sp-0">
+  ${scard('Lecture automatique',choice('la',['Activée','Désactivée'],0,'la'),'À la fin d’une vidéo, la suivante démarre après un court compte à rebours.')}
+  ${scard('Passer les sponsors (SponsorBlock)',choice('lb',['Activé','Désactivé'],0,'lb'),'Sponsors, autopromo et rappels d’abonnement sautés automatiquement.')}
+  ${scard('Volume stable',choice('lc',['Activé','Désactivé'],1,'lc'),'Même niveau sonore d’une vidéo à l’autre.')}
+  ${scard('Petite fenêtre (image dans l’image)',choice('pf',['Accueil','Accueil ou Retour','Retour','Désactivée'],0,'pf'),'La vidéo continue dans un coin de l’écran, par-dessus miryo ou une autre appli, avec la touche choisie (si elle est en pause, elle s’arrête). ▶︎ ⏸ de la télécommande la met en pause, rouvrir miryo tube la remet en plein écran.')}</div>
+ <div class="spage" data-id="sp-1" style="opacity:0">
+  ${scard('Apparence',choice('ap',['Comme miryo','Jour','Nuit','Auto'],0,'ap'),'Comme miryo suit le profil de miryo. Auto : clair de 7 h à 20 h.')}
+  ${scard('Sons de navigation',choice('ns',['Comme miryo','Activés','Coupés'],0,'ns'),'Le petit clic des flèches et de OK. Comme miryo suit son réglage.')}
+  ${scard('Taille de l’interface · 100 %',`<div class="btn c" data-id="sz-0">Plus petit</div><div class="btn c" data-id="sz-1">Plus grand</div>${choice('szd',['Par défaut'],0,'szd')}`,'De 60 à 120 % par pas de 5 %, appliqué tout de suite. Par défaut : 100 %.',{tid:'sz-t'})}
+  ${scard('DeArrow',choice('da',['Activé','Désactivé'],1,'da'),'Titres et miniatures de la communauté, sans racolage, quand il y en a.')}</div>
+ <div class="spage" data-id="sp-2" style="opacity:0">
+  ${scard('Regarder sur la TV',choice('rt',['Activé','Désactivé'],1,'rt')+`<div class="btn" data-id="pair-btn">${I.plus}Lier un téléphone</div>`,'L’app YouTube du téléphone, liée avec un code TV, envoie ses vidéos ici et sert de télécommande, quand miryo tube est ouvert.')}
+  ${scard('Recevoir même miryo tube fermé',choice('bc',['Activé','Désactivé'],1,'bc')+`<div class="btn tg ovl" data-id="bc-ok">Autoriser</div>`,'miryo tube reste prêt en arrière-plan et s’ouvre quand le téléphone envoie une vidéo. Garde environ 50 à 80 Mo de mémoire.',{hid:'bc-h'})}</div>
+ <div class="spage" data-id="sp-3" style="opacity:0">
+  ${scard('Compte YouTube',`<div class="btn" data-id="so">${I.close}Se déconnecter de Moi</div>`,'Les autres comptes liés restent sur la box (« Qui regarde ? »).')}
+  ${scard('Compte YouTube (aucun compte lié)',`<div class="btn" data-id="si">${I.plus}Se connecter</div>`,'Pour retrouver tes abonnements, ton historique et tes playlists. Un code s’affiche, à saisir sur le téléphone.',{cls:'tg ovl',id:'si-card'})}</div>
+ <div class="spage" data-id="sp-4" style="opacity:0">
+  <svg class="hlogo" viewBox="0 0 230 64" style="height:34px;width:auto;display:block" role="img" aria-label="miryo tube."><g transform="translate(-22 -22) translate(54 54) scale(.56) translate(-54 -54)"><path d="M87.48,48.1A34,34 0 1 1 59.82,20.5" fill="none" stroke="#FF5F52" stroke-width="3.5" stroke-linecap="round" opacity=".75"/><path d="M30,54a24,24 0 1 1 48,0a24,24 0 1 1 -48,0z" fill="#FF5F52" opacity=".16"/><path d="M56.06,30.09A24,24 0 1 0 74.37,66.7A21,21 0 1 1 56.06,30.09z" fill="#FF5F52"/></g><path d="M67.89 42V27.12H71.3V42ZM77.78 42V33.13Q77.78 31.65 76.85 30.82Q75.92 30 74.56 30Q73.63 30 72.9 30.38Q72.17 30.75 71.73 31.44Q71.3 32.14 71.3 33.13L69.97 32.39Q69.97 30.69 70.71 29.45Q71.46 28.2 72.73 27.51Q74 26.81 75.58 26.81Q77.16 26.81 78.43 27.49Q79.7 28.17 80.45 29.41Q81.19 30.65 81.19 32.39V42ZM87.67 42V33.13Q87.67 31.65 86.74 30.82Q85.81 30 84.44 30Q83.55 30 82.8 30.38Q82.06 30.75 81.62 31.44Q81.19 32.14 81.19 33.13L79.27 32.39Q79.42 30.69 80.26 29.45Q81.1 28.2 82.41 27.51Q83.73 26.81 85.31 26.81Q86.92 26.81 88.23 27.49Q89.53 28.17 90.3 29.41Q91.08 30.65 91.08 32.39V42ZM94.61 42V27.12H98.02V42ZM96.32 24.39Q95.45 24.39 94.88 23.8Q94.3 23.21 94.3 22.35Q94.3 21.48 94.88 20.89Q95.45 20.3 96.32 20.3Q97.22 20.3 97.78 20.89Q98.33 21.48 98.33 22.35Q98.33 23.21 97.78 23.8Q97.22 24.39 96.32 24.39ZM101.84 42V27.12H105.25V42ZM105.25 33.72 104.07 33.13Q104.07 30.31 105.32 28.56Q106.58 26.81 109.12 26.81Q110.24 26.81 111.14 27.21Q112.04 27.62 112.81 28.52L110.58 30.81Q110.18 30.38 109.68 30.19Q109.18 30 108.53 30Q107.11 30 106.18 30.9Q105.25 31.8 105.25 33.72ZM119.82 42.16 113.46 27.12H117.21L121.55 38.16H120.47L125.06 27.12H128.84L121.92 42.16ZM115.38 48.2 120 38.68 121.92 42.16 119.17 48.2ZM137.89 42.31Q135.72 42.31 133.95 41.27Q132.19 40.23 131.15 38.47Q130.11 36.7 130.11 34.53Q130.11 32.36 131.15 30.62Q132.19 28.89 133.95 27.85Q135.72 26.81 137.89 26.81Q140.09 26.81 141.86 27.83Q143.62 28.86 144.66 30.61Q145.7 32.36 145.7 34.53Q145.7 36.7 144.66 38.47Q143.62 40.23 141.86 41.27Q140.09 42.31 137.89 42.31ZM137.89 39.02Q139.16 39.02 140.14 38.45Q141.11 37.88 141.66 36.85Q142.2 35.83 142.2 34.53Q142.2 33.23 141.64 32.23Q141.08 31.24 140.12 30.67Q139.16 30.1 137.89 30.1Q136.65 30.1 135.67 30.67Q134.7 31.24 134.15 32.23Q133.61 33.23 133.61 34.53Q133.61 35.83 134.15 36.85Q134.7 37.88 135.67 38.45Q136.65 39.02 137.89 39.02Z" fill="var(--tp)"/><path d="M159.09 42V21.29H161.26V42ZM155.41 29.38V27.43H164.92V29.38ZM173.67 42.31Q171.9 42.31 170.5 41.49Q169.11 40.67 168.32 39.24Q167.53 37.81 167.53 35.89V27.43H169.73V35.8Q169.73 37.13 170.21 38.12Q170.69 39.12 171.59 39.67Q172.49 40.23 173.67 40.23Q175.49 40.23 176.56 39.02Q177.63 37.81 177.63 35.8V27.43H179.8V35.89Q179.8 37.78 179.03 39.24Q178.25 40.7 176.86 41.5Q175.46 42.31 173.67 42.31ZM191.4 42.31Q189.72 42.31 188.39 41.63Q187.06 40.95 186.2 39.75Q185.35 38.56 185.17 36.98V32.42Q185.35 30.81 186.22 29.62Q187.09 28.42 188.44 27.77Q189.79 27.12 191.4 27.12Q193.41 27.12 195.02 28.13Q196.64 29.13 197.58 30.86Q198.53 32.58 198.53 34.75Q198.53 36.88 197.6 38.59Q196.67 40.3 195.04 41.3Q193.41 42.31 191.4 42.31ZM183.86 42V20.05H186.03V30.99L185.6 34.5L186.03 38.09V42ZM191.03 40.23Q192.58 40.23 193.75 39.54Q194.93 38.84 195.6 37.58Q196.26 36.33 196.26 34.72Q196.26 33.07 195.6 31.83Q194.93 30.59 193.75 29.88Q192.58 29.17 191.06 29.17Q189.54 29.17 188.37 29.88Q187.21 30.59 186.56 31.83Q185.91 33.07 185.91 34.72Q185.91 36.33 186.56 37.58Q187.21 38.84 188.36 39.54Q189.51 40.23 191.03 40.23ZM208.73 42.31Q206.53 42.31 204.79 41.32Q203.05 40.33 202.05 38.59Q201.04 36.85 201.04 34.68Q201.04 32.55 202.03 30.82Q203.02 29.1 204.73 28.11Q206.43 27.12 208.54 27.12Q210.52 27.12 212.06 28.02Q213.59 28.92 214.48 30.51Q215.36 32.11 215.36 34.19Q215.36 34.44 215.33 34.76Q215.3 35.09 215.21 35.52H202.59V33.66H214.03L213.25 34.34Q213.28 32.73 212.71 31.57Q212.14 30.41 211.07 29.77Q210 29.13 208.48 29.13Q206.9 29.13 205.72 29.82Q204.54 30.5 203.87 31.72Q203.21 32.95 203.21 34.62Q203.21 36.3 203.91 37.57Q204.6 38.84 205.86 39.55Q207.11 40.26 208.76 40.26Q210.09 40.26 211.21 39.78Q212.32 39.3 213.1 38.34L214.49 39.77Q213.47 40.98 211.97 41.64Q210.46 42.31 208.73 42.31Z" fill="var(--ts)"/><path d="M221.97 42.31Q220.98 42.31 220.34 41.64Q219.71 40.98 219.71 40.02Q219.71 39.02 220.34 38.37Q220.98 37.72 221.97 37.72Q222.96 37.72 223.6 38.37Q224.23 39.02 224.23 40.02Q224.23 40.98 223.6 41.64Q222.96 42.31 221.97 42.31Z" fill="#FF5F52"/></svg>
+  ${scard('Version installée · 1.0 bêta 2 (bêta)',`<div class="btn c" data-id="u-chk">${I.refresh}<span data-id="u-chk-l">Vérifier</span></div>`,'miryo tube vérifie une fois par jour, au démarrage.',{hid:'u-msg'})}
+  ${scard('Recevoir les versions bêta',choice('ub',['Activé','Désactivé'],0,'ub'),HINT,{hid:'u-hint'})}
+  ${scard('BÊTA · 1.0 bêta 3',`<div class="btn c" data-id="u-inst"><span data-id="u-inst-l">Installer 1.0 bêta 3</span></div>`,'Lecteur : reprise plus rapide après une pause · corrections.',{cls:'hide',id:'u-found',tid:'u-ft',hid:'u-notes'})}</div>
+ <div class="spage" data-id="sp-5" style="opacity:0">
+  ${scard('Basé sur SmartTube','','miryo tube est un fork de SmartTube (github.com/yuliskov/SmartTube) et utilise son moteur : MediaServiceCore, SharedModules et son ExoPlayer modifié. Appli non officielle, sans lien avec SmartTube, YouTube ou Google.')}
+  ${scard('Licence de SmartTube','','MIT License · Copyright (c) 2020-present yuliskov · Permission is hereby granted, free of charge, to any person obtaining a copy of this software… (texte complet)')}
+  ${scard('Autres composants','','ExoPlayer, AndroidX, Cronet, OkHttp, RxJava et ZXing : licence Apache 2.0. Glide : licences BSD, MIT et Apache 2.0. Police Inter : SIL Open Font License 1.1. Les textes complets sont dans l’APK (assets/licenses).')}</div>
+ ${codeDlg('pa','Lier un téléphone','Scanne le QR code avec le téléphone. Ou dans l’app YouTube : photo de profil › Paramètres › Regarder sur la TV › Saisir le code TV, puis tape ce code :','Ensuite, le bouton Caster du téléphone envoie les vidéos ici (quand miryo tube est ouvert) et le téléphone sert de télécommande.',cbtn('pa-1','','Fermer'),11)}`;
+V.syspip=()=>`${V.miryo()}<div class="card scene" data-id="spipw" style="position:absolute;right:48px;bottom:36px;width:320px;height:180px;--h:30;box-shadow:0 16px 40px rgba(0,0,0,.5)"></div>`;
+V.miryo=()=>`<div class="hdr"><div class="lft"><div class="tabs"><div class="tin">${['Accueil','Bibliothèque','Ma liste','Jeux','Applications'].map((t,i)=>`<div class="tab ${i===0?'sel':''}" data-id="lt-${i}">${t}</div>`).join('')}</div></div><div class="rb">${I.search}</div></div><div class="right"><div class="rb av">${av('Moi',30,13)}</div><div class="rb">${I.gear}</div><div class="clock">20:45</div></div></div>
+ <div class="rows"><div class="rin">${rowsOf([['À reprendre',R_RESUME],['Abonnements',R_SUBS]],'l')}</div></div>`;
+
+/* ---------- steps ---------- */
+const M=(...o)=>o.reduce((r,x)=>({...r,...x,txt:{...(r.txt||{}),...(x.txt||{})},st:{...(r.st||{}),...(x.st||{})},sel:{...(r.sel||{}),...(x.sel||{})}}),{});
+const cmFor=v=>({txt:{'cm-t':v[0],'cm-c':v[1]},st:{'cm-th':{'--h':v[3]}}});
+const CODE_ST={'font-size':'40px','line-height':'48px','font-weight':'700','letter-spacing':'4px',color:'var(--tp)'};
+const SHOW={'max-height':'140px',opacity:'1','padding-top':'16px','padding-bottom':'16px','margin-bottom':'0px'};
+const HIDE={'max-height':'0px',opacity:'0','padding-top':'0px','padding-bottom':'0px','margin-bottom':'-11px'};
+const PANEL_ON={pclock:{opacity:'0'},ptitle:{right:'440px'}},PANEL_OFF={pclock:{opacity:'1'},ptitle:{right:'130px'}};
+/* player sub-menus: speed, picture format */
+V.playerSub=()=>V.player()+`
+ <div class="ovl from-r tg pmenu" data-id="pm-sp"><h4>Vitesse</h4><div data-grp="sps">${['0,5×','0,75×','Normale','1,25×','1,5×','1,75×','2×'].map((l,i)=>mrow('sp-'+i,l,null,{sel:i===2})).join('')}</div></div>
+ <div class="ovl from-r tg pmenu" data-id="pm-fmt"><h4>Format de l’image</h4><div data-grp="fms">${['Image entière','Remplir l’écran','Étirer'].map((l,i)=>mrow('fm-'+i,l,null,{sel:i===0})).join('')}</div></div>`;
+/* kids profile: parent code */
+const pinDlg=(id,title,hint)=>`<div class="ovl pop tg full" data-id="${id}"><div class="dim"><div class="dlg" style="width:460px;padding:30px;display:flex;flex-direction:column;gap:14px;align-items:center;text-align:center">
+ <h4 style="margin:0;font-size:22px;font-weight:600" data-id="${id}-t">${title}</h4><div style="font-size:15px;line-height:21px;color:var(--ts)" data-id="${id}-h">${hint}</div>
+ <div style="display:flex;gap:14px">${[0,1,2,3].map(i=>`<div class="btn c" data-id="${id}-${i}" style="width:54px;height:62px;justify-content:center;font-size:26px;font-weight:700"><span data-id="${id}-d${i}"></span></div>`).join('')}</div>
+ <div style="font-size:13px;color:var(--ts)">Chiffres de la télécommande, ou ↑ ↓ puis OK · Retour efface</div></div></div></div>`;
+V.kidsHome=()=>`${header('home').replace(/<div class="tab [^s][^>]*>[^<]*<\/div>/g,'').replace(/<div class="rb" data-id="btn-search">.*?<\/div>/,'').replace(/<div class="rb" data-id="btn-set">.*?<\/i><\/div>/,'')}
+ <div class="rows"><div class="rin">${rowsOf([['Cuisine du Dimanche',R_SUBS],['Dessins animés du Mercredi',R_RECO]],'k')}</div></div>
+ ${pinDlg('pin','Quitter le profil enfant','Code parent à 4 chiffres')}${notice('ntc','Retour encore pour quitter')}`;
+/* first launch (planned) */
+const FR=(i,body)=>`<div data-id="fr-${i}" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;transition:opacity .3s;${i?'opacity:0':''}">${body}</div>`;
+const frDots=i=>`<div style="display:flex;gap:8px;margin-top:6px">${[0,1,2,3].map(k=>`<i style="width:8px;height:8px;border-radius:50%;background:${k===i?'var(--tp)':'var(--ts)'};opacity:${k===i?1:.35}"></i>`).join('')}</div>`;
+V.firstrun=()=>`<div style="position:absolute;inset:0">
+ ${FR(0,`<div style="font-size:56px;font-weight:700;letter-spacing:-.03em">miryo tube<span style="color:#E5484D">.</span></div><div style="font-size:18px;color:var(--ts);max-width:620px">YouTube sur ta TV, sans pub et sans sponsors. Deux minutes pour le régler.</div><div style="display:flex;gap:12px">${cbtn('fr0-0',I.user,'Connecter mon compte YouTube')}${cbtn('fr0-1','','Continuer sans compte')}</div>${frDots(0)}`)}
+ ${FR(1,`<div style="font-size:34px;font-weight:700">Qui regarde sur cette TV ?</div><div style="font-size:16px;color:var(--ts);max-width:640px">Ajoute d’autres comptes YouTube maintenant ou plus tard. Chacun garde son Accueil, ses abonnements et son historique.</div><div style="display:flex;gap:12px">${cbtn('fr1-0',I.plus,'Ajouter un compte')}${cbtn('fr1-1','','Créer un profil enfant')}${cbtn('fr1-2','','Suivant')}</div>${frDots(1)}`)}
+ ${FR(2,`<div style="font-size:34px;font-weight:700">Ton confort</div><div style="display:flex;flex-direction:column;gap:14px;align-items:center">${scard('Apparence',choice('fra',['Jour','Nuit','Auto'],2,'fra'),'Auto : clair le jour, sombre le soir.')}${scard('Passer les sponsors',choice('frs',['Activé','Désactivé'],0,'frs'),'Sponsors et rappels d’abonnement sautés.')}</div>${cbtn('fr2-0','','Suivant')}${frDots(2)}`)}
+ ${FR(3,`<div style="font-size:34px;font-weight:700">C’est prêt.</div><div style="font-size:16px;color:var(--ts);max-width:640px">Tout se retrouve dans Réglages (roue en haut à droite). Le téléphone peut envoyer ses vidéos ici : Réglages › Téléphone.</div>${cbtn('fr3-0','','Commencer')}${frDots(3)}`)}
+ ${codeDlg('fsi','Connecter un compte YouTube','Scanne le QR code avec ton téléphone, ou ouvre youtube.com/activate et saisis ce code :','Rien à taper sur la télécommande : la fenêtre se ferme seule une fois le compte lié.',cbtn('fsi-0','','Plus tard'),11)}</div>`;
+const SCREENS=[
+{id:'accueil',title:'Accueil et sections',desc:'Une seule barre en haut : le compte tout à gauche comme le profil de miryo, les sections en texte (« Pour toi » pour Accueil), Rechercher juste après, et à droite les boutons ronds en verre de miryo (Apparence Jour / Nuit / Auto, Réglages), la météo de miryo puis l’heure. Dessous, les rangées : « Reprendre », l’Accueil de YouTube, puis deux rangées de chaque fil (abonnements, Musique, Gaming, Actus, Sport, Direct), chargées seulement quand on arrive en bas de l’Accueil.',
+ notes:['Sous chaque vidéo : « chaîne · il y a 3 jours ». Si le nom de la chaîne est trop long, c’est lui qui finit en « … » : la date reste toujours entière, au bout de la ligne (pareil pour l’auteur et la date d’un commentaire).','Verre miryo : le même verre que miryo (Glass.kt), sur les boutons ronds, les boutons au repos et les panneaux des Réglages ; de jour, un bord blanc en haut, une pointe d’ombre en bas et une petite ombre dessous.','Au lancement : écran de démarrage, le logo miryo tube sur le fond nuit des bannières (#10121A, comme miryo iptv), jusqu’aux premières rangées de l’Accueil, à « Qui regarde ? » ou à la vidéo d’un lien (3 s au plus), sans animation de sortie.','Flèche maintenue (comme l’app YouTube TV) : le focus avance à pas réguliers, une carte toutes les 130 ms à Gauche / Droite, une rangée toutes les 280 ms à Haut / Bas (le temps de charger ses miniatures). Haut / Bas, comme sur Apple TV : la page glisse jusqu’à la rangée sur un ressort doux, sans rebond (environ 0,4 s) ; maintenu, c’est un seul glissé continu, sans arrêt à chaque rangée. Un écran de rangées en dessous est préparé à l’avance, un demi-écran au-dessus est gardé. Pas sur la vidéo plein écran, où une flèche maintenue avance de plus en plus vite.','Sections : Pour toi, Abonnements, Musique, Gaming, Actus, Sport, Direct, Historique, Playlists. Abonnements, Historique et Playlists seulement avec un compte connecté. Pas de « Tendances » (page retirée par YouTube).','Abonnements : une rangée par période (En direct, Bientôt, Aujourd’hui, Hier, Cette semaine, Ce mois-ci, Plus ancien). Historique : « À reprendre » puis « Déjà vues ». Les titres des autres rangées viennent de YouTube.','Cartes 16:9 de 204 dp à 100 % (4 par rangée ; 6 à 60 %, 5 à 80 %, 3 à 120 %), coins de 13 dp, titre sur 2 lignes et chaîne sur 1 à hauteur fixe : les rangées ne bougent jamais. Badge : durée, EN DIRECT (rouge) ou BIENTÔT ; trait blanc = déjà vu. Shorts exclus.','Page en erreur : message (« Pas de connexion à Internet. », « YouTube ne répond pas. Réessaie. ») et « Réessayer ». Les onglets défilent quand ils ne tiennent pas (grandes tailles, petite fenêtre).','Retour : rangées → onglets → Accueil (« Pour toi ») → ferme la petite fenêtre s’il y en a une → quitte.'],
+ steps:[
+ {view:'home',f:null,on:['msg-load'],st:{'pg-home':{opacity:'0'}},k:'▶',t:'Lancement',n:'Un seul compte lié : pas de « Qui regarde ? ». « Chargement… » tant qu’aucune rangée n’est arrivée.'},
+ {k:'⏱',t:'Rangées',f:'h0-0',on:[],st:{'pg-home':{opacity:'1'}},n:'Chaque partie de l’Accueil s’affiche dès qu’elle arrive. Focus sur la 1re carte ; « Pour toi » en gras avec une barre discrète (section en cours).'},
+ {k:'▶',t:'Droite',f:'h0-1',n:'Carte prise : soulevée ×1,05, anneau doux sur le bord, ombre portée et un reflet qui la traverse.'},
+ {k:'▼',t:'Bas',f:'h1-1',st:{rin:{transform:'translateY(-46px)'}},n:'Défilement calme : juste assez pour la légende de la carte, au-dessus de la zone sûre du bas (48 dp).'},
+ {k:'▼',t:'Bas',f:'h2-1',st:{rin:{transform:'translateY(-281px)'}},n:'Une rangée de plus : son titre reste visible sous l’en-tête, la légende de la carte au-dessus de la zone sûre.'},
+ {k:'▶…',t:'Droite ×4',f:'h2-5',st:{hr2:{transform:'translateX(-440px)'}},n:'La rangée ne glisse que quand la carte sortirait de l’écran ; les autres rangées restent en place.'},
+ {k:'▲▲▲',t:'Haut ×3',f:'tab-home',st:{rin:{transform:'none'}},n:'Dans l’en-tête, on entre sur l’onglet de la section en cours : barre pleine sous le mot.'},
+ {k:'▶▶▶',t:'Droite ×3',f:'tab-gaming',n:'La barre suit le focus ; « Pour toi » reste en gras, c’est la section affichée.'},
+ {k:'OK',t:'Gaming',sel:{tb:'tab-gaming'},on:['msg-load'],st:{'pg-home':{opacity:'0'}},n:'OK charge Gaming mais laisse le focus sur l’onglet : on peut encore changer d’avis (Actus…).'},
+ {k:'⏱',t:'Vidéos',on:[],st:{'pg-gaming':{opacity:'1'}},n:'Vidéos arrivées : elles ne prennent pas le focus, resté sur l’onglet.'},
+ {k:'▼',t:'Bas',f:'g0-0',n:'Bas descend sur la 1re vidéo ; la barre redevient discrète sous Gaming.'},
+ {k:'B',t:'Retour',f:'tab-gaming',n:'Retour : des rangées vers les onglets.'},
+ {k:'B',t:'Retour',f:'tab-home',sel:{tb:'tab-home'},st:{'pg-gaming':{opacity:'0'},'pg-home':{opacity:'1'}},n:'Retour depuis les onglets : Accueil, focus sur « Pour toi ». Retour encore : quitte l’appli.'},
+ {k:'▶…',t:'Droite ×9',f:'btn-search',st:{tin:{transform:'translateX(-121px)'}},n:'Rechercher suit directement les onglets (les onglets défilent quand ils manquent de place).'},
+ {k:'▶',t:'Droite',f:'btn-ap',n:'Apparence : un seul bouton rond, qui montre l’actuelle (demi-lune de miryo : Auto).'},
+ {k:'OK',t:'Jour',st:{'ap-a':{display:'none'},'ap-d':{display:'block'}},n:'OK passe à la suivante, appliquée tout de suite : Jour → Nuit → Auto (comme Réglages › Affichage › Apparence).'},
+ {k:'OK',t:'Nuit',st:{'ap-a':{display:'none'},'ap-d':{display:'none'},'ap-n':{display:'block'}}},
+ {k:'OK',t:'Auto',st:{'ap-a':{display:'block'},'ap-d':{display:'none'},'ap-n':{display:'none'}},n:'Auto : clair de 7 h à 20 h, comme miryo et miryo iptv. Avec miryo installé, OK passe ensuite à « Comme miryo » (par défaut), qui suit le profil de miryo, son lever et son coucher du soleil compris.'},
+ ]},
+{id:'menu-carte',title:'Menu d’une carte',desc:'Appui long sur OK (ou touche Menu) sur une carte : ce que propose le menu « ⋮ » de YouTube. « À regarder plus tard » seulement connecté ; « Pas intéressé » et « Ne pas recommander cette chaîne » seulement sur les recommandations qui le permettent.',
+ notes:['Après « Pas intéressé », la carte quitte toutes les rangées ; « Ne pas recommander cette chaîne » retire toutes les cartes de la chaîne (« Cette chaîne ne sera plus recommandée. »). Si YouTube refuse : « YouTube n’a pas pris en compte la demande. »'],
+ steps:[
+ {view:'home',f:'h1-2',k:'▶',t:'Sur une carte'},
+ {k:'OK…',t:'Appui long',f:'cm-0',on:['cmenu'],n:'Fenêtre de 520 dp, miniature et titre en tête ; focus sur « Lire ».'},
+ {k:'▼▼▼',t:'Bas ×3',f:'cm-3'},
+ {k:'OK',t:'Pas intéressé',f:'h1-3',on:['ntc'],st:{'h1-2w':{width:'0px',opacity:'0','margin-right':'-16px'}},n:'La carte disparaît tout de suite, le focus passe à sa voisine. Message en bas au centre.'},
+ {k:'⏱',t:'3 s',on:[]},
+ {k:'◀◀',t:'Gauche ×2',f:'h1-1'},
+ M({k:'☰',t:'Menu',f:'cm-0',on:['cmenu'],n:'Touche Menu : le même menu.'},cmFor(R_RECO[1])),
+ {k:'▼▼',t:'Bas ×2',f:'cm-2'},
+ {k:'OK',t:'Ouvrir la chaîne',view:'chan',f:'c0-0',n:'La page de la chaîne remplace la section ; Retour y revient, sur la même carte.'},
+ ]},
+{id:'recherche',title:'Recherche',desc:'Plein écran, sans en-tête : une grande barre en pilule (22 sp), « Dicter » à côté si la box sait reconnaître la voix, une ligne de pastilles dessous (les suggestions pendant la saisie, sinon les filtres Date, Durée, Type, Tri), puis les résultats en rangées.',
+ notes:['Filtres : Date (Dernière heure, Aujourd’hui, Cette semaine, Ce mois-ci, Cette année), Durée (Moins de 4 min, 4 à 20 min, Plus de 20 min), Type (Vidéos, Chaînes, Playlists, En direct), Tri (Pertinence, Date, Vues, Note). OK passe au choix suivant puis revient à « tous ».','Aucun résultat : « Aucun résultat pour « … ». » sous les filtres.','Le clavier et la dictée sont ceux d’Android : non dessinés ici.'],
+ steps:[
+ {view:'search',f:'sbar',k:'▶',t:'Ouverture',n:'Bouton Rechercher de l’en-tête, touche Recherche ou Create : focus sur la barre.'},
+ {k:'OK',t:'Clavier',on:['caret'],n:'OK ouvre le clavier de la box (demandé deux fois : la box ignorait parfois la première). Passer sur la barre ne l’ouvre jamais.'},
+ {k:'⌨',t:'Saisie',txt:{q:'pain au lev'},st:{q:{color:'var(--tp)'},sugs:{opacity:'1'},flts:{opacity:'0'}},n:'À chaque pause de frappe, les suggestions de YouTube prennent la place des filtres (8 au plus).'},
+ {k:'▼',t:'Bas',f:'sg-1',on:[],n:'Bas pendant la saisie : vers une suggestion ; le focus y reste.'},
+ {k:'OK',t:'Valider',f:'sbar',txt:{q:'pain au levain maison'},st:{sugs:{opacity:'0'},flts:{opacity:'1'},smsg:{opacity:'0'}},n:'Recherche lancée : le focus passe par la barre…'},
+ {k:'⏱',t:'Résultats',f:'s0-0',st:{sres:{opacity:'1'}},n:'… puis va sur la 1re vidéo dès qu’elle arrive.'},
+ {k:'▼',t:'Bas',f:'s1-0',n:'Rangées mixtes : chaînes en avatars ronds (initiale sur dégradé sans photo), playlists en cartes.'},
+ {k:'▲▲▶',t:'Vers Durée',f:'fl-1'},
+ {k:'OK',t:'Durée',sel:{fl1:'fl-1'},txt:{'fl-1':'Durée : Moins de 4 min'},st:{sres:{opacity:'0'},sres2:{opacity:'1'}},n:'OK : choix suivant du filtre, pastille en surbrillance ; le focus reste dessus pour enchaîner, les résultats changent dessous.'},
+ {k:'OK',t:'Durée',txt:{'fl-1':'Durée : 4 à 20 min'},st:{sres:{opacity:'1'},sres2:{opacity:'0'}}},
+ {k:'▲▶',t:'Dicter',f:'dict',n:'« Dicter » : la dictée d’Android (« Que cherches-tu ? »). Le micro de la télécommande ouvre Rechercher et lance la dictée directement (le clavier sans reconnaissance vocale).'},
+ {k:'B',t:'Retour',view:'home',f:'h0-0',n:'Retour : la section d’avant.'},
+ ]},
+{id:'chaine',title:'Chaîne et playlist',desc:'Une chaîne ouverte (menu d’une carte, avatar dans une rangée, « Voir la chaîne » du lecteur) prend tout l’écran : « CHAÎNE », l’avatar et le nom en grand façon fiche miryo, « S’abonner » puis les tris. Une playlist : son titre en grand, ses vidéos dessous.',
+ notes:['Les cartes d’une chaîne montrent vues et date à la place du nom de la chaîne.','Sans photo, avatar = initiale blanche sur un des cinq dégradés, toujours le même pour un nom.','« Réessayer » sur une chaîne ou une playlist recharge cette page, pas l’Accueil.'],
+ steps:[
+ {view:'chan',f:'c0-0',k:'▶',t:'Ouverture',n:'Le focus est tenu dans la page pendant le chargement, puis va sur la 1re vidéo.'},
+ {k:'▲',t:'Haut',f:'srt-0',n:'Les tris de la chaîne ; « Accueil » (sa page d’accueil) est coché.'},
+ {k:'▶▶',t:'Droite ×2',f:'srt-2'},
+ {k:'OK',t:'Populaires',sel:{srt:'srt-2'},st:{'cp-home':{opacity:'0'},'cp-pop':{opacity:'1'}},n:'Les vidéos dans cet ordre ; le focus reste sur le tri.'},
+ {k:'◀◀◀',t:'Gauche ×3',f:'sub',n:'« S’abonner » : blanc sur rouge, le jour aussi ; toujours à sa place et à largeur fixe, les tris ne glissent pas.'},
+ {k:'OK',t:'S’abonner',sel:{sb:'sub'},txt:{'sub-l':'Abonné'},n:'« Abonné », coché. Déconnecté, OK ouvre la connexion.'},
+ {k:'…',t:'Playlists',view:'pls',f:'p0-2',n:'Onglet Playlists (compte connecté) : les playlists du compte, avec leur nombre de vidéos.'},
+ {k:'OK',t:'Valider',view:'plist',f:'v0-0',n:'La playlist : son titre en 34 sp, ses vidéos dessous.'},
+ {k:'▶',t:'Droite',f:'v0-1'},
+ {k:'B',t:'Retour',view:'pls',f:'p0-2',n:'Retour : la page d’avant, sur la même carte.'},
+ ]},
+{id:'lecteur',title:'Lecteur : commandes et avance',desc:'Plein écran. En haut à gauche le titre entier (2 lignes), la chaîne, le chapitre et les compteurs J’aime / Je n’aime pas ; l’heure en haut à droite. En bas seulement la barre, les neuf boutons ronds et le temps. Les commandes restent blanches sur leurs dégradés sombres, en Jour comme en Nuit.',
+ notes:['Touches comme l’appli YouTube TV : les commandes s’ouvrent sur la barre (Gauche / Droite avancent tout de suite, OK met en pause), Bas descend vers les boutons sans rien masquer, Haut remonte, Retour masque les commandes avant de quitter. Seul Retour quitte la vidéo.','Boutons, dans l’ordre : lecture/pause, sous-titres (si la vidéo en a), chapitres (si elle en a), J’aime, Je n’aime pas (connecté), commentaires, À propos, petite fenêtre, Réglages.','J’aime, Je n’aime pas, abonnement et « À regarder plus tard » partent seulement sur le compte de la vidéo : si miryo a changé de compte entre-temps, rien n’est envoyé et « Le compte YouTube a changé : action annulée. » s’affiche.','Je n’aime pas : nombre estimé par Return YouTube Dislike.','SponsorBlock : sponsors, autopromo et rappels d’abonnement sautés (Réglages › Lecture, et dans le lecteur).','Touche Accueil pendant une vidéo qui joue : elle continue dans l’image dans l’image d’Android (Réglages › Lecture › Petite fenêtre, « Accueil » par défaut ; voir « Image dans l’image »). En pause, ou si le réglage est sur « Désactivée » ou si la box ne la propose pas : pause et position enregistrée ; au retour, la vidéo attend en pause, commandes affichées.'],
+ steps:[
+ {view:'player',f:null,on:['load'],k:'▶',t:'Ouverture',n:'Avant la 1re image : la miniature voilée et trois points, rien d’autre.'},
+ {k:'⏱',t:'1re image',f:'pb',on:['ctl'],n:'Commandes affichées, focus sur la barre : 7 dp et un curseur rond. En jaune les segments SponsorBlock, petites coupures aux débuts de chapitre. OK : lecture / pause.'},
+ {k:'▶▶▶',t:'Droite maintenue',on:['ctl','sbp'],st:{'pb-pl':{width:P(342)},'pb-h':{left:P(342)}},txt:{ptime:'5:42 / 18:47'},n:'Gauche / Droite avancent tout de suite, sans aller chercher la barre. Aperçu : l’image à la position visée (storyboard de YouTube). Maintenu : ×3 puis ×6.'},
+ {k:'▶',t:'Relâché',on:['ctl'],n:'Relâché : la vidéo saute à la position.'},
+ {k:'▼',t:'Bas',f:'cb-0',n:'Bas : les boutons (le dernier pris, lecture/pause d’abord). Bas encore : rien, les commandes restent.'},
+ {k:'▶▶▶',t:'Droite ×3',f:'cb-3',n:'Neuf ronds identiques de 52 dp, 10 dp d’écart : lecture · la vidéo · petite fenêtre et Réglages, toujours en dernier.'},
+ {k:'OK',t:'J’aime',sel:{g3:'cb-3',lkc:'lkc'},n:'Vote mis : le pouce se remplit, ici et en haut. J’aime et Je n’aime pas s’excluent ; sans compte, seuls les compteurs.'},
+ {k:'▲',t:'Haut',f:'pb',n:'Haut : retour sur la barre (Haut encore : commandes masquées).'},
+ {k:'⏱',t:'4 s',f:null,on:[],n:'Sans touche pendant 4 s, les commandes se masquent.'},
+ {k:'◀',t:'Gauche',on:['seek'],txt:{'sl-t':'5:32 / 18:47'},st:{'sl-pl':{width:P(332)}},n:'Commandes masquées : Gauche / Droite reculent ou avancent de 10 s ; seule la ligne de temps apparaît, rien à focaliser.'},
+ {k:'⏱',t:'SponsorBlock',on:['skip'],n:'Segment sauté : « Passé : Sponsor » en bas à gauche, 3 s.'},
+ {k:'OK',t:'Commandes',f:'pb',on:['ctl','skip'],st:{skip:{bottom:'136px'}},n:'OK affiche les commandes, focus sur la barre (le message passe au-dessus) ; la touche lecture/pause agit directement.'},
+ {k:'B',t:'Retour',f:null,on:[],n:'Retour masque d’abord les commandes ; la vidéo continue.'},
+ {k:'B',t:'Retour',view:'home',f:'h0-0',n:'Retour encore : quitte la vidéo ; focus rendu à la carte jouée.'},
+ ]},
+{id:'panneaux',title:'Lecteur : chapitres, commentaires, À propos',desc:'Chaque bouton ouvre son panneau à droite, aux couleurs du thème (blanc le jour, sombre la nuit). Le bouton du panneau ouvert reste blanc ; Retour ferme le panneau et rend le focus à son bouton.',
+ steps:[
+ {view:'player',f:'cb-2',on:['ctl'],k:'▶',t:'Chapitres'},
+ {k:'OK',t:'Chapitres',f:'chp-1',on:['ctl','pm-ch'],sel:{g2:'cb-2'},st:PANEL_ON,n:'Liste de 400 dp : chaque chapitre et son début, celui en cours coché. Le titre s’arrête avant le panneau, l’heure se cache.'},
+ {k:'▼▼▼',t:'Bas ×3',f:'chp-4'},
+ {k:'OK',t:'Valider',f:'cb-2',on:['ctl'],sel:{g2:'',cs:'chp-4'},st:{...PANEL_OFF,'pb-pl':{width:P(860)},'pb-h':{left:P(860)}},txt:{ptime:'14:20 / 18:47','pt-c':'Cuisine du Dimanche · Chapitre 5 : La cuisson'},n:'Saut au chapitre ; la liste se ferme, focus rendu au bouton Chapitres.'},
+ {k:'▶▶▶',t:'Droite ×3',f:'cb-5'},
+ {k:'OK',t:'Commentaires',f:'cm-0',on:['cmts'],n:'Panneau de 384 dp ; la vidéo continue derrière, commandes masquées. Un long commentaire tient en 6 lignes, OK pour tout lire.'},
+ {k:'▼',t:'Bas',f:'cm-1'},
+ {k:'OK',t:'Réponses',on:['cmts','reps'],n:'OK déplie les réponses, « Plus de réponses » pour la suite ; la page suivante se charge en approchant du bas.'},
+ {k:'B',t:'Retour',f:'cb-5',on:['ctl'],n:'Retour ferme le panneau, focus sur Commentaires.'},
+ {k:'▶',t:'Droite',f:'cb-6'},
+ {k:'OK',t:'À propos',f:'info',on:['ctl','pm-info'],sel:{g6:'cb-6'},st:PANEL_ON,n:'À propos : vues, date et j’aime, puis la description (13 sp).'},
+ {k:'▼',t:'Bas',st:{info:{transform:'translateY(-160px)'}},n:'Haut / Bas font défiler la description.'},
+ {k:'B',t:'Retour',f:'cb-6',on:['ctl'],sel:{g6:''},st:{...PANEL_OFF,info:{transform:'none'}}},
+ ]},
+{id:'reglages-lecteur',title:'Lecteur : réglages, qualité, statistiques',desc:'Le bouton Réglages (ou la touche Menu, de partout) ouvre le panneau en trois sections : LECTURE (qualité, sous-titres, piste audio s’il y en a plusieurs, vitesse, format de l’image), VIDÉO ET CHAÎNE, OPTIONS.',
+ notes:['Qualité : Auto (adaptatif selon la connexion et la charge de la box ; s’il perd plus de 10 % des images, il descend d’un cran pour la session) ou une qualité tenue. Les pistes HDR (« 2160p60 · 4K HDR ») n’apparaissent que si la TV et le décodeur les gèrent.','Vitesse : 0,5× à 2×. Format : Image entière, Remplir l’écran, Étirer.','Statistiques : vidéo, codec, débits, images perdues, gels relancés, HDR de la piste et de l’écran, tampon, connexion, volume.','Fréquence d’affichage automatique (désactivée par défaut) : une fois la cadence de la vidéo connue, la TV passe à la même définition en 24 / 23,976 Hz, 50 Hz ou 60 / 59,94 Hz. Jamais de bascule entre cadences équivalentes (30 puis 60 i/s, 25 puis 50) ; le mode d’origine revient en quittant le lecteur ou en désactivant l’option. Cadence inconnue : rien ne change.'],
+ steps:[
+ {view:'player',f:'cb-8',on:['ctl'],k:'▶',t:'Réglages'},
+ {k:'OK',t:'Réglages',f:'pm-0',on:['ctl','pm-main'],sel:{g8:'cb-8'},st:PANEL_ON,n:'Focus sur la 1re ligne, jamais sur un titre de section.'},
+ {k:'OK',t:'Qualité',f:'q-0',on:['ctl','pm-q'],n:'Une liste de choix s’ouvre sur le choix en cours.'},
+ {k:'▼▼▼',t:'Bas ×3',f:'q-3'},
+ {k:'OK',t:'1080p60',f:'pm-0',on:['ctl','pm-main'],sel:{qs:'q-3'},txt:{'pmv-0':'1080p60'},n:'Qualité tenue ; retour à la liste principale, sur la ligne d’origine.'},
+ {k:'▼…',t:'Bas ×7',f:'pm-8'},
+ {k:'OK',t:'Statistiques',txt:{'pmv-8':'Affichées'}},
+ {k:'▼',t:'Bas',f:'pm-9'},
+ {k:'OK',t:'Fréquence auto',sel:{afr:'pm-9'},n:'Coché : activée. Vidéo à 25 i/s : la TV passe en 50 Hz (écran noir un instant).'},
+ {k:'B',t:'Retour',f:'cb-8',on:['ctl'],sel:{g8:''},st:PANEL_OFF},
+ {k:'⏱',t:'4 s',f:null,on:['stats'],n:'Commandes masquées : les statistiques en haut à gauche, jamais sur le titre, la barre ou un panneau.'},
+ {k:'OK',t:'Commandes',f:'pb',on:['ctl'],n:'Commandes affichées : les statistiques se cachent.'},
+ {k:'▶',t:'Droite',f:'cb-1'},
+ {k:'OK',t:'Sous-titres',f:'st-0',on:['ctl','pm-sub'],sel:{g1:'cb-1'},st:PANEL_ON,n:'Ouvert depuis son bouton : la liste seule. Français et anglais d’abord (PRÉFÉRÉES), puis les autres langues.'},
+ {k:'▼',t:'Bas',f:'st-1'},
+ {k:'OK',t:'Français',f:'cb-1',on:['ctl'],sel:{g1:'',ss:'st-1'},st:PANEL_OFF,n:'Un choix dans une liste ouverte directement ferme le panneau ; focus rendu au bouton.'},
+ ]},
+{id:'fin',title:'Fin de vidéo et erreur',desc:'À la fin d’une vidéo, si la lecture automatique est activée, « À suivre » propose la suivante (de la playlist, sinon celle de YouTube). Une erreur pose un voile et une fenêtre par-dessus la vidéo.',
+ notes:['Messages d’erreur : « YouTube ne répond pas. », « Cette vidéo ne peut pas être lue. » (ou la raison donnée par YouTube), « Pas encore de flux pour cette vidéo (direct à venir ?). ».','Les commentaires se ferment à la fin de la vidéo et à l’arrivée d’une erreur.'],
+ steps:[
+ {view:'player',f:null,on:[],st:{'pb-pl':{width:'99.3%'},'pb-h':{left:'99.3%'}},txt:{ptime:'18:39 / 18:47'},k:'▶',t:'Fin proche'},
+ {k:'⏱',t:'Fin',f:'un-0',on:['upn'],n:'« À suivre » en bas à droite (380 dp) : la suivante démarre au bout de 10 s. Le focus reste sur la carte.'},
+ {k:'⏱',t:'3 s',txt:{'un-s':'À suivre · 7 s'}},
+ {k:'▶',t:'Droite',f:'un-1',n:'« Annuler » : retour à la page.'},
+ {k:'◀',t:'Gauche',f:'un-0'},
+ {k:'OK',t:'Lire',f:null,on:['load'],st:{lthumb:{'--h':'38'},vid:{'--h':'38'}},txt:{'pt-t':'La meilleure tarte aux pommes (vraiment)','pt-c':'Cuisine du Dimanche'},n:'La vidéo suivante remplace l’actuelle, dans un lecteur neuf.'},
+ {k:'⚠',t:'Erreur',f:'er-0',on:['err'],n:'« Lecture impossible » : voile, message, « Réessayer » (relance avec un autre client YouTube) ou « Fermer ». Pas d’avance ni de menu dessous.'},
+ {k:'▶',t:'Droite',f:'er-1',n:'« Fermer » quitte la vidéo.'},
+ ]},
+{id:'image-dans-image',title:'Image dans l’image',desc:'Touche Accueil pendant une vidéo qui joue (et Retour si choisi dans Réglages › Lecture › Petite fenêtre) : la vidéo continue dans la fenêtre d’Android, en bas à droite, par-dessus miryo ou une autre appli. Dans la fenêtre : la vidéo seule, sans commandes ni panneau. Seulement si la box propose l’image dans l’image.',
+ notes:['miryo est prévenu avant que la fenêtre s’ouvre : en revenant sur miryo, son réglage « Son des applis quittées › Mettre en pause » laisse la fenêtre jouer (avant, la vidéo se figeait en pause). Une autre appli qui lit du son (Netflix, YouTube…) met toujours la fenêtre en pause, comme le veut Android.','Lecture / Pause : dans le menu de la fenêtre (Accueil maintenu ou bouton de la box) et avec ▶︎ ⏸ de la télécommande, seulement tant que la fenêtre est là (les touches multimédia ne relancent jamais une vidéo cachée).','Vidéo en pause : Accueil ne l’ouvre pas, la vidéo attend en pause comme avant.','« À suivre » continue dans la fenêtre. Fin de la vidéo sans suite : la fenêtre se ferme (jamais les pages en tout petit).','Fermer la fenêtre : la vidéo s’arrête, sa position est enregistrée. Rouvrir miryo tube (ou Plein écran dans le menu de la fenêtre) : la vidéo revient en plein écran à la même position, commandes affichées ; si elle était dans la petite fenêtre de l’appli, elle y revient.','La fenêtre prend la forme de la vidéo (16:9 en général) et grandit depuis l’image plein écran (pas de saut).','À vérifier sur la box : le menu de la fenêtre et ▶︎ ⏸ sur la télécommande Freebox.'],
+ steps:[
+ {view:'player',f:'pb',on:['ctl'],k:'▶',t:'Vidéo'},
+ {k:'⌂',t:'Accueil',view:'syspip',f:null,on:[],n:'La vidéo continue dans la fenêtre, par-dessus miryo, avec le son.'},
+ {k:'⏯',t:'Pause',f:null,n:'▶︎ ⏸ de la télécommande : pause, puis reprise.'},
+ {k:'OK',t:'miryo tube',view:'player',f:'pb',on:['ctl'],n:'Rouvrir miryo tube depuis miryo : plein écran à la même position.'},
+ {view:'set',f:'pf-1',k:'OK',t:'Réglage',sel:{pf:'pf-1'},n:'Réglages › Lecture › Petite fenêtre : Accueil (par défaut), Accueil ou Retour, Retour, Désactivée. Absent si la box ne propose pas l’image dans l’image.'},
+ ]},
+{id:'petite-fenetre',title:'Petite fenêtre',desc:'Le bouton petite fenêtre réduit la vidéo dans le coin en bas à droite (un tiers de la largeur, 16:9) : elle continue pendant qu’on parcourt les pages. Fenêtre interne à miryo tube, pas l’image dans l’image d’Android (Accueil depuis la petite fenêtre ouvre celle d’Android, voir « Image dans l’image »).',
+ notes:['Passage en petite fenêtre et retour en plein écran : un voile court à la couleur de la page (0,14 s puis 0,22 s) pendant que la vidéo change de taille, plus de saut d’image ni de l’en-tête qui gagne « Lecture en cours ».','La petite fenêtre ne capte ni Gauche / Droite ni OK : la page garde la télécommande. Avec elle, le message du bas passe à gauche.','« Lecture en cours » apparaît dans l’en-tête avant les boutons ronds ; les onglets défilent s’ils manquent de place.'],
+ steps:[
+ {view:'player',f:'cb-7',on:['ctl'],k:'▶',t:'Petite fenêtre'},
+ {k:'OK',t:'Réduire',view:'homemini',f:'btn-now',n:'Focus sur « Lecture en cours » dans l’en-tête : Retour puis OK, et la vidéo revient.'},
+ {k:'▼▼',t:'Bas ×2',f:'h1-0',n:'On navigue normalement.'},
+ M({k:'☰',t:'Menu',f:'cm-0',on:['cmenu']},cmFor(R_RECO[0])),
+ {k:'▼',t:'Bas',f:'cm-1'},
+ {k:'OK',t:'Plus tard',f:'h1-0',on:['ntc'],n:'« Ajoutée à « À regarder plus tard ». » : en bas à gauche, à cause de la petite fenêtre.'},
+ {k:'B',t:'Retour',f:'btn-now',on:[],n:'Retour : sur « Lecture en cours ».'},
+ {k:'OK',t:'Plein écran',view:'player',f:'pb',on:['ctl'],n:'Plein écran à la même position. La touche lecture/pause fait pareil, de n’importe où.'},
+ ]},
+{id:'comptes',title:'« Qui regarde ? » et connexion',desc:'Plein écran, comme dans miryo : les comptes liés en grands avatars ronds, « Invité », « Enfant » et « Ajouter ». Au lancement quand plusieurs comptes sont liés, et depuis l’avatar de l’en-tête. La connexion s’ouvre par-dessus : un code et un QR code.',
+ notes:['Bascule propre : dès OK sur un compte, « Invité » ou « Enfant », un écran couvre tout (fond, avatar 132 dp et nom), « Qui regarde ? » se ferme dessous et l’Accueil précédent est vidé : rien de l’ancien compte n’apparaît (ni rangées, ni nom dans l’en-tête). L’écran s’efface en fondu (220 ms) dès que les premières rangées du nouveau profil sont là, 1,5 s au plus. Les touches attendent pendant ce temps.','Profil enfant : sans compte YouTube, une rangée par chaîne autorisée (ses dernières vidéos), rien d’autre. Pas de Rechercher, de Réglages, de menu de carte, de commentaires, de « Voir la chaîne » ni de « À suivre » de YouTube ; les vidéos du téléphone et les liens des autres applis ne sont pas lus. L’avatar (« Enfant ») demande le code parent (4 chiffres, 5 essais puis 5 min d’attente) avant « Qui regarde ? ». Rouvert au lancement tant qu’il n’est pas quitté.','Profil enfant de miryo : miryo tube s’ouvre en profil enfant, sans sortie ici (« change de profil dans miryo ») ; revenu sur un profil adulte dans miryo, miryo tube revient au compte d’avant.','Un parent autorise une chaîne depuis un profil adulte : « Pour Enfant » sur la page de la chaîne (« Autorisée pour Enfant » ensuite). Réglages › Enfant : les chaînes (OK en retire une), « Changer le code », « Supprimer le profil enfant » (code demandé).','Connexion impossible : le message en rouge à la place du code, et « Réessayer » ; le focus revient après.','Lancée depuis miryo avec un compte, une vidéo démarre sans « Qui regarde ? ».'],
+ steps:[
+ {view:'who',f:'pf-0',k:'▶',t:'Lancement',n:'Focus sur le compte actuel (« Compte actuel » sous le nom). Anneau détaché autour de l’avatar, ×1,1.'},
+ {k:'▶',t:'Droite',f:'pf-1'},
+ {k:'▶',t:'Droite',f:'pf-guest',n:'« Invité » : YouTube sans compte (rien dans l’historique ni les recommandations de personne), les comptes liés restent. Proposé dès qu’un compte est lié ; laissé en Invité, « Qui regarde ? » revient au lancement suivant.'},
+ {k:'▶',t:'Droite',f:'pf-kids',n:'« Enfant » : le profil enfant (« À créer » tant qu’il n’existe pas : OK demande alors de choisir un code parent, deux fois).'},
+ {k:'▶',t:'Droite',f:'pf-add'},
+ {k:'OK',t:'Ajouter',f:'si-0',on:['si'],n:'Connexion par-dessus « Qui regarde ? ». Le code a une place fixe : la fenêtre ne saute pas.'},
+ {k:'⏱',t:'Code',txt:{'si-code':'XKT-4QF-BPM'},st:{'si-code':CODE_ST,'si-qr':{opacity:'1'}},n:'Code et QR code dessiné sur la box (aucun service web) ; scanné, il ouvre youtube.com/activate avec le code rempli. La fenêtre se ferme seule une fois le compte lié.'},
+ {k:'B',t:'Annuler',f:'pf-add',on:[],n:'Fermée : focus rendu à « Ajouter ».'},
+ {k:'◀',t:'Gauche',f:'pf-kids'},
+ {k:'◀',t:'Gauche',f:'pf-guest'},
+ {k:'◀',t:'Gauche',f:'pf-1'},
+ {k:'OK',t:'Alex',view:'home',f:'h0-0',txt:{hav:'A'},st:{hav:{background:grad('Alex')}},n:'Compte choisi : l’Accueil, les abonnements, l’historique et le flux de miryo suivent ce compte.'},
+ ]},
+{id:'reglages',title:'Réglages',desc:'Bouton rond Réglages de l’en-tête. Plein écran : « Réglages » en grand, les catégories à gauche (celle qui a le focus montre sa page), une carte en verre par réglage à droite, les choix en pastilles (l’actuel coché). OK applique tout de suite.',
+ notes:['Catégories : Rechercher, Lecture, Affichage, Téléphone, Compte (toujours : « Se connecter » quand aucun compte n’est lié), Enfant (si le profil existe), Mises à jour, À propos.','À propos : fork de SmartTube, son avis de licence MIT en entier et les licences des autres composants. Rien à sélectionner : la page s’affiche quand « À propos » a le focus.','Chaque page a son propre défilement.'],
+ steps:[
+ {view:'home',f:'btn-set',on:['udot'],k:'▶',t:'En-tête'},
+ {k:'OK',t:'Réglages',view:'set',f:'sn-0',n:'Lecture : lecture automatique, SponsorBlock, volume stable.'},
+ {k:'▶',t:'Droite',f:'la-0'},
+ {k:'▼▶',t:'SponsorBlock',f:'lb-1'},
+ {k:'OK',t:'Désactivé',sel:{lb:'lb-1'},n:'La coche passe sur le choix.'},
+ {k:'◀◀',t:'Gauche ×2',f:'sn-0',n:'Gauche revient sur la catégorie en cours.'},
+ {k:'▼',t:'Affichage',f:'sn-1',sel:{sn:'sn-1'},st:{'sp-0':{opacity:'0'},'sp-1':{opacity:'1'}},n:'Apparence : Jour, Nuit ou Auto (les deux colonnes de ce storyboard). Taille de l’interface. DeArrow.'},
+ {k:'▶▼▶',t:'Plus grand',f:'sz-1'},
+ {k:'OK',t:'Valider',txt:{'sz-t':'Taille de l’interface · 105 %'},sel:{szd:''},n:'Appliqué tout de suite ; le pourcentage est dans le titre, les pastilles ne bougent pas sous le focus. La zone sûre reste la même en dp de la TV : les marges suivent la taille. (Ce storyboard reste dessiné à 100 %.)'},
+ {k:'◀▼▼',t:'Compte',f:'sn-3',sel:{sn:'sn-3'},st:{'sp-1':{opacity:'0'},'sp-3':{opacity:'1'}},n:'Compte : se déconnecter ; les autres comptes liés restent sur la box.'},
+ {k:'▼▼',t:'À propos',f:'sn-5',sel:{sn:'sn-5'},st:{'sp-3':{opacity:'0'},'sp-5':{opacity:'1'}},n:'À propos : miryo tube est un fork de SmartTube ; avis de licence MIT et licences des composants.'},
+ {k:'▲×6',t:'Rechercher',f:'sn-s',sel:{sn:'sn-s'},st:{'sp-5':{opacity:'0'},'sp-s':{opacity:'1'}},n:'En haut du menu, au-dessus de Lecture : Réglages s’ouvre toujours sur Lecture.'},
+ {k:'▶ OK',t:'Taper « pub »',f:'fd-field',txt:{'fd-q':'pub','fd-h':'OK sur un réglage ouvre sa page.'},st:{'fd-hits':{opacity:'1'}},n:'Le clavier s’ouvre ; les réglages trouvés par leur nom ou un mot courant (sans accents, 2 lettres au moins). Sans profil Enfant, ses réglages ne sont pas proposés.'},
+ {k:'▼ OK',t:'Ouvrir',f:'sn-0',sel:{sn:'sn-0'},st:{'sp-s':{opacity:'0'},'sp-0':{opacity:'1'}},n:'Le focus va sur la catégorie du réglage, qui affiche sa page.'},
+ {k:'B',t:'Retour',view:'home',f:'btn-set',n:'Retour ferme les Réglages.'},
+ ]},
+{id:'telephone',title:'Lier un téléphone',desc:'Réglages › Téléphone. « Regarder sur la TV » : l’app YouTube du téléphone, liée par un code TV, envoie ses vidéos ici et sert de télécommande (lecture, pause, position, suivante, arrêt, volume), quand miryo tube est ouvert.',
+ notes:['Écoute seulement miryo tube à l’écran, sauf avec « Recevoir même miryo tube fermé » (service au premier plan, relancé au démarrage de la box).','Une vidéo envoyée du téléphone ferme les Réglages, l’appairage, la connexion et « Qui regarde ? ».'],
+ steps:[
+ {view:'set',f:'sn-2',sel:{sn:'sn-2'},st:{'sp-0':{opacity:'0'},'sp-2':{opacity:'1'}},k:'▶',t:'Téléphone'},
+ {k:'▶▶▶',t:'Droite ×3',f:'pair-btn'},
+ {k:'OK',t:'Lier',f:'pa-1',on:['pa'],n:'Par-dessus les Réglages. Le code TV est demandé ; l’écoute démarre pour que le téléphone trouve la TV tout de suite.'},
+ {k:'⏱',t:'Code',txt:{'pa-code':'482 915 307 664'},st:{'pa-code':CODE_ST,'pa-qr':{opacity:'1'}},n:'Le QR code ouvre la page d’appairage de YouTube avec le code rempli ; sinon on le tape dans l’app.'},
+ {k:'📱',t:'Lié',f:'pair-btn',on:[],n:'Téléphone connecté : la fenêtre se ferme seule, focus rendu à « Lier un téléphone ».'},
+ {k:'▼',t:'Bas',f:'bc-0'},
+ {k:'OK',t:'Activé',sel:{bc:'bc-0',rt:'rt-0'},on:['bc-ok'],txt:{'bc-h':'Une autorisation d’Android est nécessaire une fois : « Autoriser », puis active miryo tube.'},n:'Active aussi « Regarder sur la TV ». Sans l’autorisation d’affichage, un bouton « Autoriser » ouvre l’écran d’Android (la liste générale si la box n’a pas celui de l’appli) ; miryo tube le relit toutes les 1,5 s et le bouton disparaît dès qu’elle est donnée. Plus de commande adb. ( sur Android TV), l’aide donne la commande adb.'},
+ {k:'📱',t:'Vidéo envoyée',view:'player',f:'pb',on:['ctl'],n:'Le téléphone caste une vidéo : les Réglages se ferment, elle démarre, la télécommande pilote bien le lecteur.'},
+ ]},
+{id:'mises-a-jour',title:'Réglages › Mises à jour',desc:'Version installée, « Recevoir les versions bêta », et la version trouvée sur le canal public, marquée BÊTA ou STABLE. Seules les versions stables sont proposées par défaut ; une bêta installée active l’option.',
+ notes:['Vérification silencieuse une fois par jour au démarrage ; si une version est trouvée, message en bas : « Mise à jour disponible : … (Réglages › Mises à jour). »','Installation refusée par Android : « Autorise miryo tube à installer des applis, puis relance l’installation. » (l’écran d’autorisation s’ouvre).','Les versions de travail s’appellent « 1.0 bêta N » ; une stable n’a pas le mot « bêta ». Android refuse toute mise à jour signée par une autre clé.'],
+ steps:[
+ {view:'set',f:'sn-4',sel:{sn:'sn-4'},st:{'sp-0':{opacity:'0'},'sp-4':{opacity:'1'}},k:'▶',t:'Mises à jour',n:'« Version installée · 1.0 bêta 2 (bêta) » : le nom de l’APK, suivi de « (bêta) » quand il contient « bêta ».'},
+ {k:'▶',t:'Droite',f:'u-chk'},
+ {k:'OK',t:'Vérifier',txt:{'u-chk-l':'Vérification…'}},
+ {k:'⏱',t:'Trouvée',txt:{'u-chk-l':'Vérifier','u-msg':'Nouvelle version : 1.0 bêta 3.'},st:{'u-found':SHOW},n:'Avec les bêtas : la plus récente des versions stable et bêta. Carte « BÊTA · 1.0 bêta 3 » avec ses notes.'},
+ {k:'▼▶',t:'Désactivé',f:'ub-1'},
+ {k:'OK',t:'Valider',sel:{ub:'ub-1'},txt:{'u-chk-l':'Vérification…','u-msg':'miryo tube vérifie une fois par jour, au démarrage.','u-hint':HINT+' Tu restes sur cette bêta jusqu’à la prochaine version stable.'},st:{'u-found':HIDE},n:'Option coupée : la version trouvée disparaît et une vérification repart. L’aide précise qu’on reste sur la bêta installée.'},
+ {k:'⏱',t:'À jour',txt:{'u-chk-l':'Vérifier','u-msg':'miryo tube est à jour.'},n:'Stables seulement : aucune stable plus récente.'},
+ {k:'⟳',t:'Exemple stable',txt:{'u-msg':'Nouvelle version : 1.0.','u-ft':'STABLE · 1.0','u-notes':'Version stable.','u-inst-l':'Installer 1.0'},st:{'u-found':SHOW},n:'Exemple : quand une 1.0 stable sera publiée, elle sera proposée, marquée STABLE.'},
+ {k:'▼',t:'Bas',f:'u-inst'},
+ {k:'OK',t:'Installer',txt:{'u-inst-l':'Téléchargement… 46 %'},n:'Téléchargement (progression par pas de 2 %), puis taille, empreinte SHA-256, paquet, version et certificat vérifiés ; l’installateur d’Android demande ensuite confirmation.'},
+ ]},
+{id:'telecommande',title:'Télécommande : sections et quitter',desc:'Les mêmes touches que dans miryo et miryo iptv. ◀◀ / ▶▶ (L1 / R1 sur une manette) passent à la section d’avant / d’après, focus sur son onglet, sans boucler aux bouts. Un seul Retour ne quitte jamais : « Retour encore pour quitter ».',
+ notes:['Touche options (Menu, Y, Select, touche rouge, menu contextuel TV) : ouvre le menu de la carte, partout pareil. Sur la Freebox Player POP (sans Menu) : appui long sur OK.','Flèche maintenue : un pas toutes les 120 ms à Gauche / Droite, une rangée toutes les 280 ms à Haut / Bas.','◀◀ / ▶▶ ne changent pas de section dans le lecteur : là, ils reculent / avancent dans la vidéo.'],
+ steps:[
+ {view:'home',f:'h0-0',k:'▶',t:'Accueil'},
+ {k:'▶▶',t:'Avance',f:'tab-subs',sel:{tb:'tab-subs'},on:['msg-load'],st:{'pg-home':{opacity:'0'}},n:'Section suivante : Abonnements. Le focus monte sur son onglet, comme un OK sur l’onglet.'},
+ {k:'◀◀',t:'Recul',f:'tab-home',sel:{tb:'tab-home'},on:[],st:{'pg-home':{opacity:'1'}},n:'Section d’avant : Accueil.'},
+ {k:'◀◀',t:'Recul',n:'Déjà sur la première : rien ne bouge (pas de saut vers Playlists).'},
+ {k:'B',t:'Retour',on:['ntc'],txt:{'ntc-t':'Retour encore pour quitter'},n:'Sur l’Accueil, dans les onglets : « Retour encore pour quitter », 3 s.'},
+ {k:'B',t:'Retour',f:null,n:'Deuxième Retour dans les 3 s : l’appli se ferme. Avec une vidéo en petite fenêtre, Retour la ferme d’abord.'},
+ ]},
+{id:'menus-lecteur',title:'Lecteur : vitesse et format',desc:'Les deux listes de la section LECTURE pas encore montrées. Chaque liste s’ouvre sur le choix en cours ; OK applique et revient à la liste principale.',
+ notes:['Vitesse : de 0,5× à 2×, le son garde sa hauteur. Remise à Normale à chaque nouvelle vidéo.','Format : Image entière (bandes noires si besoin), Remplir l’écran (rogne), Étirer. Gardé pour les vidéos suivantes.','Piste audio : la ligne n’apparaît que si la vidéo en a plusieurs (doublages), avec Auto en premier.'],
+ steps:[
+ {view:'playerSub',f:'pm-2',on:['ctl','pm-main'],st:PANEL_ON,k:'☰',t:'Réglages'},
+ {k:'OK',t:'Vitesse',f:'sp-2',on:['ctl','pm-sp']},
+ {k:'▼▼',t:'Bas ×2',f:'sp-4'},
+ {k:'OK',t:'1,5×',f:'pm-2',on:['ctl','pm-main'],sel:{sps:'sp-4'},n:'Retour sur la ligne Vitesse.'},
+ {k:'▼',t:'Bas',f:'pm-3'},
+ {k:'OK',t:'Format',f:'fm-0',on:['ctl','pm-fmt']},
+ {k:'▼',t:'Bas',f:'fm-1'},
+ {k:'OK',t:'Remplir',f:'pm-3',on:['ctl','pm-main'],sel:{fms:'fm-1'},n:'L’image remplit l’écran tout de suite.'},
+ ]},
+{id:'enfant-code',title:'Profil enfant : code parent',desc:'Quitter le profil enfant (avatar « Enfant » de l’en-tête) demande le code parent. Le même clavier sert à le créer, le confirmer, le changer et à supprimer le profil.',
+ notes:['Avec miryo installé et un code parental : le profil enfant se crée sans nouveau code et se quitte avec le code de miryo (un seul compteur d’essais pour les 3 applis). Réglages › Enfant › Code parent : « C’est le code parental de miryo. Il se change dans miryo › Réglages › Contrôle parental. », sans « Changer le code ».','Titres : « Profil enfant : choisis un code parent », « Confirme le code parent », « Quitter le profil enfant », « Code parent actuel », « Nouveau code parent ».','Erreurs : « Code incorrect. », « Trop d’essais : réessaie dans 5 min. » (après 5 essais), « Les deux codes étaient différents : recommence. ».'],
+ steps:[
+ {view:'kidsHome',f:'k0-0',k:'▶',t:'Enfant',n:'Une rangée par chaîne autorisée, rien d’autre.'},
+ {k:'▲',t:'Haut',f:'btn-acc'},
+ {k:'OK',t:'Compte',f:'pin-0',on:['pin'],n:'Code parent, 4 cases.'},
+ {k:'1 2',t:'Chiffres',f:'pin-2',txt:{'pin-d0':'•','pin-d1':'•'}},
+ {k:'5 9',t:'Chiffres',txt:{'pin-d0':'','pin-d1':'','pin-h':'Code incorrect.'},f:'pin-0',n:'Faux : les cases se vident et le message remplace l’aide.'},
+ {k:'B',t:'Retour',f:'btn-acc',on:[],n:'Retour sur une case vide ferme ; on reste en Enfant.'},
+ ]},
+{id:'premier-lancement',status:'Prévu',title:'Premier lancement',desc:'À la toute première ouverture, quatre écrans courts au lieu d’arriver sur un Accueil vide : connecter un compte par code ou QR (ou continuer sans), les autres personnes de la TV, le confort, et où tout retrouver. Aucun code à taper : tout se fait au téléphone.',
+ notes:['Passé une fois : ne revient plus. Tout reste dans Réglages.','Ouvert depuis miryo avec un compte déjà choisi : ce parcours est sauté.','« Continuer sans compte » : Accueil en Invité ; « Connecter un compte » reste dans l’avatar.'],
+ steps:[
+ {view:'firstrun',f:'fr0-0',k:'▶',t:'Ouverture',n:'Un seul choix à faire, gros boutons.'},
+ {k:'OK',t:'Connecter',f:'fsi-0',on:['fsi'],n:'Même fenêtre que « Ajouter » : code et QR code.'},
+ {k:'⏱',t:'Code',txt:{'fsi-code':'QRM-7HD-KTA'},st:{'fsi-code':CODE_ST,'fsi-qr':{opacity:'1'}}},
+ {k:'📱',t:'Lié',f:'fr1-2',on:[],st:{'fr-0':{opacity:'0'},'fr-1':{opacity:'1'}},n:'Compte lié : la fenêtre se ferme seule et l’écran suivant arrive.'},
+ {k:'OK',t:'Suivant',f:'fra-2',st:{'fr-1':{opacity:'0'},'fr-2':{opacity:'1'}},n:'Les choix par défaut sont déjà cochés : OK sur Suivant suffit.'},
+ {k:'▼▼',t:'Bas ×2',f:'fr2-0'},
+ {k:'OK',t:'Suivant',f:'fr3-0',st:{'fr-2':{opacity:'0'},'fr-3':{opacity:'1'}}},
+ {k:'OK',t:'Commencer',view:'home',f:'h0-0',n:'L’Accueil du compte.'},
+ ]},
+{id:'miryo',title:'Dans miryo',desc:'miryo tube marche seul. Quand le launcher miryo est installé et que son certificat correspond à l’empreinte attendue, miryo tube lui fournit ses rangées « À reprendre » et « Abonnements », pour le compte choisi dans miryo. OK dans miryo ouvre la vidéo directement dans miryo tube.',
+ notes:['Fournisseur en lecture seule (contrat miryo-link v3, données v2) : /continue, /subscriptions, /search et /accounts, réservés au paquet de miryo signé avec le certificat attendu. Empreintes vides : aucun lien.','miryo n’attend jamais : les rangées viennent du cache tout de suite ; trop vieilles (30 min), elles sont rafraîchies en fond, une seule fois à la fois, et miryo est prévenu.','« Sans Qui regarde ? » et le compte choisi ne valent que pour un lien venu de miryo (paquet et certificat) ; d’une autre appli, la vidéo s’ouvre normalement.','La vidéo lancée depuis miryo est créditée au compte choisi dans miryo (historique, position) ; à l’arrêt, miryo tube revient à son propre compte.','L’écran de miryo est esquissé : seules les rangées fournies par miryo tube sont le sujet ici.'],
+ steps:[
+ {view:'miryo',f:'lt-0',k:'▶',t:'miryo'},
+ {k:'▼',t:'Bas',f:'l0-0',n:'« À reprendre » : les vidéos commencées et pas finies du compte.'},
+ {k:'▼',t:'Bas',f:'l1-0',n:'« Abonnements » : les dernières vidéos des chaînes suivies.'},
+ {k:'▶',t:'Droite',f:'l1-1'},
+ {k:'OK',t:'Valider',view:'player',f:null,on:['load'],st:{lthumb:{'--h':'25'},vid:{'--h':'25'}},txt:{'pt-t':'Focaccia express','pt-c':'Cuisine du Dimanche'},n:'miryo tube s’ouvre sur la vidéo, avec ce compte, sans « Qui regarde ? ».'},
+ {k:'⏱',t:'1re image',f:'pb',on:['ctl']},
+ ]},
+];
+
+/* ---------- engine (same as the miryo iptv storyboard) ---------- */
+function resolve(steps){
+ let acc={view:null,f:null,on:[],sel:{},txt:{},st:{}};
+ return steps.map(s=>{
+  const fresh=s.view&&s.view!==acc.view;
+  const base=fresh?{sel:{},txt:{},st:{}}:acc;
+  const st={...base.st};for(const[id,v]of Object.entries(s.st||{}))st[id]={...(st[id]||{}),...v};
+  acc={view:s.view||acc.view,f:s.f!==undefined?s.f:(fresh?null:acc.f),on:s.on||(fresh?[]:acc.on),sel:{...base.sel,...(s.sel||{})},txt:{...base.txt,...(s.txt||{})},st,k:s.k,t:s.t,n:s.n};
+  return acc;
+ });
+}
+function apply(stage,s){
+ let layer=stage.querySelector('.layer:not(.out)');
+ if(!layer||stage.dataset.view!==s.view){
+  const nl=document.createElement('div');nl.className='layer';nl.innerHTML=V[s.view]();stage.appendChild(nl);
+  if(layer){const old=layer;old.classList.add('out');setTimeout(()=>old.remove(),420)}
+  layer=nl;stage.dataset.view=s.view;layer._st={};layer._txt={};
+ }
+ const q=id=>layer.querySelector(`[data-id="${id}"]`);
+ layer.querySelectorAll('.f').forEach(e=>e.classList.remove('f'));
+ if(s.f){const e=q(s.f);if(e)e.classList.add('f')}
+ layer.querySelectorAll('.tg').forEach(e=>e.classList.toggle('on',s.on.includes(e.dataset.id)));
+ // reset any styles / texts the new state no longer sets (jumping back)
+ for(const[id,props]of Object.entries(layer._st)){const e=q(id);if(!e)continue;for(const[p,orig]of Object.entries(props))if(!(s.st[id]&&p in s.st[id])){if(orig)e.style.setProperty(p,orig);else e.style.removeProperty(p)}}
+ for(const[id,orig]of Object.entries(layer._txt)){if(!(id in s.txt)){const e=q(id);if(e)e.textContent=orig}}
+ for(const[id,props]of Object.entries(s.st)){const e=q(id);if(!e)continue;layer._st[id]=layer._st[id]||{};for(const[p,v]of Object.entries(props)){if(!(p in layer._st[id]))layer._st[id][p]=e.style.getPropertyValue(p);e.style.setProperty(p,String(v))}}
+ for(const[id,v]of Object.entries(s.txt)){const e=q(id);if(!e)continue;if(!(id in layer._txt))layer._txt[id]=e.textContent;e.textContent=v}
+ // selection groups: reset to markup default then apply
+ layer.querySelectorAll('[data-grp]').forEach(g=>{const kids=[...g.querySelectorAll(':scope > [data-id]')];if(g.dataset.def===undefined)g.dataset.def=(kids.find(c=>c.classList.contains('sel'))||{dataset:{id:''}}).dataset.id;const want=s.sel[g.dataset.grp]??g.dataset.def;kids.forEach(c=>c.classList.toggle('sel',c.dataset.id===want))});
+}
+
+let amb='Neutre',speed=1.25,auto=false;
+const stages=[];
+function paint(stage){const A=AMB[amb],d=stage.classList.contains('jour'),s=d?A.d:A.n,g=d?A.dg:A.ng;
+ stage.style.setProperty('--a0',s[0]);stage.style.setProperty('--a1',s[1]);stage.style.setProperty('--a2',s[2]);stage.style.setProperty('--g1',g[0]);stage.style.setProperty('--g2',g[1])}
+const fit=()=>stages.forEach(st=>{const w=st.parentElement.clientWidth;st.style.transform=`scale(${w/1080})`});
+
+const players=[];
+function build(){
+ const host=document.getElementById('screens'),toc=document.getElementById('toc');
+ SCREENS.forEach((sc,si)=>{
+  const res=resolve(sc.steps);
+  const sec=document.createElement('section');sec.className='screen';sec.id=sc.id;
+  const tag=sc.status==='Prévu'?'<span class="stag plan">Prévu</span>':'<span class="stag">En place</span>';
+  sec.innerHTML=`<div class="shead"><div><div class="eyebrow">Écran ${si+1}</div><h2>${sc.title}${tag}</h2><p>${sc.desc}</p></div>
+   <div class="ctls"><button class="ctl" data-a="restart" aria-label="Revenir au début">${I.restart}</button><button class="ctl" data-a="prev" aria-label="Étape précédente">${I.prev}</button>
+   <button class="ctl play" data-a="play" aria-pressed="false" aria-label="Lire la séquence">${I.play}</button><button class="ctl" data-a="next" aria-label="Étape suivante">${I.next}</button></div></div>
+   <div class="frames"><div class="fcol"><div class="flabel">Jour</div><div class="frame"><div class="stage jour"></div></div></div><div class="fcol"><div class="flabel">Nuit</div><div class="frame"><div class="stage nuit"></div></div></div></div>
+   <div class="now" aria-live="polite"><kbd class="nk"></kbd><div><b class="nt"></b><span class="nn"></span></div></div>
+   <ol class="steps">${res.map((r,i)=>`<li><button data-i="${i}"><kbd>${r.k}</kbd>${r.t}</button></li>`).join('')}</ol>
+   ${sc.notes?`<ul class="notes">${sc.notes.map(n=>`<li>${n}</li>`).join('')}</ul>`:''}`;
+  host.appendChild(sec);
+  toc.insertAdjacentHTML('beforeend',`<a href="#${sc.id}">${sc.title}</a>`);
+  const sts=[...sec.querySelectorAll('.stage')];sts.forEach(s=>{stages.push(s);paint(s)});
+  const p={i:0,res,sec,sts,timer:null,playing:false,visible:false};
+  p.go=i=>{p.i=(i+res.length)%res.length;const s=res[p.i];sts.forEach(st=>apply(st,s));
+   sec.querySelector('.nk').textContent=s.k;sec.querySelector('.nt').textContent=`${p.i+1}/${res.length} · ${s.t}`;sec.querySelector('.nn').textContent=s.n||'';
+   sec.querySelectorAll('.steps button').forEach((b,j)=>{if(j===p.i)b.setAttribute('aria-current','step');else b.removeAttribute('aria-current')});};
+  p.tick=()=>{if(!p.playing)return;const last=p.i===res.length-1;p.timer=setTimeout(()=>{p.go(last?0:p.i+1);p.tick()},(last?2600:1500)*speed)};
+  p.setPlay=v=>{p.playing=v;clearTimeout(p.timer);sec.querySelector('[data-a=play]').setAttribute('aria-pressed',v);sec.querySelector('[data-a=play]').innerHTML=v?I.pause:I.play;if(v)p.tick()};
+  sec.querySelector('.ctls').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;const act=b.dataset.a;
+   if(act==='play')p.setPlay(!p.playing);else{p.setPlay(false);if(act==='restart')p.go(0);if(act==='prev')p.go(p.i-1);if(act==='next')p.go(p.i+1)}});
+  sec.querySelector('.steps').addEventListener('click',e=>{const b=e.target.closest('button');if(!b)return;p.setPlay(false);p.go(+b.dataset.i)});
+  players.push(p);p.go(0);
+ });
+ fit();
+}
+build();
+new ResizeObserver(fit).observe(document.body);
+// ambiance picker
+const ambs=document.getElementById('ambs');
+Object.keys(AMB).forEach(n=>{const b=document.createElement('button');b.className='pill';b.textContent=n;b.setAttribute('aria-pressed',n===amb);
+ b.onclick=()=>{amb=n;ambs.querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b));stages.forEach(paint)};ambs.appendChild(b)});
+document.querySelectorAll('[data-speed]').forEach(b=>b.onclick=()=>{speed=+b.dataset.speed;document.querySelectorAll('[data-speed]').forEach(x=>x.setAttribute('aria-pressed',x===b))});
+// autoplay the section in view
+const io=new IntersectionObserver(es=>es.forEach(en=>{const p=players.find(x=>x.sec===en.target);p.visible=en.isIntersecting;if(auto)p.setPlay(p.visible)}),{threshold:.45});
+players.forEach(p=>io.observe(p.sec));
+document.getElementById('safe').onclick=e=>{const on=e.currentTarget.getAttribute('aria-pressed')!=='true';e.currentTarget.setAttribute('aria-pressed',on);stages.forEach(st=>st.classList.toggle('safe',on))};
+document.getElementById('auto').onclick=e=>{auto=!auto;e.currentTarget.setAttribute('aria-pressed',auto);players.forEach(p=>p.setPlay(auto&&p.visible))};
+// keyboard: arrows step the section nearest the top
+document.addEventListener('keydown',e=>{if(!['ArrowLeft','ArrowRight'].includes(e.key)||e.target.closest('input,textarea'))return;
+ const p=players.find(x=>{const r=x.sec.getBoundingClientRect();return r.bottom>140});if(!p)return;p.setPlay(false);p.go(p.i+(e.key==='ArrowRight'?1:-1))});
+</script>
