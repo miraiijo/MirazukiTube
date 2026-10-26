@@ -387,6 +387,9 @@ fun SettingsDialog(
     onDeleteKids: () -> Unit = {},
     /** The kids profile uses miryo's parental code: it is changed in miryo, not here. */
     kidsMiryoCode: Boolean = false,
+    /** Back from this app's own update: open on Mises à jour, focus on Vérifier. */
+    startOnUpdates: Boolean = false,
+    onStarted: () -> Unit = {},
 ) {
     MirazukiDialog(onDismissRequest = onDismiss) {
         val first = remember { FocusRequester() }
@@ -405,6 +408,8 @@ fun SettingsDialog(
         // Rechercher can't take the focus before Lecture has it: Android's own first focus would
         // land on it for a frame and show its page, then Lecture's (the menu and the page jumped).
         var settled by remember { mutableStateOf(false) }
+        // Mises à jour › Vérifier.
+        val check = remember { FocusRequester() }
         val pages = SettingsPage.entries.filter { it != SettingsPage.KIDS || kidChannels != null }
         // Rechercher › a result: its page's menu item takes the focus (which shows the page).
         val navFocus = remember { SettingsPage.entries.associateWith { FocusRequester() } }
@@ -582,6 +587,7 @@ fun SettingsDialog(
                             ) {
                                 MirazukiButton(
                                     if (update.busy && update.progress == null) "Vérification…" else "Vérifier",
+                                    modifier = Modifier.focusRequester(check),
                                     icon = MirazukiIcon.REFRESH,
                                     contentColor = Palette.ChipText,
                                     onClick = onCheckUpdate,
@@ -628,6 +634,16 @@ fun SettingsDialog(
             }
         }
         LaunchedEffect(Unit) {
+            if (startOnUpdates) {
+                onStarted()
+                page = SettingsPage.UPDATES
+                settled = true
+                repeat(4) {
+                    withFrameNanos { }
+                    check.tryRequestFocus()
+                }
+                return@LaunchedEffect
+            }
             withFrameNanos { }
             first.tryRequestFocus()
             settled = true
