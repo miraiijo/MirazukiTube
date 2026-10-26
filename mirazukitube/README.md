@@ -18,14 +18,14 @@ YouTube sans pubs pour Android TV, avec l'interface de miryo. C'est un fork de
   `git diff <commit> upstream/master -- common/src/main/java/com/liskovsoft/smartyoutubetv2/common/exoplayer/`
 
 ## Mise en place (une fois)
-1. Sur GitHub, forke `yuliskov/SmartTube`, par exemple en `miraiijo/MirazukiTube`.
-2. Clone-le avec ses sous-modules : `git clone --recurse-submodules git@github.com:miraiijo/MirazukiTube.git`
+1. Sur GitHub, forke `yuliskov/SmartTube`, par exemple en `miraiijo/miryo-tube`.
+2. Clone-le avec ses sous-modules : `git clone --recurse-submodules git@github.com:miraiijo/miryo-tube.git`
 3. Copie dans le clone le dossier `mirazukitube/` et le fichier `.github/workflows/mirazukitube.yml` de l'archive, puis commit et push.
 4. Optionnel : désactive les workflows de SmartTube (CI, VirusTotal…) dans l'onglet Actions du fork.
 5. Aucun secret dans GitHub : la CI construit un APK **non signé** (artefact `mirazukitube-unsigned`). Il est signé sur le Mac avec `mirazuki-ship` (clé créée par `mirazuki-keys init`, qui ne quitte jamais le Mac).
 
 ## Distribution et mises à jour
-- Les APK signés sont publiés sur le dépôt public `miraiijo/mirazuki-releases` (une release par version, plus la release `channel` qui contient `lumentube.json`).
+- Les APK signés sont publiés sur le dépôt public `miraiijo/miryo-releases` (une release par version, plus la release `channel` qui contient `lumentube.json`).
 - Dans l'appli : **Réglages › Mises à jour**. Seules les versions **stables** sont proposées par défaut ; « Recevoir les versions bêta » ajoute les bêtas (plus tôt, mais elles peuvent planter ou contenir des bugs). Une bêta installée active l'option par défaut. Vérification silencieuse une fois par jour au démarrage.
 - Avant l'installation, l'appli vérifie la taille, l'empreinte SHA-256, le paquet, la version et le certificat de l'APK ; Android refuse de son côté toute mise à jour signée par une autre clé.
 - Les versions de travail s'appellent « 1.0 bêta N » ; une version stable n'a pas le mot « bêta ».

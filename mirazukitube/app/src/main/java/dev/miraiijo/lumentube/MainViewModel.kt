@@ -1349,7 +1349,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         const val RESUME_REFRESH_DELAY_MS = 1_500L
         const val SUGGEST_DELAY_MS = 300L
         const val NOTICE_MS = 3_000L
-        /** This app's file on the update channel (mirazuki-releases › channel › lumentube.json). */
+        /** This app's file on the update channel (miryo-releases › channel › lumentube.json). */
         const val UPDATE_APP = "lumentube"
         /** After a play-as video stops: the player's last position save starts (dispose)… */
         const val HISTORY_SETTLE_MS = 400L
