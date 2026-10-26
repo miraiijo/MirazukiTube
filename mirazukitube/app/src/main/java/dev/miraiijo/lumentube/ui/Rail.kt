@@ -376,6 +376,8 @@ fun SettingsDialog(
     onRemoveKidChannel: (String) -> Unit = {},
     onChangeKidsPin: () -> Unit = {},
     onDeleteKids: () -> Unit = {},
+    /** The kids profile uses miryo's parental code: it is changed in miryo, not here. */
+    kidsMiryoCode: Boolean = false,
 ) {
     MirazukiDialog(onDismissRequest = onDismiss) {
         val first = remember { FocusRequester() }
@@ -495,8 +497,12 @@ fun SettingsDialog(
                                     }
                                 }
                             }
-                            SettingCard("Code parent", "Demandé pour quitter le profil enfant. Le profil enfant de miryo se quitte dans miryo.") {
-                                MirazukiButton("Changer le code", contentColor = Palette.ChipText, onClick = onChangeKidsPin)
+                            SettingCard(
+                                "Code parent",
+                                if (kidsMiryoCode) "C'est le code parental de miryo. Il se change dans miryo › Réglages › Contrôle parental."
+                                else "Demandé pour quitter le profil enfant. Le profil enfant de miryo se quitte dans miryo.",
+                            ) {
+                                if (!kidsMiryoCode) MirazukiButton("Changer le code", contentColor = Palette.ChipText, onClick = onChangeKidsPin)
                                 MirazukiButton("Supprimer le profil enfant", icon = MirazukiIcon.CLOSE, onClick = onDeleteKids)
                             }
                         }

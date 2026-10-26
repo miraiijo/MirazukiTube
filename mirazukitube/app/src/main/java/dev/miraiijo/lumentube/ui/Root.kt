@@ -324,6 +324,7 @@ fun Root(vm: MainViewModel) {
                 kidChannels = state.kidChannels.takeIf { state.kidsExists },
                 onRemoveKidChannel = vm::removeKidChannel,
                 onChangeKidsPin = vm::changeKidsPin,
+                kidsMiryoCode = state.kidsMiryoCode,
                 onDeleteKids = vm::deleteKids,
             )
         } else if (state.cardMenu != null) {
