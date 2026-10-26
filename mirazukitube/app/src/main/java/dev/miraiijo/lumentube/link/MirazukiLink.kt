@@ -18,6 +18,8 @@ import dev.miraiijo.lumentube.update.Updater
  * Providers (read-only, every query checks the caller):
  *  - miryo      content://dev.miraiijo.lumen.profiles/profiles
  *               profile_id, name, color (ARGB long), avatar, kids ("1"/"0"), current ("1"/"0")
+ *               content://dev.miraiijo.lumen.profiles/weather
+ *               city, latitude, longitude (no row: no city set in miryo)
  *  - miryo tube  content://dev.miraiijo.lumentube.feed/…  (feed contract v2, see FeedProvider)
  *  - miryo iptv  content://dev.miraiijo.lumeniptv.rows/channels?profile=<profile_id>
  *               channel_id, name, number, logo_url (https or null), kind ("recent"/"favorite"),
