@@ -51,6 +51,8 @@ fun Root(vm: MainViewModel) {
     val page = remember(state.section, state.pages, state.opened, state.search, state.resume, state.deArrow) { state.page }
     val content = remember { FocusRequester() }
     val header = remember { FocusRequester() }
+    // Restarted by its own update: Réglages › Mises à jour open again.
+    LaunchedEffect(Unit) { vm.reopenAfterUpdate() }
     // Incremented when a page should take the focus (section opened from the menu, channel opened).
     // Starts at 1: at launch, Accueil takes the focus as soon as its rows arrive.
     var pageFocusTick by remember { mutableIntStateOf(1) }
@@ -352,6 +354,8 @@ fun Root(vm: MainViewModel) {
                 onChangeKidsPin = vm::changeKidsPin,
                 kidsMiryoCode = state.kidsMiryoCode,
                 onDeleteKids = vm::deleteKids,
+                startOnUpdates = state.settingsOnUpdates,
+                onStarted = vm::settingsOnUpdatesShown,
             )
         } else if (state.cardMenu != null) {
             val video = state.cardMenu!!
