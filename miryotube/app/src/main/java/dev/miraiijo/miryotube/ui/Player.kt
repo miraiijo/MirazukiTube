@@ -166,6 +166,8 @@ fun PlayerScreen(
     signedIn: Boolean,
     onNext: (Video) -> Unit,
     onExit: () -> Unit,
+    /** The first video of « À la suite » (the box's own queue): played next, before YouTube's. */
+    queued: Video? = null,
     /** Retour on the video, nothing over it (the system's window if chosen); else as [onExit]. */
     onBack: () -> Unit = onExit,
     /** In-app picture-in-picture: small window in a corner, no controls, browsing goes on. */
@@ -185,6 +187,7 @@ fun PlayerScreen(
 ) {
     val isMini by rememberUpdatedState(minimized)
     val playNext by rememberUpdatedState(onNext)
+    val queuedNext by rememberUpdatedState(queued)
     val tellPosition by rememberUpdatedState(onPosition)
     val context = LocalContext.current
     val prefs = remember { PlayerPrefs(context) }
@@ -401,9 +404,11 @@ fun PlayerScreen(
                     retried = false
                 }
                 if (playbackState == Player.STATE_ENDED) {
-                    val next = details?.next?.takeIf { !kids }
+                    // « À la suite » first (asked for, so even without Lecture automatique), then YouTube's.
+                    val queuedVideo = queuedNext?.takeIf { !kids && it.videoId != videoId }
+                    val next = queuedVideo ?: details?.next?.takeIf { !kids && prefs.autoplay }
                     when {
-                        !prefs.autoplay || next == null -> onExit()
+                        next == null -> onExit()
                         // Small window: no card to show, the next one starts right away.
                         isMini -> playNext(next)
                         // Alone on screen: no controls under the card, nothing for the focus to escape to.
@@ -509,7 +514,7 @@ fun PlayerScreen(
                 }
                 RemoteControl.Event.Play -> player.exo.playWhenReady = true
                 RemoteControl.Event.Pause -> player.exo.playWhenReady = false
-                RemoteControl.Event.Next -> details?.next?.let(playNext)
+                RemoteControl.Event.Next -> (queuedNext ?: details?.next)?.let(playNext)
                 RemoteControl.Event.StateRequest ->
                     RemoteControl.reportPlaying(videoId, player.exo.currentPosition, player.exo.duration.coerceAtLeast(0L), player.exo.playWhenReady)
                 else -> Unit
@@ -1020,6 +1025,7 @@ fun PlayerScreen(
         upNext?.takeIf { !minimized }?.let { next ->
             UpNextCard(
                 next,
+                fromQueue = next.key == queued?.key,
                 onPlay = { onNext(next) },
                 onCancel = onExit,
                 modifier = Modifier.align(Alignment.BottomEnd).padding(end = SafeArea.side, bottom = SafeArea.bottom),
@@ -1403,7 +1409,7 @@ private fun formatTime(ms: Long): String = formatDuration(ms).ifEmpty { "0:00" }
 
 /** "À suivre": the next video, played when the countdown ends (OK: now, Annuler: back to the page). */
 @Composable
-private fun UpNextCard(next: Video, onPlay: () -> Unit, onCancel: () -> Unit, modifier: Modifier = Modifier) {
+private fun UpNextCard(next: Video, onPlay: () -> Unit, onCancel: () -> Unit, modifier: Modifier = Modifier, fromQueue: Boolean = false) {
     var seconds by remember(next.key) { mutableIntStateOf(UP_NEXT_SECONDS) }
     val playNow = remember { FocusRequester() }
     LaunchedEffect(next.key) {
@@ -1431,7 +1437,7 @@ private fun UpNextCard(next: Video, onPlay: () -> Unit, onCancel: () -> Unit, mo
         }
         // 12 + 144 + 14 + 198 + 12 = 380 dp (the redesign).
         Column(Modifier.width(198.dp), verticalArrangement = Arrangement.spacedBy(5.dp)) {
-            Text("À suivre · $seconds s", fontSize = Dimens.TextMin, fontWeight = FontWeight.SemiBold, color = Palette.TextSecondary)
+            Text("${if (fromQueue) "À la suite" else "À suivre"} · $seconds s", fontSize = Dimens.TextMin, fontWeight = FontWeight.SemiBold, color = Palette.TextSecondary)
             Text(next.title, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, maxLines = 2, overflow = TextOverflow.Ellipsis, lineHeight = 18.sp, color = Palette.TextPrimary)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), modifier = Modifier.padding(top = 4.dp)) {
                 MiryoButton("Lire", modifier = Modifier.focusRequester(playNow), onClick = onPlay)

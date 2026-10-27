@@ -183,6 +183,8 @@ data class UiState(
     val settings: Settings = Settings(sponsorBlock = true, autoplay = true, stableVolume = true, deArrow = false),
     /** "Reprendre" row at the top of Accueil (null: none, or not signed in). */
     val resume: VideoRow? = null,
+    /** « En direct maintenant »: the subscriptions live now, first on Accueil (null: none). */
+    val liveNow: VideoRow? = null,
     val query: String = "",
     /** Search results (null before the first search). */
     val search: Page? = null,
@@ -224,6 +226,8 @@ data class UiState(
     val hiddenChannels: List<ChannelRef> = emptyList(),
     /** « Ranger dans un dossier » open for this channel. */
     val folderFor: ChannelRef? = null,
+    /** « À la suite »: videos to play next, in order (this box, until the app closes). */
+    val queue: List<Video> = emptyList(),
 ) {
     /**
      * The launch has something to show (the splash screen can go): Accueil's first rows or its
@@ -242,7 +246,8 @@ data class UiState(
             opened != null -> opened!!.page
             section == Section.SEARCH -> search ?: Page(loading = false)
             section == Section.HOME -> (pages[section] ?: Page()).let { home ->
-                if (resume == null) home else home.copy(rows = listOf(resume) + home.rows)
+                val top = listOfNotNull(liveNow, resume)
+                if (top.isEmpty()) home else home.copy(rows = top + home.rows)
             }
             else -> pages[section] ?: Page()
         }.withDeArrow(deArrow).curated()
@@ -324,7 +329,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                 val id = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { YouTube.homeAccountId() }
                 if (id != _state.value.accountId && !_state.value.choosingAccount && _state.value.switchingTo == null) {
                     cancelLoads()
-                    _state.update { it.copy(pages = emptyMap(), resume = null, search = null, openedStack = emptyList(), focusKey = null, cardMenu = null) }
+                    _state.update { it.copy(pages = emptyMap(), resume = null, liveNow = null, search = null, openedStack = emptyList(), focusKey = null, cardMenu = null) }
                     refreshAccount()
                     show(_state.value.section.takeIf { it != Section.SEARCH } ?: Section.HOME)
                 }
@@ -513,6 +518,10 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
             val row = runCatching { YouTube.resumeRow() }.getOrNull()
             _state.update { it.copy(resume = row) }
             row?.let { fetchDeArrow(listOf(it)) }
+        }
+        viewModelScope.launch {
+            val row = runCatching { YouTube.liveNowRow() }.getOrNull()
+            _state.update { it.copy(liveNow = row) }
         }
     }
 
@@ -850,6 +859,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
             search = s.search?.without(),
             openedStack = s.openedStack.map { it.copy(page = it.page.without()) },
             resume = s.resume?.let { row -> row.copy(items = row.items.filterNot(matches)).takeIf { it.items.isNotEmpty() } },
+            liveNow = s.liveNow?.let { row -> row.copy(items = row.items.filterNot(matches)).takeIf { it.items.isNotEmpty() } },
         )
     }
 
@@ -927,10 +937,27 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         }
     }
 
-    /** "À suivre" from the player: the next video replaces the current one. */
+    /** "À suivre" from the player: the next video replaces the current one (out of « À la suite » if it was there). */
     fun playNext(video: Video) {
         if (_state.value.kids) return stopPlaying()
-        _state.update { it.copy(playing = video, playingId = null) }
+        _state.update { s -> s.copy(playing = video, playingId = null, queue = s.queue.filterNot { it.key == video.key }) }
+    }
+
+    /** « Lire ensuite »: at the end of « À la suite » (a video already in it stays where it is). */
+    fun cardQueue(video: Video) {
+        closeCardMenu()
+        if (!video.isVideo || video.videoId == null) return
+        val s = _state.value
+        if (s.queue.any { it.key == video.key }) return showNotice("Déjà dans « À la suite ».")
+        val queue = (s.queue + video).takeLast(QUEUE_MAX)
+        _state.update { it.copy(queue = queue) }
+        showNotice(if (queue.size == 1) "À la suite : elle démarre à la fin de la vidéo." else "À la suite · ${queue.size} vidéos.")
+    }
+
+    fun clearQueue() {
+        closeCardMenu()
+        _state.update { it.copy(queue = emptyList()) }
+        showNotice("« À la suite » est vide.")
     }
 
     fun closeOpened() = _state.update { s ->
@@ -1011,7 +1038,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     private fun reloadHome() {
         cancelLoads()
         channelJob?.cancel()
-        _state.update { it.copy(pages = emptyMap(), resume = null, search = null, openedStack = emptyList(), focusKey = null) }
+        _state.update { it.copy(pages = emptyMap(), resume = null, liveNow = null, search = null, openedStack = emptyList(), focusKey = null) }
         refreshAccount()
         show(_state.value.section.takeIf { it != Section.SEARCH } ?: Section.HOME)
     }
@@ -1117,7 +1144,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                 kids = true, kidsLocked = fromMiryo, pin = null,
                 choosingAccount = false, accountsOpen = false, settingsOpen = false, pairing = null, cardMenu = null,
                 playing = null, playingId = null, minimized = false,
-                pages = emptyMap(), resume = null, search = null, section = Section.HOME, openedStack = emptyList(), focusKey = null,
+                pages = emptyMap(), resume = null, liveNow = null, search = null, section = Section.HOME, openedStack = emptyList(), focusKey = null,
             )
         }
         kidsUi()
@@ -1137,7 +1164,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
 
     private fun reloadAfterKids() {
         cancelLoads()
-        _state.update { it.copy(pages = emptyMap(), resume = null, search = null, section = Section.HOME, openedStack = emptyList(), focusKey = null, playing = null, playingId = null, minimized = false) }
+        _state.update { it.copy(pages = emptyMap(), resume = null, liveNow = null, search = null, section = Section.HOME, openedStack = emptyList(), focusKey = null, playing = null, playingId = null, minimized = false) }
         refreshAccount()
         show(Section.HOME)
     }
@@ -1248,7 +1275,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     private fun loadKids() {
         loads[Section.HOME]?.cancel()
         val channels = kidsStore.channels
-        _state.update { it.copy(pages = it.pages + (Section.HOME to Page(loading = true)), resume = null) }
+        _state.update { it.copy(pages = it.pages + (Section.HOME to Page(loading = true)), resume = null, liveNow = null) }
         loads[Section.HOME] = viewModelScope.launch {
             fun set(page: Page) = _state.update { it.copy(pages = it.pages + (Section.HOME to page)) }
             if (channels.isEmpty()) {
@@ -1441,7 +1468,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
             onError = { message -> _state.update { it.copy(signInError = message) } },
             onDone = {
                 // A new account is the selected one: everything reloads for it.
-                _state.update { it.copy(signingIn = false, signInCode = null, choosingAccount = false, accountsOpen = false, settingsOpen = false, pages = emptyMap(), resume = null) }
+                _state.update { it.copy(signingIn = false, signInCode = null, choosingAccount = false, accountsOpen = false, settingsOpen = false, pages = emptyMap(), resume = null, liveNow = null) }
                 refreshAccount()
                 show(Section.HOME)
             },
@@ -1497,7 +1524,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         _state.update {
             it.copy(
                 switchingTo = cover, accountName = cover.name, accountAvatar = cover.avatar, cardMenu = null,
-                pages = emptyMap(), resume = null, search = null, section = Section.HOME, openedStack = emptyList(), focusKey = null,
+                pages = emptyMap(), resume = null, liveNow = null, search = null, section = Section.HOME, openedStack = emptyList(), focusKey = null,
             )
         }
         viewModelScope.launch {
@@ -1529,7 +1556,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     fun signOut() {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             YouTube.signOut()
-            _state.update { it.copy(pages = emptyMap(), resume = null, settingsOpen = false, section = Section.HOME) }
+            _state.update { it.copy(pages = emptyMap(), resume = null, liveNow = null, settingsOpen = false, section = Section.HOME) }
             refreshAccount()
             launch(kotlinx.coroutines.Dispatchers.Main) { show(Section.HOME) }
         }
@@ -1573,6 +1600,8 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         /** Profile switch: the cover lifts at the latest after this, even if Accueil is still loading. */
         const val SWITCH_MAX_MS = 1_500L
         const val SUGGEST_DELAY_MS = 300L
+        /** « À la suite »: videos at most. */
+        const val QUEUE_MAX = 50
         /** Abonnements' channel pictures at most. */
         const val PASTILLES_MAX = 30
         const val NOTICE_MS = 3_000L

@@ -48,7 +48,7 @@ fun Root(vm: MainViewModel) {
     val state by vm.state.collectAsState()
     // The page's rows, rebuilt only when what they show changes (state.page builds a new one each
     // time it's read): a notice, the player or a dialog doesn't recompose every card.
-    val page = remember(state.section, state.pages, state.opened, state.search, state.resume, state.deArrow, state.subsFilter, state.hiddenChannels, state.folders, state.kids) { state.page }
+    val page = remember(state.section, state.pages, state.opened, state.search, state.resume, state.liveNow, state.deArrow, state.subsFilter, state.hiddenChannels, state.folders, state.kids) { state.page }
     val content = remember { FocusRequester() }
     val header = remember { FocusRequester() }
     // Restarted by its own update: Réglages › Mises à jour open again.
@@ -398,6 +398,9 @@ fun Root(vm: MainViewModel) {
                     neighbourTick++
                     vm.cardNotInterested(video, channel)
                 },
+                queued = state.queue.size,
+                onQueue = { vm.cardQueue(video) },
+                onClearQueue = vm::clearQueue,
                 onHideChannel = {
                     neighbourTick++
                     vm.cardHideChannel(video)
@@ -464,6 +467,7 @@ fun Root(vm: MainViewModel) {
                 item = playing?.raw,
                 signedIn = state.signedIn,
                 onNext = vm::playNext,
+                queued = state.queue.firstOrNull(),
                 onExit = {
                     vm.stopPlaying()
                     returnFocusTick++

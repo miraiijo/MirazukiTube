@@ -570,6 +570,31 @@ object YouTube {
         if (started.isEmpty()) null else VideoRow("resume", "Reprendre", started, history, canLoadMore = false)
     }
 
+    /**
+     * « En direct maintenant »: the subscriptions live right now, with their viewers when YouTube
+     * says it (« 1,2 k spectateurs »); null when none (or signed out). One request (the
+     * subscriptions' first page, also given to miryo's feed).
+     */
+    suspend fun liveNowRow(): VideoRow? = withContext(Dispatchers.IO) {
+        if (!signedIn) return@withContext null
+        val subs = runCatching { subscriptionsForFeed() }.getOrNull() ?: return@withContext null
+        val live = subs.mediaItems.orEmpty().filterNotNull()
+            .filter { it.isLive && !it.isShorts && it.videoId != null }
+            .map { item -> item.toVideo().copy(published = item.viewersText()) }
+            .distinctBy { it.key }
+            .take(20)
+        if (live.isEmpty()) null else VideoRow(LIVE_NOW, "En direct maintenant", live, subs, canLoadMore = false)
+    }
+
+    const val LIVE_NOW = "live-now"
+
+    /** « 1,2 k spectateurs » / « 3 k watching »: the part of the second line that says it. */
+    private fun MediaItem.viewersText(): String? =
+        secondTitle?.toString().orEmpty().split('•', '·').map { it.trim() }
+            .firstOrNull { part -> VIEWERS.any { part.contains(it, ignoreCase = true) } }
+
+    private val VIEWERS = listOf("spectateur", "regardent", "watching", "viewers")
+
     /** Next page of a row (null when there's no more). */
     suspend fun more(row: VideoRow): VideoRow? = withContext(Dispatchers.IO) {
         val next = runCatching { service.contentService.continueGroup(row.raw) }.getOrNull()

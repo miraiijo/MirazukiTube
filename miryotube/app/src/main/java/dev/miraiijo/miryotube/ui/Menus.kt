@@ -54,6 +54,10 @@ fun CardMenuDialog(
     onWatchLater: () -> Unit,
     onChannel: () -> Unit,
     onNotInterested: (channel: Boolean) -> Unit,
+    /** « À la suite »: videos in it, add this one, empty it. */
+    queued: Int = 0,
+    onQueue: () -> Unit = {},
+    onClearQueue: () -> Unit = {},
     /** « Ne plus montrer cette chaîne » (on this box, for this profile). */
     onHideChannel: () -> Unit = {},
     /** « Ranger dans un dossier » (null: no channel known, no line). */
@@ -77,6 +81,8 @@ fun CardMenuDialog(
                 }
             }
             DialogRow("Lire", icon = MiryoIcon.PLAY, modifier = Modifier.focusRequester(first), onClick = onPlay)
+            if (video.isVideo && video.videoId != null) DialogRow("Lire ensuite", value = if (queued > 0) "À la suite · $queued" else null, icon = MiryoIcon.PLAYLIST, onClick = onQueue)
+            if (queued > 0) DialogRow("Vider « À la suite »", icon = MiryoIcon.CLOSE, onClick = onClearQueue)
             if (signedIn && video.videoId != null) DialogRow("À regarder plus tard", icon = MiryoIcon.HISTORY, onClick = onWatchLater)
             if (video.raw.channelId != null) DialogRow("Ouvrir la chaîne", icon = MiryoIcon.USER, onClick = onChannel)
             if (signedIn && onFolder != null) DialogRow("Ranger la chaîne dans un dossier", icon = MiryoIcon.PLAYLIST, onClick = onFolder)
