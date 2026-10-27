@@ -53,12 +53,13 @@ object LowEnd {
         val late = measured(context)
         // Too little memory: Économes whatever the test says.
         val memoryLow = am == null || am.isLowRamDevice || info.totalMem in 1 until MIN_RAM_BYTES
-        val low = memoryLow || when {
-            // The test was run on this box: it decides.
+        // Only small cores (Cortex-A53 / A55 / A35: Freebox POP, most sticks and cheap boxes) means a
+        // modest GPU too: Économes whatever the test says (the POP passes the 3 s test, yet the real
+        // screens dropped up to 9 frames in 10). Otherwise the test decides when it was run; big cores
+        // (Shield's A57, A72, A76…) keep everything; processor not readable: memory decides.
+        val low = memoryLow || cores == true || when {
             late != null -> late >= LATE_LIMIT
-            // Only small cores (Cortex-A53 / A55 / A35: Freebox POP, most sticks and cheap boxes)
-            // means a modest GPU too; big cores (Shield's A57, A72, A76…) keep everything.
-            cores != null -> cores
+            cores != null -> false
             else -> info.totalMem in 1 until LOW_END_RAM_BYTES
         }
         val ram = info.totalMem.takeIf { it > 0 }?.let { it / (1024.0 * 1024 * 1024) }
