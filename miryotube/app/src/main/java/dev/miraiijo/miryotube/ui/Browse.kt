@@ -227,9 +227,15 @@ fun BrowsePage(
                     onClick = retry,
                 )
                 else -> RowsScroll(rowTitle, cardCaption) {
+                    val safeBottom = SafeArea.bottom
                     LazyColumn(
                         state = listState,
-                        modifier = Modifier.fillMaxSize(),
+                        // Nothing drawn in the bottom safe zone: the next row's title alone (no card
+                        // under it) no longer sits on the screen's edge; the focused row's caption
+                        // stops just above it.
+                        modifier = Modifier.fillMaxSize().drawWithContent {
+                            androidx.compose.ui.graphics.drawscope.clipRect(bottom = size.height - safeBottom.toPx()) { this@drawWithContent.drawContent() }
+                        },
                         contentPadding = PaddingValues(bottom = SafeArea.bottom + 16.dp),
                     ) {
                         if (header != null) item(key = "header", contentType = 1) {
