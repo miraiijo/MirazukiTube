@@ -219,7 +219,7 @@ class MiryoPlayer(context: Context) {
     private fun checkLoad() {
         val counters = exo.videoDecoderCounters
         val playing = playingQuality?.rem(HDR_FLAG)
-        if (currentQuality != 0 || !exo.isPlaying || counters == null || playing == null) {
+        if (audioOnly || currentQuality != 0 || !exo.isPlaying || counters == null || playing == null) {
             loadChecks = 0
             loadDropped = -1
             return
@@ -255,7 +255,7 @@ class MiryoPlayer(context: Context) {
      */
     private fun checkVideoFrozen() {
         val counters = exo.videoDecoderCounters
-        if (!exo.isPlaying || exo.videoFormat == null || counters == null) {
+        if (audioOnly || !exo.isPlaying || exo.videoFormat == null || counters == null) {
             stillChecks = 0
             lastRendered = -1
             return
@@ -486,6 +486,22 @@ class MiryoPlayer(context: Context) {
         }
         builder.setForceHighestSupportedBitrate(!auto)
         selector.setParameters(builder)
+    }
+
+    /** « Son seul »: the picture is no longer loaded nor decoded, the sound goes on. */
+    var audioOnly = false
+        private set
+
+    fun setAudioOnly(on: Boolean) {
+        val info = selector.currentMappedTrackInfo ?: return
+        val index = (0 until info.rendererCount).firstOrNull { info.getRendererType(it) == C.TRACK_TYPE_VIDEO } ?: return
+        audioOnly = on
+        selector.setParameters(selector.buildUponParameters().setRendererDisabled(index, on))
+        // The picture back: the quality chosen again for its tracks.
+        if (!on) {
+            appliedFor = null
+            applyVideoSelection()
+        }
     }
 
     /** Subtitle tracks by name: the video's own, then YouTube's automatic translations. */

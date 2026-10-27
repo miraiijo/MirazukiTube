@@ -75,7 +75,8 @@ data class Segment(val startMs: Long, val endMs: Long, val category: String) {
         }
 }
 
-data class Chapter(val title: String, val startMs: Long)
+/** A chapter: its title, start and YouTube's picture of it (null: none). */
+data class Chapter(val title: String, val startMs: Long, val image: String? = null)
 
 /** What the player shows next to a video: description, actions' state, chapters, next video. */
 @androidx.compose.runtime.Immutable
@@ -721,7 +722,7 @@ object YouTube {
             subscribed = meta.isSubscribed,
             channelId = meta.channelId,
             channel = meta.author,
-            chapters = meta.chapters.orEmpty().filterNotNull().map { Chapter(it.title.orEmpty(), it.startTimeMs) }.sortedBy { it.startMs },
+            chapters = meta.chapters.orEmpty().filterNotNull().map { Chapter(it.title.orEmpty(), it.startTimeMs, it.cardImageUrl?.takeIf { url -> url.startsWith("http") }) }.sortedBy { it.startMs },
             next = meta.nextVideo?.takeIf { it.videoId != null && it.videoId != videoId }?.toVideo(),
         )
     }

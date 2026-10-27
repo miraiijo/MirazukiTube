@@ -479,6 +479,10 @@ fun SettingsDialog(
                                 Choice("Activé", settings.stableVolume) { onSettings(settings.copy(stableVolume = true)) }
                                 Choice("Désactivé", !settings.stableVolume) { onSettings(settings.copy(stableVolume = false)) }
                             }
+                            SettingCard("Sous-titres en français", "Une vidéo dans une autre langue : ses sous-titres français, sinon la traduction automatique de YouTube (pas toujours parfaite). Sur demande : Sous-titres › Traduire en français.") {
+                                Choice("Toujours", settings.autoFrench) { onSettings(settings.copy(autoFrench = true)) }
+                                Choice("Sur demande", !settings.autoFrench) { onSettings(settings.copy(autoFrench = false)) }
+                            }
                             // No « Petite fenêtre » setting: the player's button does it, Accueil
                             // always opens the system's window (as in miryo iptv).
                         }

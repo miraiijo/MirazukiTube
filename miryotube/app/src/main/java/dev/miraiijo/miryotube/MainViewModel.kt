@@ -114,6 +114,8 @@ data class Settings(
     val navSounds: Int = 0,
     /** Réglages › Affichage › Animations: miryo (Comme miryo, the default), auto, eco or full (system.LowEnd). */
     val animations: String = dev.miraiijo.miryotube.system.LowEnd.MIRYO,
+    /** Réglages › Lecture › Sous-titres en français: Toujours (true) or Sur demande. */
+    val autoFrench: Boolean = false,
 ) {
     /** The clicks of the remote's arrows and OK are heard. */
     val navSoundsOn: Boolean
@@ -1443,6 +1445,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         prefs.backgroundCast = settings.backgroundCast
         prefs.background = settings.background
         prefs.navSounds = settings.navSounds
+        prefs.autoFrench = settings.autoFrench
         prefs.animations = settings.animations
         dev.miraiijo.miryotube.system.LowEnd.choice = settings.animations
         if (settings.remote != _state.value.settings.remote) {

@@ -83,6 +83,7 @@ import dev.miraiijo.miryotube.AppScope
 import dev.miraiijo.miryotube.data.ACCOUNT_CHANGED_MESSAGE
 import dev.miraiijo.miryotube.data.ActionResult
 import dev.miraiijo.miryotube.data.Chapter
+import dev.miraiijo.miryotube.player.SleepTimer
 import dev.miraiijo.miryotube.data.Details
 import dev.miraiijo.miryotube.data.Segment
 import dev.miraiijo.miryotube.data.Video
@@ -206,6 +207,8 @@ fun PlayerScreen(
     var activity by remember { mutableIntStateOf(0) }
     var loadTick by remember(videoId) { mutableIntStateOf(0) }
     var retried by remember(videoId) { mutableStateOf(false) }
+    /** « Minuterie »: « Toujours là ? » on screen (the last minute). */
+    var askStill by remember { mutableStateOf(false) }
     /** Seek preview on the progress bar (committed when the arrow is released). */
     var preview by remember { mutableStateOf<Long?>(null) }
     val playPause = remember { FocusRequester() }
@@ -314,6 +317,8 @@ fun PlayerScreen(
     }
 
     fun show() {
+        // « Son seul »: the screen stays dark (Up, OK or Back bring the picture back first).
+        if (AudioOnly.on) return
         // The time line is only refreshed while it's shown: up to date as soon as it appears.
         position = player.exo.currentPosition
         buffered = player.exo.bufferedPosition
@@ -378,7 +383,11 @@ fun PlayerScreen(
             if (!subtitlesRestored && tracks.isNotEmpty()) {
                 subtitlesRestored = true
                 // -1 (off) is applied too: no track turns on by itself as the manifest's default.
-                player.selectSubtitle(prefs.subtitles?.let(tracks::indexOf) ?: -1)
+                // « Sous-titres en français » always: a video in another language gets French ones
+                // (its own, else YouTube's translation) when the last choice isn't there.
+                val stored = prefs.subtitles?.let(tracks::indexOf) ?: -1
+                val french = if (stored < 0 && prefs.autoFrench) frenchSubtitle(tracks) else -1
+                player.selectSubtitle(if (stored >= 0) stored else french)
             }
         }
         player.onError = { e ->
@@ -408,6 +417,11 @@ fun PlayerScreen(
                     val queuedVideo = queuedNext?.takeIf { !kids && it.videoId != videoId }
                     val next = queuedVideo ?: details?.next?.takeIf { !kids && prefs.autoplay }
                     when {
+                        // « Minuterie : à la fin de la vidéo »: nothing after it.
+                        SleepTimer.minutes == SleepTimer.AT_END -> {
+                            SleepTimer.cancel()
+                            onExit()
+                        }
                         next == null -> onExit()
                         // Small window: no card to show, the next one starts right away.
                         isMini -> playNext(next)
@@ -577,6 +591,26 @@ fun PlayerScreen(
         }
     }
 
+    // « Son seul »: the video track off (not loaded nor decoded) once the tracks are known, and back.
+    LaunchedEffect(tracksTick, AudioOnly.on) {
+        if (player.audioOnly != AudioOnly.on) player.setAudioOnly(AudioOnly.on)
+        if (AudioOnly.on) controls = false
+    }
+    // « Minuterie »: « Toujours là ? » a minute before the end; no answer, the playback stops.
+    LaunchedEffect(SleepTimer.endsAt) {
+        askStill = false
+        val end = SleepTimer.endsAt
+        if (end <= 0) return@LaunchedEffect
+        val untilAsk = end - SleepTimer.ASK_MS - android.os.SystemClock.elapsedRealtime()
+        if (untilAsk > 0) delay(untilAsk)
+        askStill = true
+        delay((end - android.os.SystemClock.elapsedRealtime()).coerceAtLeast(0L))
+        askStill = false
+        SleepTimer.cancel()
+        player.exo.playWhenReady = false
+        onExit()
+    }
+
     // Controls hide after a while when playing (never while paused or loading).
     // Read in a flow, not as effect keys: a key press (activity++) doesn't recompose the screen.
     LaunchedEffect(Unit) {
@@ -600,7 +634,7 @@ fun PlayerScreen(
     LaunchedEffect(controls, minimized, error == null, started, commentsOpen) {
         withFrameNanos { }
         // The comments panel and an open menu keep their own focus (Menu pressed while loading).
-        if (upNext != null || minimized || commentsOpen || menu != null) return@LaunchedEffect
+        if (upNext != null || minimized || commentsOpen || menu != null || askStill) return@LaunchedEffect
         if (controls && refocusComments) {
             refocusComments = false
             if (commentsButton.tryRequestFocus()) return@LaunchedEffect
@@ -718,6 +752,11 @@ fun PlayerScreen(
     }
     // Declared last: with the comments open, Back only closes them (the video goes on).
     BackHandler(enabled = commentsOpen && !minimized) { closeComments() }
+    // « Son seul »: Back brings the picture back first.
+    BackHandler(enabled = AudioOnly.on && menu == null && !commentsOpen && !minimized) {
+        AudioOnly.on = false
+        show()
+    }
     LaunchedEffect(menuClosed) {
         if (menuClosed == 0) return@LaunchedEffect
         withFrameNanos { }
@@ -763,7 +802,7 @@ fun PlayerScreen(
                 if (native.action != AndroidKeyEvent.ACTION_DOWN) return@onPreviewKeyEvent false
                 // The "À suivre" card, the comments panel and the error box have their own focus
                 // (no seek, no settings under the error's veil).
-                if (upNext != null || commentsOpen || error != null) return@onPreviewKeyEvent false
+                if (upNext != null || commentsOpen || error != null || askStill) return@onPreviewKeyEvent false
                 // Media keys (remote, or the gamepad: X, L1 / R1, L2 / R2) and Menu (gamepad Y / Start)
                 // act the same with the controls shown or hidden.
                 when (native.keyCode) {
@@ -781,6 +820,25 @@ fun PlayerScreen(
                             menu = PlayerMenu.MAIN
                         }
                         return@onPreviewKeyEvent true
+                    }
+                }
+                // « Son seul »: Right = the next title, Left = 10 s back, Up or OK = the picture back.
+                if (AudioOnly.on) {
+                    if (menu != null) return@onPreviewKeyEvent false
+                    return@onPreviewKeyEvent when (native.keyCode) {
+                        AndroidKeyEvent.KEYCODE_DPAD_RIGHT -> {
+                            if (native.repeatCount == 0) (queued?.takeIf { !kids } ?: details?.next?.takeIf { !kids })?.let(playNext)
+                            true
+                        }
+                        AndroidKeyEvent.KEYCODE_DPAD_LEFT -> { nudge(-1, native.repeatCount); true }
+                        AndroidKeyEvent.KEYCODE_DPAD_UP, AndroidKeyEvent.KEYCODE_DPAD_CENTER, AndroidKeyEvent.KEYCODE_ENTER, AndroidKeyEvent.KEYCODE_NUMPAD_ENTER -> {
+                            if (isOk) swallowOkUp = true
+                            AudioOnly.on = false
+                            show()
+                            true
+                        }
+                        AndroidKeyEvent.KEYCODE_DPAD_DOWN -> true
+                        else -> false
                     }
                 }
                 if (controls) {
@@ -855,12 +913,18 @@ fun PlayerScreen(
         }
         if (started && buffering && error == null) LoadingDots(Modifier.align(Alignment.Center))
 
-        AnimatedVisibility(visible = controls && started && error == null && !minimized && !commentsOpen, enter = fadeIn(tween(150)), exit = fadeOut(tween(250))) {
+        // « Son seul »: a dark screen, only the title and the time, moving slowly (no mark left on the TV).
+        if (AudioOnly.on && started && !minimized && error == null) {
+            AudioOnlyScreen(shownTitle, shownChannel, Modifier.fillMaxSize())
+        }
+
+        AnimatedVisibility(visible = controls && started && error == null && !minimized && !commentsOpen && !AudioOnly.on, enter = fadeIn(tween(150)), exit = fadeOut(tween(250))) {
             val chapterIndex = chapters.indexOfLast { it.startMs <= (preview ?: position) }
             val chapter = chapters.getOrNull(chapterIndex)?.title?.takeIf { it.isNotBlank() }?.let { "Chapitre ${chapterIndex + 1} : $it" }
+            val timer = if (SleepTimer.active) "Minuterie : ${SleepTimer.label()}" else null
             Controls(
                 title = shownTitle,
-                channel = listOfNotNull(shownChannel.takeIf { it.isNotBlank() }, chapter).joinToString(" · "),
+                channel = listOfNotNull(shownChannel.takeIf { it.isNotBlank() }, chapter, timer).joinToString(" · "),
                 panelOpen = menu != null,
                 openedFrom = if (menu != null) menuRoot else null,
                 isPlaying = isPlaying || (player.exo.playWhenReady && buffering),
@@ -997,6 +1061,26 @@ fun PlayerScreen(
                         position = chapter.startMs
                     },
                     kids = kids,
+                    audioOnly = AudioOnly.on,
+                    onAudioOnly = {
+                        val on = !AudioOnly.on
+                        if (on) {
+                            closeMenu()
+                            controls = false
+                        }
+                        AudioOnly.on = on
+                        if (!on) show()
+                    },
+                    timer = SleepTimer.label(),
+                    timerMinutes = SleepTimer.minutes,
+                    onTimer = { minutes ->
+                        SleepTimer.set(minutes)
+                        skipNotice = when (minutes) {
+                            0 -> "Minuterie désactivée"
+                            SleepTimer.AT_END -> "Minuterie : la lecture s’arrête à la fin de la vidéo"
+                            else -> "Minuterie : la lecture s’arrête dans ${SleepTimer.label()}"
+                        }
+                    },
                 ),
                 // A choice made in a list opened directly (subtitles button) closes the panel.
                 onMenu = { next -> if (next == null || (next == PlayerMenu.MAIN && menuRoot != PlayerMenu.MAIN)) closeMenu() else menu = next },
@@ -1019,6 +1103,20 @@ fun PlayerScreen(
                 formatsMs = formatsMs,
                 firstFrameMs = firstFrameMs,
                 modifier = Modifier.align(Alignment.TopStart).padding(top = SafeArea.top, start = SafeArea.side).widthIn(max = 340.dp),
+            )
+        }
+
+        if (askStill && !minimized) {
+            StillThereDialog(
+                onStay = {
+                    SleepTimer.extend()
+                    show()
+                },
+                onStop = {
+                    SleepTimer.cancel()
+                    player.exo.playWhenReady = false
+                    onExit()
+                },
             )
         }
 
@@ -1406,6 +1504,78 @@ private fun LoadingDots(modifier: Modifier = Modifier) {
 }
 
 private fun formatTime(ms: Long): String = formatDuration(ms).ifEmpty { "0:00" }
+
+/** « Son seul » on: Lecture / Pause and the next title keep working (the same player). Process-wide: it stays on from one video to the next. */
+object AudioOnly {
+    var on by mutableStateOf(false)
+}
+
+/** « Son seul »'s screen: black, the title, the channel and the time, moved now and then (no mark on the TV). */
+@Composable
+private fun AudioOnlyScreen(title: String, channel: String, modifier: Modifier) {
+    var spot by remember { mutableIntStateOf(0) }
+    var clock by remember { mutableStateOf(clockText()) }
+    LaunchedEffect(Unit) {
+        while (true) {
+            delay(AUDIO_ONLY_MOVE_MS)
+            spot = (spot + 1) % AUDIO_ONLY_SPOTS.size
+            clock = clockText()
+        }
+    }
+    Box(modifier.background(Color.Black)) {
+        val (x, y) = AUDIO_ONLY_SPOTS[spot]
+        androidx.compose.animation.Crossfade(targetState = Triple(x, y, clock), animationSpec = tween(1_200), label = "audioOnly") { (bx, by, time) ->
+            Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.BiasAlignment(bx, by)) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(6.dp), modifier = Modifier.widthIn(max = 520.dp)) {
+                    Text(time, fontSize = 44.sp, fontWeight = FontWeight.Light, color = Color.White.copy(alpha = 0.55f))
+                    Text(title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.White.copy(alpha = 0.7f), maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                    if (channel.isNotBlank()) Text(channel, fontSize = 15.sp, color = Color.White.copy(alpha = 0.5f), maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text("Son seul · ↑ ou OK : l’image revient · → : titre suivant", fontSize = Dimens.TextMin, color = Color.White.copy(alpha = 0.35f), modifier = Modifier.padding(top = 10.dp))
+                }
+            }
+        }
+    }
+}
+
+private fun clockText(): String = java.text.SimpleDateFormat("HH:mm", java.util.Locale.FRANCE).format(java.util.Date())
+
+private const val AUDIO_ONLY_MOVE_MS = 20_000L
+/** Where the text goes, in turn (horizontal, vertical bias). */
+private val AUDIO_ONLY_SPOTS = listOf(0f to 0f, -0.5f to -0.5f, 0.5f to 0.4f, -0.4f to 0.5f, 0.5f to -0.4f)
+
+/** « Minuterie »: « Toujours là ? », a minute to answer (any answer: 30 minutes more). */
+@Composable
+private fun StillThereDialog(onStay: () -> Unit, onStop: () -> Unit) {
+    var seconds by remember { mutableIntStateOf((SleepTimer.ASK_MS / 1000).toInt()) }
+    val stay = remember { FocusRequester() }
+    LaunchedEffect(Unit) {
+        withFrameNanos { }
+        stay.tryRequestFocus()
+        while (seconds > 0) {
+            delay(1_000)
+            seconds--
+        }
+    }
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)))
+    SafeDialog(
+        560.dp,
+        Modifier
+            .focusProperties { exit = { FocusRequester.Cancel } }
+            .focusGroup()
+            .background(Palette.Panel.copy(alpha = 0.95f), DialogShape)
+            .padding(28.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Icon(MiryoIcon.MOON, size = 34.dp)
+        Text("Toujours là ?", fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
+        Text("La minuterie arrête la lecture dans $seconds s.", fontSize = 15.sp, color = Palette.TextSecondary, textAlign = TextAlign.Center)
+        Row(horizontalArrangement = Arrangement.spacedBy(Dimens.PillGap)) {
+            MiryoButton("Je suis là (+${SleepTimer.EXTRA_MINUTES} min)", modifier = Modifier.focusRequester(stay), onClick = onStay)
+            MiryoButton("Arrêter maintenant", onClick = onStop)
+        }
+    }
+}
 
 /** "À suivre": the next video, played when the countdown ends (OK: now, Annuler: back to the page). */
 @Composable

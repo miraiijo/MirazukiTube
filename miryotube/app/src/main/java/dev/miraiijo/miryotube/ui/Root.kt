@@ -469,6 +469,7 @@ fun Root(vm: MainViewModel) {
                 onNext = vm::playNext,
                 queued = state.queue.firstOrNull(),
                 onExit = {
+                    AudioOnly.on = false
                     vm.stopPlaying()
                     returnFocusTick++
                     // The video ended in the system's window with nothing after it: the window goes
@@ -477,6 +478,7 @@ fun Root(vm: MainViewModel) {
                 },
                 // Retour closes the player and stays in miryo tube (the bar's button gives the small window).
                 onBack = {
+                    AudioOnly.on = false
                     vm.stopPlaying()
                     returnFocusTick++
                 },

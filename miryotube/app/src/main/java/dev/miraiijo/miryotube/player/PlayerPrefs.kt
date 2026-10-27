@@ -82,6 +82,11 @@ class PlayerPrefs(context: Context) {
         get() = prefs.getInt(KEY_NAV_SOUNDS, 0)
         set(value) = prefs.edit().putInt(KEY_NAV_SOUNDS, value).apply()
 
+    /** « Sous-titres en français »: a video in another language gets French ones by itself (its own, else YouTube's translation). */
+    var autoFrench: Boolean
+        get() = prefs.getBoolean(KEY_AUTO_FRENCH, false)
+        set(value) = prefs.edit().putBoolean(KEY_AUTO_FRENCH, value).apply()
+
     /** Réglages › Affichage › Animations (system.LowEnd): suits this box, not in backups. */
     var animations: String
         get() = prefs.getString(KEY_ANIMATIONS, null)?.takeIf { it in dev.miraiijo.miryotube.system.LowEnd.CHOICES } ?: dev.miraiijo.miryotube.system.LowEnd.MIRYO
@@ -92,6 +97,7 @@ class PlayerPrefs(context: Context) {
         remote = remote, appearance = appearance, uiScale = uiScale, backgroundCast = backgroundCast,
         background = background,
         navSounds = navSounds,
+        autoFrench = autoFrench,
         animations = animations.also { dev.miraiijo.miryotube.system.LowEnd.choice = it },
     )
 
@@ -113,5 +119,6 @@ class PlayerPrefs(context: Context) {
         const val KEY_BACKGROUND = "background"
         const val KEY_NAV_SOUNDS = "nav_sounds"
         const val KEY_ANIMATIONS = "animations"
+        const val KEY_AUTO_FRENCH = "auto_french"
     }
 }
