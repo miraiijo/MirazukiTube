@@ -599,7 +599,7 @@ V.who=()=>`<div class="who"><h3>Qui regarde ?</h3><div class="ptiles">
  ${codeDlg('si','Connecter un compte YouTube','Scanne le QR code avec ton téléphone, ou ouvre youtube.com/activate et saisis ce code :','miryo tube reste connecté ensuite. Tu peux lier plusieurs comptes et choisir lequel à l’ouverture.',cbtn('si-0','','Annuler'),7)}`;
 const HINT='Les bêtas arrivent plus tôt mais peuvent planter ou contenir des bugs. Sans elles, seules les versions stables sont proposées.';
 V.set=()=>`<div class="stitle">Réglages</div>
- <div class="snav" data-grp="sn">${[['Rechercher','s'],['Lecture',0],['Affichage',1],['Téléphone',2],['Compte',3],['Mises à jour',4],['À propos',5]].map(([l,i])=>`<div class="sitem ${i===0?'sel':''}" data-id="sn-${i}">${l}</div>`).join('')}</div>
+ <div class="snav" data-grp="sn">${[['Rechercher','s'],['Compte',3],['Affichage',1],['Sons','so'],['Lecture',0],['Téléphone',2],['Mises à jour',4],['À propos',5]].map(([l,i])=>`<div class="sitem ${i===0?'sel':''}" data-id="sn-${i}">${l}</div>`).join('')}</div>
  <div class="spage" data-id="sp-s" style="opacity:0">
   ${scard('Rechercher un réglage',`<div class="btn c" data-id="fd-field" style="width:440px;justify-content:flex-start">${I.search}<span data-id="fd-q">Nom d’un réglage</span></div>`,'Par exemple : sombre, volume, bêta, enfant, téléphone.',{hid:'fd-h'})}
   <div data-id="fd-hits" style="opacity:0;display:flex;flex-direction:column;gap:11px">
@@ -652,7 +652,7 @@ const pinDlg=(id,title,hint)=>`<div class="ovl pop tg full" data-id="${id}"><div
  <div style="font-size:13px;color:var(--ts)">Chiffres de la télécommande, ou ↑ ↓ puis OK · Retour efface</div></div></div></div>`;
 V.kidsHome=()=>`${header('home').replace(/<div class="tab [^s][^>]*>[^<]*<\/div>/g,'').replace(/<div class="rb" data-id="btn-search">.*?<\/div>/,'').replace(/<div class="rb" data-id="btn-set">.*?<\/i><\/div>/,'')}
  <div class="rows"><div class="rin">${rowsOf([['Cuisine du Dimanche',R_SUBS],['Dessins animés du Mercredi',R_RECO]],'k')}</div></div>
- ${pinDlg('pin','Quitter le profil enfant','Code parent à 4 chiffres')}${notice('ntc','Retour encore pour quitter')}`;
+ ${pinDlg('pin','Quitter le profil enfant','Code parental à 4 chiffres')}${notice('ntc','Retour encore pour quitter')}`;
 /* first launch (planned) */
 const FR=(i,body)=>`<div data-id="fr-${i}" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;transition:opacity .3s;${i?'opacity:0':''}">${body}</div>`;
 const frDots=i=>`<div style="display:flex;gap:8px;margin-top:6px">${[0,1,2,3].map(k=>`<i style="width:8px;height:8px;border-radius:50%;background:${k===i?'var(--tp)':'var(--ts)'};opacity:${k===i?1:.35}"></i>`).join('')}</div>`;
@@ -816,12 +816,12 @@ const SCREENS=[
  {k:'OK',t:'Plein écran',view:'player',f:'pb',on:['ctl'],n:'Plein écran à la même position. La touche lecture/pause fait pareil, de n’importe où.'},
  ]},
 {id:'comptes',title:'« Qui regarde ? » et connexion',desc:'Plein écran, comme dans miryo : les comptes liés en grands avatars ronds, « Invité », « Enfant » et « Ajouter ». Au lancement quand plusieurs comptes sont liés, et depuis l’avatar de l’en-tête. La connexion s’ouvre par-dessus : un code et un QR code.',
- notes:['Bascule propre : dès OK sur un compte, « Invité » ou « Enfant », un écran couvre tout (fond, avatar 132 dp et nom), « Qui regarde ? » se ferme dessous et l’Accueil précédent est vidé : rien de l’ancien compte n’apparaît (ni rangées, ni nom dans l’en-tête). L’écran s’efface en fondu (220 ms) dès que les premières rangées du nouveau profil sont là, 1,5 s au plus. Les touches attendent pendant ce temps.','Profil enfant : sans compte YouTube, une rangée par chaîne autorisée (ses dernières vidéos), rien d’autre. Pas de Rechercher, de Réglages, de menu de carte, de commentaires, de « Voir la chaîne » ni de « À suivre » de YouTube ; les vidéos du téléphone et les liens des autres applis ne sont pas lus. L’avatar (« Enfant ») demande le code parent (4 chiffres, 5 essais puis 5 min d’attente) avant « Qui regarde ? ». Rouvert au lancement tant qu’il n’est pas quitté.','Profil enfant de miryo : miryo tube s’ouvre en profil enfant, sans sortie ici (« change de profil dans miryo ») ; revenu sur un profil adulte dans miryo, miryo tube revient au compte d’avant.','Un parent autorise une chaîne depuis un profil adulte : « Pour Enfant » sur la page de la chaîne (« Autorisée pour Enfant » ensuite). Réglages › Enfant : les chaînes (OK en retire une), « Changer le code », « Supprimer le profil enfant » (code demandé).','Connexion impossible : le message en rouge à la place du code, et « Réessayer » ; le focus revient après.','Lancée depuis miryo avec un compte, une vidéo démarre sans « Qui regarde ? ».'],
+ notes:['Bascule propre : dès OK sur un compte, « Invité » ou « Enfant », un écran couvre tout (fond, avatar 132 dp et nom), « Qui regarde ? » se ferme dessous et l’Accueil précédent est vidé : rien de l’ancien compte n’apparaît (ni rangées, ni nom dans l’en-tête). L’écran s’efface en fondu (220 ms) dès que les premières rangées du nouveau profil sont là, 1,5 s au plus. Les touches attendent pendant ce temps.','Profil enfant : sans compte YouTube, une rangée par chaîne autorisée (ses dernières vidéos), rien d’autre. Pas de Rechercher, de Réglages, de menu de carte, de commentaires, de « Voir la chaîne » ni de « À suivre » de YouTube ; les vidéos du téléphone et les liens des autres applis ne sont pas lus. L’avatar (« Enfant ») demande le code parental (4 chiffres, 5 essais puis 5 min d’attente) avant « Qui regarde ? ». Rouvert au lancement tant qu’il n’est pas quitté.','Profil enfant de miryo : miryo tube s’ouvre en profil enfant, sans sortie ici (« change de profil dans miryo ») ; revenu sur un profil adulte dans miryo, miryo tube revient au compte d’avant.','Un parent autorise une chaîne depuis un profil adulte : « Pour Enfant » sur la page de la chaîne (« Autorisée pour Enfant » ensuite). Réglages › Enfant : les chaînes (OK en retire une), « Changer le code », « Supprimer le profil enfant » (code demandé).','Connexion impossible : le message en rouge à la place du code, et « Réessayer » ; le focus revient après.','Lancée depuis miryo avec un compte, une vidéo démarre sans « Qui regarde ? ».'],
  steps:[
  {view:'who',f:'pf-0',k:'▶',t:'Lancement',n:'Focus sur le compte actuel (« Compte actuel » sous le nom). Anneau détaché autour de l’avatar, ×1,1.'},
  {k:'▶',t:'Droite',f:'pf-1'},
  {k:'▶',t:'Droite',f:'pf-guest',n:'« Invité » : YouTube sans compte (rien dans l’historique ni les recommandations de personne), les comptes liés restent. Proposé dès qu’un compte est lié ; laissé en Invité, « Qui regarde ? » revient au lancement suivant.'},
- {k:'▶',t:'Droite',f:'pf-kids',n:'« Enfant » : le profil enfant (« À créer » tant qu’il n’existe pas : OK demande alors de choisir un code parent, deux fois).'},
+ {k:'▶',t:'Droite',f:'pf-kids',n:'« Enfant » : le profil enfant (« À créer » tant qu’il n’existe pas : OK demande alors de choisir un code parental, deux fois).'},
  {k:'▶',t:'Droite',f:'pf-add'},
  {k:'OK',t:'Ajouter',f:'si-0',on:['si'],n:'Connexion par-dessus « Qui regarde ? ». Le code a une place fixe : la fenêtre ne saute pas.'},
  {k:'⏱',t:'Code',txt:{'si-code':'XKT-4QF-BPM'},st:{'si-code':CODE_ST,'si-qr':{opacity:'1'}},n:'Code et QR code dessiné sur la box (aucun service web) ; scanné, il ouvre youtube.com/activate avec le code rempli. La fenêtre se ferme seule une fois le compte lié.'},
@@ -840,7 +840,7 @@ const SCREENS=[
  {k:'▼▶',t:'SponsorBlock',f:'lb-1'},
  {k:'OK',t:'Désactivé',sel:{lb:'lb-1'},n:'La coche passe sur le choix.'},
  {k:'◀◀',t:'Gauche ×2',f:'sn-0',n:'Gauche revient sur la catégorie en cours.'},
- {k:'▼',t:'Affichage',f:'sn-1',sel:{sn:'sn-1'},st:{'sp-0':{opacity:'0'},'sp-1':{opacity:'1'}},n:'Apparence : Jour, Nuit ou Auto (les deux colonnes de ce storyboard). Taille de l’interface. DeArrow.'},
+ {k:'▼',t:'Affichage',f:'sn-1',sel:{sn:'Bêta 22 : même ordre que miryo et miryo iptv (Compte, Contrôle parental, Affichage, Sons, Lecture, Téléphone, Mises à jour, À propos), Réglages s’ouvre sur Compte ; Sons de navigation passent dans « Sons » ; Affichage gagne Animations (Comme miryo, Auto, Économes, Complètes : Économes coupe le fondu entre pages et le reflet des cartes). Maquette pas encore redessinée. sn-1'},st:{'sp-0':{opacity:'0'},'sp-1':{opacity:'1'}},n:'Apparence : Jour, Nuit ou Auto (les deux colonnes de ce storyboard). Taille de l’interface. DeArrow.'},
  {k:'▶▼▶',t:'Plus grand',f:'sz-1'},
  {k:'OK',t:'Valider',txt:{'sz-t':'Taille de l’interface · 105 %'},sel:{szd:''},n:'Appliqué tout de suite ; le pourcentage est dans le titre, les pastilles ne bougent pas sous le focus. La zone sûre reste la même en dp de la TV : les marges suivent la taille. (Ce storyboard reste dessiné à 100 %.)'},
  {k:'◀▼▼',t:'Compte',f:'sn-3',sel:{sn:'sn-3'},st:{'sp-1':{opacity:'0'},'sp-3':{opacity:'1'}},n:'Compte : se déconnecter ; les autres comptes liés restent sur la box.'},
@@ -898,17 +898,17 @@ const SCREENS=[
  {k:'▼',t:'Bas',f:'fm-1'},
  {k:'OK',t:'Remplir',f:'pm-3',on:['ctl','pm-main'],sel:{fms:'fm-1'},n:'L’image remplit l’écran tout de suite.'},
  ]},
-{id:'enfant-code',title:'Profil enfant : code parent',desc:'Quitter le profil enfant (avatar « Enfant » de l’en-tête) demande le code parent. Le même clavier sert à le créer, le confirmer, le changer et à supprimer le profil.',
- notes:['Avec miryo installé et un code parental : le profil enfant se crée sans nouveau code et se quitte avec le code de miryo (un seul compteur d’essais pour les 3 applis). Réglages › Enfant › Code parent : « C’est le code parental de miryo. Il se change dans miryo › Réglages › Contrôle parental. », sans « Changer le code ».','Titres : « Profil enfant : choisis un code parent », « Confirme le code parent », « Quitter le profil enfant », « Code parent actuel », « Nouveau code parent ».','Erreurs : « Code incorrect. », « Trop d’essais : réessaie dans 5 min. » (après 5 essais), « Les deux codes étaient différents : recommence. ».'],
+{id:'enfant-code',title:'Profil enfant : code parental',desc:'Quitter le profil enfant (avatar « Enfant » de l’en-tête) demande le code parental. Le même clavier sert à le créer, le confirmer, le changer et à supprimer le profil.',
+ notes:['Avec miryo installé et un code parental : le profil enfant se crée sans nouveau code et se quitte avec le code de miryo (un seul compteur d’essais pour les 3 applis). Réglages › Contrôle parental › Code parental : « C’est le code parental de miryo. Il se change dans miryo › Réglages › Contrôle parental. », sans « Changer le code ».','Titres : « Profil enfant : choisis un code parental », « Confirme le code parental », « Quitter le profil enfant », « Code parental actuel », « Nouveau code parental ».','Erreurs : « Code incorrect. », « Trop d’essais : réessaie dans 5 min. » (après 5 essais), « Les deux codes étaient différents : recommence. ».'],
  steps:[
  {view:'kidsHome',f:'k0-0',k:'▶',t:'Enfant',n:'Une rangée par chaîne autorisée, rien d’autre.'},
  {k:'▲',t:'Haut',f:'btn-acc'},
- {k:'OK',t:'Compte',f:'pin-0',on:['pin'],n:'Code parent, 4 cases.'},
+ {k:'OK',t:'Compte',f:'pin-0',on:['pin'],n:'Code parental, 4 cases.'},
  {k:'1 2',t:'Chiffres',f:'pin-2',txt:{'pin-d0':'•','pin-d1':'•'}},
  {k:'5 9',t:'Chiffres',txt:{'pin-d0':'','pin-d1':'','pin-h':'Code incorrect.'},f:'pin-0',n:'Faux : les cases se vident et le message remplace l’aide.'},
  {k:'B',t:'Retour',f:'btn-acc',on:[],n:'Retour sur une case vide ferme ; on reste en Enfant.'},
  ]},
-{id:'premier-lancement',status:'Prévu',title:'Premier lancement',desc:'À la toute première ouverture, quatre écrans courts au lieu d’arriver sur un Accueil vide : connecter un compte par code ou QR (ou continuer sans), les autres personnes de la TV, le confort, et où tout retrouver. Aucun code à taper : tout se fait au téléphone.',
+{id:'premier-lancement',status:'En place',title:'Premier lancement',desc:'À la toute première ouverture, quatre écrans courts au lieu d’arriver sur un Accueil vide : connecter un compte par code ou QR (ou continuer sans), les autres personnes de la TV, le confort, et où tout retrouver. Aucun code à taper : tout se fait au téléphone.',
  notes:['Passé une fois : ne revient plus. Tout reste dans Réglages.','Ouvert depuis miryo avec un compte déjà choisi : ce parcours est sauté.','« Continuer sans compte » : Accueil en Invité ; « Connecter un compte » reste dans l’avatar.'],
  steps:[
  {view:'firstrun',f:'fr0-0',k:'▶',t:'Ouverture',n:'Un seul choix à faire, gros boutons.'},

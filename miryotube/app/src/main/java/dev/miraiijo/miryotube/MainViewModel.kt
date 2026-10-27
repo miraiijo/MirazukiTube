@@ -77,17 +77,17 @@ enum class PinStep { CREATE, CONFIRM, UNLOCK, CHANGE_CHECK, CHANGE_NEW, CHANGE_C
 data class PinPrompt(val step: PinStep, val first: String? = null, val note: String? = null) {
     val title: String
         get() = when (step) {
-            PinStep.CREATE -> "Profil enfant : choisis un code parent"
-            PinStep.CONFIRM, PinStep.CHANGE_CONFIRM -> "Confirme le code parent"
+            PinStep.CREATE -> "Profil enfant : choisis un code parental"
+            PinStep.CONFIRM, PinStep.CHANGE_CONFIRM -> "Confirme le code parental"
             PinStep.UNLOCK -> "Quitter le profil enfant"
-            PinStep.CHANGE_CHECK, PinStep.DELETE_CHECK -> "Code parent actuel"
-            PinStep.CHANGE_NEW -> "Nouveau code parent"
+            PinStep.CHANGE_CHECK, PinStep.DELETE_CHECK -> "Code parental actuel"
+            PinStep.CHANGE_NEW -> "Nouveau code parental"
         }
     val hint: String
         get() = note ?: when (step) {
             PinStep.CREATE, PinStep.CHANGE_NEW -> "4 chiffres. Il sera demandé pour quitter le profil enfant."
             PinStep.CONFIRM, PinStep.CHANGE_CONFIRM -> "Les mêmes 4 chiffres, encore une fois."
-            else -> "Code parent à 4 chiffres"
+            else -> "Code parental à 4 chiffres"
         }
 }
 
@@ -108,6 +108,8 @@ data class Settings(
     val background: String = dev.miraiijo.miryotube.player.PictureInPicture.HOME,
     /** "Sons de navigation": 0 = Comme miryo (the default; on without miryo), 1 = Activés, 2 = Coupés. */
     val navSounds: Int = 0,
+    /** Réglages › Affichage › Animations: miryo (Comme miryo, the default), auto, eco or full (system.LowEnd). */
+    val animations: String = dev.miraiijo.miryotube.system.LowEnd.MIRYO,
 ) {
     /** The clicks of the remote's arrows and OK are heard. */
     val navSoundsOn: Boolean
@@ -1058,7 +1060,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                 if (prompt.step == PinStep.CONFIRM) {
                     kidsMutex.withLock { beginKids(fromMiryo = false) }
                 } else {
-                    showNotice("Code parent changé.")
+                    showNotice("Code parental changé.")
                 }
                 null
             }
@@ -1274,6 +1276,8 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         prefs.backgroundCast = settings.backgroundCast
         prefs.background = settings.background
         prefs.navSounds = settings.navSounds
+        prefs.animations = settings.animations
+        dev.miraiijo.miryotube.system.LowEnd.choice = settings.animations
         if (settings.remote != _state.value.settings.remote) {
             if (settings.remote && foreground) RemoteControl.start(getApplication()) else if (!settings.remote) RemoteControl.stop()
         }

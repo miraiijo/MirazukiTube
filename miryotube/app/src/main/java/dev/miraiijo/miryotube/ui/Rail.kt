@@ -357,7 +357,11 @@ private fun ProfileTile(name: String, caption: String?, modifier: Modifier, onCl
 }
 
 /** Réglages' categories (left column). */
-private enum class SettingsPage(val label: String) { SEARCH("Rechercher"), PLAYBACK("Lecture"), DISPLAY("Affichage"), PHONE("Téléphone"), ACCOUNT("Compte"), KIDS("Enfant"), UPDATES("Mises à jour"), ABOUT("À propos") }
+// Same order as miryo and miryo iptv: account, parental control, display, sounds, playback, then the device's.
+private enum class SettingsPage(val label: String) { SEARCH("Rechercher"), ACCOUNT("Compte"), KIDS("Contrôle parental"), DISPLAY("Affichage"), SOUNDS("Sons"), PLAYBACK("Lecture"), PHONE("Téléphone"), UPDATES("Mises à jour"), ABOUT("À propos") }
+
+/** Réglages opens on its first page (Rechercher is right above it). */
+private val OPENING = SettingsPage.ACCOUNT
 
 /**
  * Réglages (the redesign: full screen, like miryo's): the categories on the left (the one focused
@@ -404,9 +408,9 @@ fun SettingsDialog(
                 pair.tryRequestFocus()
             }
         }
-        var page by remember { mutableStateOf(SettingsPage.PLAYBACK) }
-        // Rechercher can't take the focus before Lecture has it: Android's own first focus would
-        // land on it for a frame and show its page, then Lecture's (the menu and the page jumped).
+        var page by remember { mutableStateOf(OPENING) }
+        // Rechercher can't take the focus before Compte has it: Android's own first focus would
+        // land on it for a frame and show its page, then Compte's (the menu and the page jumped).
         var settled by remember { mutableStateOf(false) }
         // Mises à jour › Vérifier.
         val check = remember { FocusRequester() }
@@ -432,11 +436,10 @@ fun SettingsDialog(
                         SettingsNavItem(
                             item.label,
                             current = item == page,
-                            // Réglages opens on Lecture: Rechercher is right above it.
                             modifier = Modifier
-                                .focusRequester(if (item == SettingsPage.PLAYBACK) first else navFocus.getValue(item))
+                                .focusRequester(if (item == OPENING) first else navFocus.getValue(item))
                                 .focusProperties { canFocus = settled || item != SettingsPage.SEARCH },
-                            onFocus = { if (settled || item == SettingsPage.PLAYBACK) page = item },
+                            onFocus = { if (settled || item == OPENING) page = item },
                         )
                     }
                 }
@@ -456,7 +459,7 @@ fun SettingsDialog(
                     when (page) {
                         SettingsPage.SEARCH -> SettingsSearch(pages = pages.map { it.name }.toSet()) { name ->
                             val target = SettingsPage.valueOf(name)
-                            (if (target == SettingsPage.PLAYBACK) first else navFocus.getValue(target)).tryRequestFocus()
+                            (if (target == OPENING) first else navFocus.getValue(target)).tryRequestFocus()
                         }
                         SettingsPage.PLAYBACK -> {
                             SettingCard("Lecture automatique", "À la fin d’une vidéo, la suivante démarre après un court compte à rebours.") {
@@ -485,14 +488,6 @@ fun SettingsDialog(
                                 Choice("Nuit", settings.appearance == 2) { onSettings(settings.copy(appearance = 2)) }
                                 Choice("Auto", settings.appearance == 0) { onSettings(settings.copy(appearance = 0)) }
                             }
-                            SettingCard(
-                                "Sons de navigation",
-                                if (miryo) "Le petit clic des flèches et de OK. Comme miryo suit son réglage." else "Le petit clic des flèches et de OK de la télécommande.",
-                            ) {
-                                if (miryo) Choice("Comme miryo", settings.navSounds == 0) { onSettings(settings.copy(navSounds = 0)) }
-                                Choice("Activés", settings.navSounds == 1 || (!miryo && settings.navSounds == 0)) { onSettings(settings.copy(navSounds = 1)) }
-                                Choice("Coupés", settings.navSounds == 2) { onSettings(settings.copy(navSounds = 2)) }
-                            }
                             // The size in the title: the pills never move under the focus as it changes.
                             val size = settings.uiScale
                             SettingCard("Taille de l’interface · $size %", "De $UI_SCALE_MIN à $UI_SCALE_MAX % par pas de $UI_SCALE_STEP %, appliqué tout de suite. Par défaut : $UI_SCALE_DEFAULT %.") {
@@ -503,6 +498,29 @@ fun SettingsDialog(
                             SettingCard("DeArrow", "Titres et miniatures de la communauté, sans racolage, quand il y en a.") {
                                 Choice("Activé", settings.deArrow) { onSettings(settings.copy(deArrow = true)) }
                                 Choice("Désactivé", !settings.deArrow) { onSettings(settings.copy(deArrow = false)) }
+                            }
+                            val eco = dev.miraiijo.miryotube.system.LowEnd.detectedLowEnd(androidx.compose.ui.platform.LocalContext.current)
+                            SettingCard(
+                                "Animations",
+                                "Économes : moins d’effets, plus fluide sur une petite box. Complètes : tous les effets. Auto choisit pour cette box : " +
+                                    (if (eco) "Économes." else "Complètes.") + if (miryo) " Comme miryo suit son réglage." else "",
+                            ) {
+                                // Without miryo, « Comme miryo » means Auto: Auto shows as chosen.
+                                if (miryo) Choice("Comme miryo", settings.animations == dev.miraiijo.miryotube.system.LowEnd.MIRYO) { onSettings(settings.copy(animations = dev.miraiijo.miryotube.system.LowEnd.MIRYO)) }
+                                Choice("Auto", settings.animations == dev.miraiijo.miryotube.system.LowEnd.AUTO || (!miryo && settings.animations == dev.miraiijo.miryotube.system.LowEnd.MIRYO)) { onSettings(settings.copy(animations = dev.miraiijo.miryotube.system.LowEnd.AUTO)) }
+                                Choice("Économes", settings.animations == dev.miraiijo.miryotube.system.LowEnd.ECO) { onSettings(settings.copy(animations = dev.miraiijo.miryotube.system.LowEnd.ECO)) }
+                                Choice("Complètes", settings.animations == dev.miraiijo.miryotube.system.LowEnd.FULL) { onSettings(settings.copy(animations = dev.miraiijo.miryotube.system.LowEnd.FULL)) }
+                            }
+                        }
+                        SettingsPage.SOUNDS -> {
+                            val miryo = dev.miraiijo.miryotube.link.MiryoLook.current != null
+                            SettingCard(
+                                "Sons de navigation",
+                                if (miryo) "Le petit clic des flèches et de OK. Comme miryo suit son réglage." else "Le petit clic des flèches et de OK de la télécommande.",
+                            ) {
+                                if (miryo) Choice("Comme miryo", settings.navSounds == 0) { onSettings(settings.copy(navSounds = 0)) }
+                                Choice("Activés", settings.navSounds == 1 || (!miryo && settings.navSounds == 0)) { onSettings(settings.copy(navSounds = 1)) }
+                                Choice("Coupés", settings.navSounds == 2) { onSettings(settings.copy(navSounds = 2)) }
                             }
                         }
                         SettingsPage.PHONE -> {
@@ -561,7 +579,7 @@ fun SettingsDialog(
                                 }
                             }
                             SettingCard(
-                                "Code parent",
+                                "Code parental",
                                 if (kidsMiryoCode) "C'est le code parental de miryo. Il se change dans miryo › Réglages › Contrôle parental."
                                 else "Demandé pour quitter le profil enfant. Le profil enfant de miryo se quitte dans miryo.",
                             ) {
