@@ -413,6 +413,143 @@ svg{display:block}
         <tr><td>Haut / Bas</td><td><kbd>▲</kbd> <kbd>▼</kbd></td><td>Croix directionnelle, stick gauche</td><td>Masquées : affiche les commandes (focus sur la barre). Affichées : Bas descend vers les boutons (ne masque jamais), Haut remonte (boutons → barre → commandes masquées)</td></tr>
       </tbody></table></div>
   </section>
+
+  <section class="screen" id="nouveautes">
+    <div class="eyebrow">Prévu · à vérifier sur la box</div>
+    <h2>Nouvelles idées approuvées <span class="stag" style="background:var(--accent-soft);color:var(--accent)">Codé, pas encore publié</span></h2>
+    <p class="lead">Les écrans ajoutés pour les idées validées par Jordan (Abonnements, À la suite, directs, lecteur, idées communes aux 3 applis). Images fixes : les séquences animées viendront avec la vérification sur la box.</p>
+    <style>
+#nouveautes .nv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(100%,420px),1fr));gap:20px;margin-top:18px}
+#nouveautes figure{margin:0}
+#nouveautes figcaption{font-size:13px;color:var(--muted);margin-top:8px;line-height:1.45}
+#nouveautes figcaption b{color:var(--ink)}
+#nouveautes .tv{position:relative;aspect-ratio:16/9;border-radius:12px;overflow:hidden;background:linear-gradient(160deg,#1B1D27,#10121A);color:#F2F3F5;font:500 11px/1.3 var(--f-ui)}
+#nouveautes .vid{position:absolute;inset:0;background:linear-gradient(135deg,#3C5A6E,#1D2B36 60%,#2F2233)}
+#nouveautes .pad{position:absolute;inset:6% 5%}
+#nouveautes .row{display:flex;gap:8px;align-items:center;flex-wrap:nowrap;overflow:hidden}
+#nouveautes .pa{flex:none;width:44px;display:flex;flex-direction:column;align-items:center;gap:3px;font-size:8px;color:#B9BBC3}
+#nouveautes .pa i{position:relative;width:34px;height:34px;border-radius:50%;background:var(--g,#556);display:block}
+#nouveautes .pa.f i{outline:2px solid #fff;outline-offset:2px}
+#nouveautes .pa em{position:absolute;top:-4px;right:-6px;font-style:normal;font-weight:700;font-size:8px;background:#E5484D;color:#fff;border-radius:9px;padding:0 4px}
+#nouveautes .chip{flex:none;padding:4px 9px;border-radius:999px;background:rgba(255,255,255,.10);font-size:9px;font-weight:600}
+#nouveautes .chip.s{background:rgba(255,255,255,.85);color:#16171A}
+#nouveautes .ncards{display:flex;gap:8px;margin-top:10px}
+#nouveautes .cd{flex:none;width:96px}
+#nouveautes .cd i{display:block;height:54px;border-radius:6px;background:var(--g,#445)}
+#nouveautes .cd span{display:block;font-size:8px;margin-top:3px;color:#D5D7DD}
+#nouveautes .nrt{font-size:10px;font-weight:700;margin:10px 0 0}
+#nouveautes .dlg{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:58%;background:rgba(30,32,42,.96);border-radius:12px;padding:14px 16px;display:flex;flex-direction:column;gap:6px}
+#nouveautes .dlg.c{align-items:center;text-align:center}
+#nouveautes .dlg b{font-size:13px}
+#nouveautes .dlg small{color:#A3A5AD;font-size:9px}
+#nouveautes .ln{padding:5px 8px;border-radius:7px;font-size:10px}
+#nouveautes .ln.f{background:rgba(255,255,255,.9);color:#16171A}
+#nouveautes .bt{display:inline-block;padding:5px 11px;border-radius:999px;background:rgba(255,255,255,.12);font-size:9px;font-weight:600}
+#nouveautes .bt.f{background:#fff;color:#16171A}
+#nouveautes .chat{position:absolute;top:0;right:0;bottom:0;width:34%;background:linear-gradient(90deg,transparent,rgba(0,0,0,.55) 12%,rgba(0,0,0,.7));padding:8% 4% 6% 5%;display:flex;flex-direction:column;justify-content:flex-end;gap:4px;font-size:9px}
+#nouveautes .chat b{color:#B9B4FF}
+#nouveautes .pm{position:absolute;top:0;right:0;bottom:0;width:38%;background:rgba(22,24,32,.94);padding:6% 4%;display:flex;flex-direction:column;gap:3px}
+#nouveautes .pm h6{margin:0 0 4px;font-size:12px}
+#nouveautes .pm .ln{display:flex;justify-content:space-between;gap:6px}
+#nouveautes .pm .ln span:last-child{color:#9A9CA3}
+#nouveautes .pm .ln.f span:last-child{color:#555}
+#nouveautes .moon{width:22px;height:22px;border-radius:50%;box-shadow:inset -6px -3px 0 0 #F3EEE1;transform:rotate(-30deg)}
+#nouveautes .sub{position:absolute;left:0;right:0;bottom:9%;text-align:center}
+#nouveautes .sub span{padding:2px 6px;font-size:12px}
+#nouveautes .sc{position:absolute;inset:4% 4%;display:flex;flex-direction:column;gap:4px}
+#nouveautes .scard{background:rgba(255,255,255,.06);border-radius:9px;padding:5px 8px}
+#nouveautes .scard h5{margin:0 0 5px;font-size:10px}
+#nouveautes .scard p{margin:3px 0 0;font-size:8px;color:#9A9CA3}
+</style>
+    <div class="nv-grid">
+      <figure>
+        <div class="tv" role="img" aria-label="Haut d'Abonnements : photos des chaînes avec pastilles, puis les filtres."><div class="pad">
+          <div class="row">
+            <div class="pa f"><i style="--g:linear-gradient(135deg,#E9A23B,#B5562B)"><em>3</em></i>Cuisine</div>
+            <div class="pa"><i style="--g:linear-gradient(135deg,#4F8DE0,#2B4FA6)"><em>12</em></i>Science</div>
+            <div class="pa"><i style="--g:linear-gradient(135deg,#5BC28E,#227A55)"></i>Rando</div>
+            <div class="pa"><i style="--g:linear-gradient(135deg,#C46ADB,#6E2F9B)"><em>1</em></i>Musique</div>
+            <div class="pa"><i style="--g:linear-gradient(135deg,#E0605A,#8F2B2B)"></i>Jeux</div>
+          </div>
+          <div class="row" style="margin-top:10px"><span class="chip s">✓ Que du nouveau</span><span class="chip">Durée : Moins de 10 min</span><span class="chip">Tous les dossiers</span><span class="chip">Cuisine</span><span class="chip">Sport</span></div>
+          <div class="nrt">Aujourd’hui</div>
+          <div class="ncards"><div class="cd"><i style="--g:#5A4A3A"></i><span>Pain au levain</span></div><div class="cd"><i style="--g:#3A4A5A"></i><span>Les trous noirs</span></div><div class="cd"><i style="--g:#3A5A48"></i><span>GR20 jour 3</span></div><div class="cd"><i style="--g:#4A3A5A"></i><span>Live session</span></div></div>
+        </div></div>
+        <figcaption><b>Abonnements.</b> Pastilles : nouvelles vidéos depuis la dernière visite de la chaîne (OK : seulement elle). « Que du nouveau » cache ce qui est vu jusqu’au bout, « Durée » change à chaque OK, puis les dossiers. Les filtres restent à l’écran même s’ils ne laissent rien.</figcaption>
+      </figure>
+      <figure>
+        <div class="tv" role="img" aria-label="Menu d'une carte avec Lire ensuite, ranger la chaîne, ne plus montrer."><div class="vid" style="opacity:.35"></div>
+          <div class="dlg"><b>Pain au levain maison</b><small>Cuisine du Dimanche</small>
+            <div class="ln">Lire</div><div class="ln f">Lire ensuite</div><div class="ln">Vider « À la suite »</div><div class="ln">Ranger la chaîne dans un dossier</div><div class="ln">Ne plus montrer cette chaîne</div>
+          </div></div>
+        <figcaption><b>Menu d’une carte.</b> « Lire ensuite » remplit « À la suite », une file sur la box : elle passe avant la suggestion de YouTube. Les chaînes masquées reviennent dans Réglages › Compte › Chaînes masquées ; les dossiers se créent au clavier de la télé.</figcaption>
+      </figure>
+      <figure>
+        <div class="tv" role="img" aria-label="Choix d'un dossier pour une chaîne."><div class="vid" style="opacity:.35"></div>
+          <div class="dlg"><b>Ranger Cuisine du Dimanche</b>
+            <div class="ln">Aucun dossier</div><div class="ln f">Cuisine ✓</div><div class="ln">Sport</div><div class="ln">Nouveau dossier…</div>
+          </div></div>
+        <figcaption><b>Dossiers d’abonnements.</b> Une chaîne va dans un seul dossier. Rien n’est envoyé à YouTube ; c’est rangé par profil, sur la box.</figcaption>
+      </figure>
+      <figure>
+        <div class="tv" role="img" aria-label="Accueil avec la rangée En direct maintenant."><div class="pad">
+          <div class="nrt" style="margin-top:0">En direct maintenant</div>
+          <div class="ncards"><div class="cd"><i style="--g:#5A2A2A"></i><span><b style="color:#FF6B6B">EN DIRECT</b> · 1,2 k spectateurs</span></div><div class="cd"><i style="--g:#2A3A5A"></i><span><b style="color:#FF6B6B">EN DIRECT</b> · Science en Poche</span></div></div>
+          <div class="nrt">À reprendre</div>
+          <div class="ncards"><div class="cd"><i style="--g:#5A4A3A"></i><span>Pain au levain</span></div><div class="cd"><i style="--g:#3A5A48"></i><span>GR20 jour 3</span></div></div>
+        </div></div>
+        <figcaption><b>En direct maintenant.</b> En tête de l’Accueil quand une chaîne suivie est en direct, avec le nombre de spectateurs quand YouTube le donne.</figcaption>
+      </figure>
+      <figure>
+        <div class="tv" role="img" aria-label="Fin de vidéo : À la suite."><div class="vid"></div>
+          <div style="position:absolute;right:5%;bottom:8%;width:46%;background:rgba(22,24,32,.92);border-radius:10px;padding:8px;display:flex;gap:8px"><i style="flex:none;width:72px;height:40px;border-radius:6px;background:#3A4A5A"></i><div style="display:flex;flex-direction:column;gap:3px"><small style="font-size:8px;color:#A3A5AD">À la suite · 10 s</small><b style="font-size:10px">Les trous noirs</b><div><span class="bt f">Lire</span> <span class="bt">Annuler</span></div></div></div>
+        </div>
+        <figcaption><b>À la suite.</b> À la fin d’une vidéo, la première de la file démarre après le compte à rebours, même sans Lecture automatique.</figcaption>
+      </figure>
+      <figure>
+        <div class="tv" role="img" aria-label="Menu du lecteur avec Son seul, Minuterie, Chat du direct."><div class="vid"></div>
+          <div class="pm"><h6>Réglages</h6>
+            <div class="ln"><span>Qualité</span><span>Auto</span></div><div class="ln"><span>Vitesse</span><span>Normale</span></div><div class="ln f"><span>Son seul</span><span>Désactivé</span></div><div class="ln"><span>Minuterie</span><span>Désactivée</span></div><div class="ln"><span>Chat du direct</span><span>Affiché</span></div><div class="ln"><span>Taille du chat</span><span>Normale</span></div>
+          </div></div>
+        <figcaption><b>Réglages du lecteur.</b> Son seul, Minuterie (15 min à 2 h, ou à la fin de la vidéo) ; sur un direct, Chat du direct et Taille du chat.</figcaption>
+      </figure>
+      <figure>
+        <div class="tv" role="img" aria-label="Son seul : écran noir avec le titre et l'heure." style="background:#000"><div style="position:absolute;left:22%;top:38%;display:flex;flex-direction:column;gap:4px"><span style="font-size:20px;font-weight:700">20:45</span><b style="font-size:11px">Live session acoustique</b><small style="font-size:9px;color:#9A9CA3">Musique du Soir · Son seul · → titre suivant · ↑ ou OK : l’image</small></div></div>
+        <figcaption><b>Son seul.</b> L’image n’est plus décodée (la box chauffe moins) ; le titre et l’heure se déplacent doucement pour ne pas marquer l’écran. Reste activé d’une vidéo à la suivante.</figcaption>
+      </figure>
+      <figure>
+        <div class="tv" role="img" aria-label="Toujours là ?"><div class="vid" style="opacity:.5"></div>
+          <div class="dlg c"><span class="moon"></span><b>Toujours là ?</b><small>La minuterie arrête la lecture dans 58 s.</small><div><span class="bt f">Je suis là (+30 min)</span> <span class="bt">Arrêter maintenant</span></div></div></div>
+        <figcaption><b>Minuterie.</b> Une minute avant la fin ; sans réponse, la lecture s’arrête et la mise en veille de la télé fait le reste.</figcaption>
+      </figure>
+      <figure>
+        <div class="tv" role="img" aria-label="Direct avec le chat à droite."><div class="vid"></div>
+          <div class="chat"><small style="color:#9A9CA3;font-weight:600">Chat du direct</small><div><b>léa</b>  trop beau ce passage</div><div><b>Marc_72</b>  bonsoir tout le monde</div><div><b>nina</b>  la suite au prochain live ?</div><div><b>Tom</b>  on entend super bien</div></div></div>
+        <figcaption><b>Chat des directs.</b> En lecture seule, jamais focalisable : → l’affiche, ← le cache, sur un direct qu’on ne peut pas avancer. Rien n’est jamais envoyé depuis la box.</figcaption>
+      </figure>
+      <figure>
+        <div class="tv" role="img" aria-label="Menu des sous-titres avec Traduire en français et chapitres en images."><div class="vid"></div>
+          <div class="pm"><h6>Sous-titres</h6>
+            <div class="ln f"><span>Traduire en français</span><span></span></div><div class="ln"><span>Désactivés</span><span></span></div><div class="ln"><span>Anglais</span><span></span></div><div class="ln"><span>Français · traduit automatiquement</span><span></span></div>
+          </div>
+          <div class="sub"><span style="background:rgba(0,0,0,.6)">Le levain doit doubler de volume.</span></div></div>
+        <figcaption><b>Sous-titres en français.</b> « Traduire en français » en tête quand YouTube le propose ; Réglages › Lecture › Sous-titres en français : Toujours ou Sur demande. Les chapitres ont aussi leur petite image.</figcaption>
+      </figure>
+      <figure>
+        <div class="tv" role="img" aria-label="Réglages, Lecture : taille, couleur et fond des sous-titres."><div class="sc">
+          <div class="scard"><h5>Taille des sous-titres</h5><div class="row"><span class="chip s">✓ Comme miryo</span><span class="chip">Petite</span><span class="chip">Normale</span><span class="chip">Grande</span><span class="chip">Très grande</span></div><p>Comme miryo : la même taille dans les 3 applis, réglée dans miryo.</p></div>
+          <div class="scard"><h5>Couleur et fond des sous-titres</h5><div class="row"><span class="chip s">✓ Comme miryo</span><span class="chip">Blanc</span><span class="chip">Jaune</span><span class="chip">Bandeau</span><span class="chip">Ombre</span><span class="chip">Sans fond</span></div><p>Le bandeau sombre se lit le mieux sur les images claires.</p></div>
+          <div class="scard"><h5>Taille de l’interface · 115 %</h5><div class="row"><span class="chip">Plus petit</span><span class="chip">Plus grand</span><span class="chip s">✓ Comme miryo</span><span class="chip">Par défaut</span></div><p>Comme miryo suit sa Taille du texte.</p></div>
+        </div></div>
+        <figcaption><b>Réglés une fois pour les 3 applis.</b> Par défaut, miryo tube suit la taille du texte et les sous-titres choisis dans miryo (langue comprise) ; chaque réglage peut être changé ici à la télécommande. Sans miryo : 100 %, blanc sur bandeau.</figcaption>
+      </figure>
+      <figure>
+        <div class="tv" role="img" aria-label="C'est fini pour aujourd'hui."><div class="vid" style="opacity:.3"></div>
+          <div class="dlg c"><span class="moon"></span><b>C’est fini pour aujourd’hui</b><small>Le temps d’écran de ce profil est passé. Un parent peut ajouter du temps dans miryo, avec le code parental.</small><span class="bt f">D’accord</span></div></div>
+        <figcaption><b>Temps d’écran enfant.</b> Sur le profil enfant de miryo, chaque minute regardée compte dans miryo (le même temps pour les 3 applis). Temps passé ou heure du coucher : la vidéo s’arrête ici, même au début d’une autre.</figcaption>
+      </figure>
+    </div>
+  </section>
 </div>
 
 <script>
