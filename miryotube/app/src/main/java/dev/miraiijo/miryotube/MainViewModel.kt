@@ -367,13 +367,16 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                 keepSavedState()
                 return@launch
             }
+            // miryo's « Invité »: miryo tube's Invité, no "Qui regarde ?" (and back to the account
+            // used before when miryo has left it while the app was closed).
+            val miryoGuest = followMiryoGuest()
             val accounts = YouTube.accounts()
             val guest = accounts.isNotEmpty() && !kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { YouTube.signedIn }
             // Several accounts, or "Invité" left on last time: "Qui regarde ?" first, Accueil loads
             // for the one picked (not when miryo launched a video and asked to skip it, nor when it
             // was answered before the process was killed).
             val ask = if (restored) saved.get<Boolean>(KEY_PICKED) == false else accounts.size >= 2 || guest
-            if (ask && !skipPicker) {
+            if (ask && !skipPicker && miryoGuest == null) {
                 _state.update { it.copy(accounts = accounts, choosingAccount = true) }
             } else {
                 _state.update { it.copy(accounts = accounts) }
@@ -1114,6 +1117,30 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         }
     }
 
+    /**
+     * miryo's « Invité » profile (read by MiryoProfile.currentIsKids just before): miryo tube's
+     * Invité on (the account in use kept to come back to), or off again when miryo has left it.
+     * Returns true / false when it switched on / off, null when nothing changed. Not while playing
+     * as another account for miryo (contract v2).
+     */
+    private suspend fun followMiryoGuest(): Boolean? {
+        if (playingAs) return null
+        val previous = prefs.miryoGuestPrevious
+        return when {
+            MiryoProfile.currentGuest && previous == null -> {
+                prefs.miryoGuestPrevious = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { YouTube.homeAccountId() }.orEmpty()
+                YouTube.useGuest()
+                true
+            }
+            !MiryoProfile.currentGuest && previous != null -> {
+                prefs.miryoGuestPrevious = null
+                if (previous.isNotEmpty()) kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { runCatching { YouTube.selectFeedAccount(previous) } }
+                false
+            }
+            else -> null
+        }
+    }
+
     /** Back on screen: miryo's profile may have changed meanwhile (kids ↔ adult). */
     private fun checkMiryoProfile() {
         viewModelScope.launch {
@@ -1128,6 +1155,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                     endKidsLocked()
                     reloadAfterKids()
                 }
+                if (!miryoKids && !_state.value.kids && followMiryoGuest() != null) reloadAfterKids()
             }
         }
     }
