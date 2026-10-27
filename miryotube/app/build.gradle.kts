@@ -56,10 +56,8 @@ android {
 
     lint {
         checkReleaseBuilds = false
-        // miryo tube's own code only (SmartTube's modules are upstream's); problems in the CI log.
+        // miryo tube's own code only (SmartTube's modules are upstream's).
         checkDependencies = false
-        textReport = true
-        textOutput = file("stdout")
     }
 
     compileOptions {

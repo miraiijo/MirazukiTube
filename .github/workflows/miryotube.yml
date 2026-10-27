@@ -76,7 +76,7 @@ jobs:
       - name: Run Android Lint
         continue-on-error: true
         working-directory: miryotube
-        run: ./gradlew --no-daemon --build-cache :app:lintRelease
+        run: ./gradlew --no-daemon --build-cache :app:lintRelease || { grep -B1 -A4 ': Error: ' app/build/intermediates/lint_intermediate_text_report/release/lintReportRelease/lint-results-release.txt | head -300; exit 1; }
 
       - name: Report build errors
         if: failure()
