@@ -115,6 +115,14 @@ class PlayerPrefs(context: Context) {
         get() = prefs.getString(KEY_SUB_BG, null)
         set(value) = prefs.edit().putString(KEY_SUB_BG, value).apply()
 
+    /**
+     * miryo's « Invité » profile put miryo tube in its Invité (no account, nothing kept on one); the
+     * account used before, to come back to when miryo leaves it ("" = none).
+     */
+    var miryoGuestPrevious: String?
+        get() = prefs.getString(KEY_MIRYO_GUEST, null)
+        set(value) = prefs.edit().putString(KEY_MIRYO_GUEST, value).apply()
+
     /** A subtitle choice was made here (on or off): miryo's language no longer picks them. */
     val subtitlesChosen: Boolean
         get() = prefs.getBoolean(KEY_SUBTITLES_CHOSEN, false)
@@ -159,5 +167,6 @@ class PlayerPrefs(context: Context) {
         const val KEY_SUB_COLOR = "sub_color"
         const val KEY_SUB_BG = "sub_bg"
         const val KEY_SUBTITLES_CHOSEN = "subtitles_chosen"
+        const val KEY_MIRYO_GUEST = "miryo_guest_previous"
     }
 }

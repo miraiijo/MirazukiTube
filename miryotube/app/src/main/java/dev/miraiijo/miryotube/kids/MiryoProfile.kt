@@ -16,9 +16,16 @@ object MiryoProfile {
     @Volatile var currentKidsId: String? = null
         private set
 
+    /** miryo's current profile is its « Invité » (id [GUEST_ID]), as last read: miryo tube goes to its Invité. */
+    @Volatile var currentGuest: Boolean = false
+        private set
+
+    const val GUEST_ID = "guest"
+
     /** True: miryo's current profile is a kids one; false: an adult one; null: no trusted miryo. Blocking. */
     fun currentIsKids(context: Context): Boolean? {
         currentKidsId = null
+        currentGuest = false
         if (!MiryoLink.partner(context, MiryoLink.MIRYO, MiryoLink.PROFILES_AUTHORITY)) return null
         return runCatching {
             context.contentResolver.query(URI, arrayOf("profile_id", "kids", "current"), null, null, null)?.use { cursor ->
@@ -31,6 +38,7 @@ object MiryoProfile {
                     if (cursor.getString(current) == "1") {
                         found = cursor.getString(kids) == "1"
                         if (found && id >= 0) currentKidsId = cursor.getString(id)
+                        currentGuest = !found && id >= 0 && cursor.getString(id) == GUEST_ID
                         break
                     }
                 }
