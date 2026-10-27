@@ -18,8 +18,8 @@ android {
         applicationId = "dev.miraiijo.lumentube"
         minSdk = 28
         targetSdk = 35
-        versionCode = 84
-        versionName = "1.0 bêta 23"
+        versionCode = 85
+        versionName = "1.0 bêta 24"
         // 32-bit only (Jordan, 2026-10-27): the Freebox Player POP runs a 32-bit userspace
         // (abilist armeabi-v7a, armeabi) and almost every Android TV box runs 32-bit code, so one
         // copy of the native libraries halves their weight. A 64-bit-only device can't install it.
