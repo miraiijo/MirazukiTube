@@ -45,6 +45,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.graphics.drawscope.clipRect
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
@@ -234,7 +235,7 @@ fun BrowsePage(
                         // under it) no longer sits on the screen's edge; the focused row's caption
                         // stops just above it.
                         modifier = Modifier.fillMaxSize().drawWithContent {
-                            androidx.compose.ui.graphics.drawscope.clipRect(bottom = size.height - safeBottom.toPx()) { this@drawWithContent.drawContent() }
+                            clipRect(bottom = size.height - safeBottom.toPx()) { this@drawWithContent.drawContent() }
                         },
                         contentPadding = PaddingValues(bottom = SafeArea.bottom + 16.dp),
                     ) {
