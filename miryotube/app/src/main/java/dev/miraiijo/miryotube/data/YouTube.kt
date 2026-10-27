@@ -55,6 +55,8 @@ data class Video(
     val customThumbnail: String? = null,
     /** When it was published, as YouTube says it (« il y a 3 jours »); null when unknown. */
     val published: String? = null,
+    /** Its channel (null: unknown, or a playlist). */
+    val channelId: String? = null,
 ) {
     val isChannel get() = kind == MediaItem.TYPE_CHANNEL
     val isVideo get() = kind == MediaItem.TYPE_VIDEO || kind == MediaItem.TYPE_MUSIC || kind == MediaItem.TYPE_UNDEFINED && videoId != null
@@ -967,6 +969,19 @@ object YouTube {
         }
     }
 
+    /** When a video was published (ms, from [ageHours]: to the hour), null when unknown. */
+    fun publishedAt(video: Video): Long? = ageHours(video)?.let { System.currentTimeMillis() - it * 3_600_000L }
+
+    /**
+     * The account's subscriptions as channel cards (avatar, name), the ones with new videos first
+     * (YouTube's order); empty when signed out or on failure. Blocking-free for the caller (IO).
+     */
+    suspend fun subscribedChannelCards(): List<Video> = withContext(Dispatchers.IO) {
+        if (!signedIn) return@withContext emptyList()
+        runCatching { service.contentService.subscribedChannelsByNewContent?.mediaItems.orEmpty() }.getOrDefault(emptyList())
+            .filterNotNull().filter { !it.channelId.isNullOrBlank() }.map { it.toVideo() }.distinctBy { it.channelId }
+    }
+
     /** Hours since publication: the engine's date when it has one, else read from the card's text. */
     private fun ageHours(video: Video): Long? {
         // Milliseconds (seconds on some engine versions: read as such when too small to be ms).
@@ -1044,6 +1059,7 @@ object YouTube {
         kind = type,
         raw = this,
         published = if (type == MediaItem.TYPE_CHANNEL || type == MediaItem.TYPE_PLAYLIST || isLive || isUpcoming) null else publishedText(),
+        channelId = channelId?.takeIf { it.isNotBlank() },
     )
 
     /**

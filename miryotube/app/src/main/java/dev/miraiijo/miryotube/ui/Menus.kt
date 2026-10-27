@@ -22,6 +22,8 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
@@ -52,6 +54,10 @@ fun CardMenuDialog(
     onWatchLater: () -> Unit,
     onChannel: () -> Unit,
     onNotInterested: (channel: Boolean) -> Unit,
+    /** « Ne plus montrer cette chaîne » (on this box, for this profile). */
+    onHideChannel: () -> Unit = {},
+    /** « Ranger dans un dossier » (null: no channel known, no line). */
+    onFolder: (() -> Unit)? = null,
     onDismiss: () -> Unit,
 ) {
     MiryoDialog(onDismissRequest = onDismiss) {
@@ -73,6 +79,8 @@ fun CardMenuDialog(
             DialogRow("Lire", icon = MiryoIcon.PLAY, modifier = Modifier.focusRequester(first), onClick = onPlay)
             if (signedIn && video.videoId != null) DialogRow("À regarder plus tard", icon = MiryoIcon.HISTORY, onClick = onWatchLater)
             if (video.raw.channelId != null) DialogRow("Ouvrir la chaîne", icon = MiryoIcon.USER, onClick = onChannel)
+            if (signedIn && onFolder != null) DialogRow("Ranger la chaîne dans un dossier", icon = MiryoIcon.PLAYLIST, onClick = onFolder)
+            if (video.channelId != null && !video.isChannel) DialogRow("Ne plus montrer cette chaîne", icon = MiryoIcon.EYE_OFF, onClick = onHideChannel)
             if (signedIn && canGiveFeedback) {
                 DialogRow("Pas intéressé", icon = MiryoIcon.EYE_OFF) { onNotInterested(false) }
                 if (video.raw.feedbackToken2 != null || video.raw.feedbackEndpoint != null) {
@@ -83,6 +91,96 @@ fun CardMenuDialog(
         LaunchedEffect(Unit) {
             withFrameNanos { }
             first.tryRequestFocus()
+        }
+    }
+}
+
+/**
+ * « Ranger dans un dossier »: the profile's folders (the channel's own checked), « Aucun dossier »,
+ * and « Nouveau dossier… » with the TV keyboard (or the remote's dictation). On the box only.
+ */
+@Composable
+fun FolderDialog(
+    channel: dev.miraiijo.miryotube.data.ChannelRef,
+    folders: List<dev.miraiijo.miryotube.data.Folder>,
+    onFile: (String?) -> Unit,
+    onDismiss: () -> Unit,
+) {
+    MiryoDialog(onDismissRequest = onDismiss) {
+        val first = remember { FocusRequester() }
+        val field = remember { FocusRequester() }
+        val keyboard = androidx.compose.ui.platform.LocalSoftwareKeyboardController.current
+        var naming by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf(false) }
+        var name by androidx.compose.runtime.saveable.rememberSaveable { androidx.compose.runtime.mutableStateOf("") }
+        val current = folders.firstOrNull { channel.id in it.channels }?.name
+        SafeDialog(
+            520.dp,
+            Modifier.background(Palette.Panel, DialogShape).padding(24.dp),
+            verticalArrangement = Arrangement.spacedBy(6.dp),
+        ) {
+            Text("Ranger dans un dossier", fontSize = 20.sp, fontWeight = FontWeight.SemiBold, modifier = Modifier.padding(start = 12.dp))
+            Text(
+                "${channel.name}. Les dossiers deviennent des filtres en haut d’Abonnements. Ils restent sur la box, ton compte YouTube ne change pas.",
+                fontSize = 14.sp,
+                lineHeight = 19.sp,
+                color = Palette.TextSecondary,
+                modifier = Modifier.padding(start = 12.dp, end = 12.dp, bottom = 10.dp),
+            )
+            if (naming) {
+                Row(
+                    Modifier.fillMaxWidth().height(52.dp).clip(ControlShape).background(Palette.ControlIdle).padding(horizontal = 16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    androidx.compose.foundation.text.BasicTextField(
+                        value = name,
+                        onValueChange = { name = it.take(dev.miraiijo.miryotube.data.Curation.NAME_MAX) },
+                        singleLine = true,
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Palette.TextPrimary, fontSize = 18.sp, fontFamily = InterFamily),
+                        cursorBrush = androidx.compose.ui.graphics.SolidColor(Palette.Highlight),
+                        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Done),
+                        keyboardActions = androidx.compose.foundation.text.KeyboardActions(onDone = {
+                            keyboard?.hide()
+                            if (name.isNotBlank()) onFile(name) else naming = false
+                        }),
+                        decorationBox = { inner ->
+                            Box(contentAlignment = Alignment.CenterStart) {
+                                if (name.isEmpty()) Text("Nom du dossier (Cuisine, Jeux…)", fontSize = 18.sp, color = Palette.TextSecondary)
+                                inner()
+                            }
+                        },
+                        modifier = Modifier.weight(1f).focusRequester(field),
+                    )
+                }
+                Row(horizontalArrangement = Arrangement.spacedBy(Dimens.PillGap), modifier = Modifier.padding(top = 8.dp)) {
+                    MiryoButton("Créer", icon = MiryoIcon.CHECK) { if (name.isNotBlank()) onFile(name) }
+                    MiryoButton("Annuler") { naming = false }
+                }
+                LaunchedEffect(Unit) {
+                    withFrameNanos { }
+                    field.tryRequestFocus()
+                    // As in Rechercher: the box ignored a keyboard asked for at once.
+                    kotlinx.coroutines.delay(150)
+                    keyboard?.show()
+                }
+            } else {
+                folders.forEachIndexed { index, folder ->
+                    DialogRow(
+                        folder.name,
+                        value = if (folder.name == current) "Ici" else "${folder.channels.size} chaîne${if (folder.channels.size > 1) "s" else ""}",
+                        icon = if (folder.name == current) MiryoIcon.CHECK else MiryoIcon.PLAYLIST,
+                        modifier = if (index == 0) Modifier.focusRequester(first) else Modifier,
+                    ) { onFile(folder.name) }
+                }
+                DialogRow("Nouveau dossier…", icon = MiryoIcon.PLUS, modifier = if (folders.isEmpty()) Modifier.focusRequester(first) else Modifier) {
+                    name = ""
+                    naming = true
+                }
+                if (current != null) DialogRow("Sortir du dossier « $current »", icon = MiryoIcon.CLOSE) { onFile(null) }
+                LaunchedEffect(Unit) {
+                    withFrameNanos { }
+                    first.tryRequestFocus()
+                }
+            }
         }
     }
 }

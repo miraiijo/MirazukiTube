@@ -31,6 +31,8 @@ object SettingsIndex {
         e("Lier un téléphone", "PHONE", "code tv", "associer", "appairer", "téléphone"),
         e("Recevoir même miryo tube fermé", "PHONE", "arrière-plan", "fermé", "autoriser", "autorisation"),
         e("Compte YouTube (se connecter, se déconnecter)", "ACCOUNT", "connexion", "connecter", "déconnecter", "abonnements", "historique", "playlists", "google"),
+        e("Chaînes masquées", "ACCOUNT", "masquer", "cacher", "bloquer", "ne plus montrer", "chaîne", "revoir"),
+        e("Dossiers d'abonnements", "ACCOUNT", "dossier", "ranger", "trier", "classer", "abonnements", "catégorie"),
         e("Chaînes autorisées pour Enfant", "KIDS", "contrôle", "enfant", "kids", "autorisées", "chaînes"),
         e("Code parental", "KIDS", "code", "pin", "parental", "parent", "verrou"),
         e("Supprimer le profil enfant", "KIDS", "enfant", "supprimer", "profil"),

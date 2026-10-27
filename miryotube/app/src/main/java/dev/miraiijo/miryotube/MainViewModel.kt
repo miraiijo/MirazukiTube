@@ -6,6 +6,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import dev.miraiijo.miryotube.data.ACCOUNT_CHANGED_MESSAGE
 import dev.miraiijo.miryotube.data.Account
+import dev.miraiijo.miryotube.data.ChannelRef
+import dev.miraiijo.miryotube.data.Curation
+import dev.miraiijo.miryotube.data.Folder
+import dev.miraiijo.miryotube.data.SubsFilter
 import dev.miraiijo.miryotube.data.ActionResult
 import dev.miraiijo.miryotube.data.DeArrow
 import dev.miraiijo.miryotube.data.Section
@@ -134,6 +138,10 @@ data class UpdateUi(
     val message: String? = null,
 )
 
+/** A subscription at the top of Abonnements: its picture and its new videos since it was last looked at. */
+@androidx.compose.runtime.Immutable
+data class Pastille(val channelId: String, val name: String, val avatar: String?, val newCount: Int)
+
 /** "Lier un téléphone": the TV code to type in the phone's YouTube app (null while it's requested). */
 data class Pairing(val code: String? = null, val error: String? = null)
 
@@ -207,6 +215,15 @@ data class UiState(
     val pin: PinPrompt? = null,
     /** A profile picked in "Qui regarde ?": a cover hides the page until its Accueil is in. */
     val switchingTo: SwitchCover? = null,
+    /** Abonnements' filters (this box, this profile's session). */
+    val subsFilter: SubsFilter = SubsFilter(),
+    /** Abonnements' channel pictures with their new videos (empty: none, or not loaded yet). */
+    val pastilles: List<Pastille> = emptyList(),
+    /** This profile's folders of subscriptions and hidden channels (kept on the box). */
+    val folders: List<Folder> = emptyList(),
+    val hiddenChannels: List<ChannelRef> = emptyList(),
+    /** « Ranger dans un dossier » open for this channel. */
+    val folderFor: ChannelRef? = null,
 ) {
     /**
      * The launch has something to show (the splash screen can go): Accueil's first rows or its
@@ -228,7 +245,31 @@ data class UiState(
                 if (resume == null) home else home.copy(rows = listOf(resume) + home.rows)
             }
             else -> pages[section] ?: Page()
-        }.withDeArrow(deArrow)
+        }.withDeArrow(deArrow).curated()
+
+    /**
+     * The profile's own choices on the cards: hidden channels left out (not on that channel's own
+     * page, nor in Historique and Playlists), and Abonnements' filters.
+     */
+    private fun Page.curated(): Page {
+        val subs = opened == null && section == Section.SUBSCRIPTIONS && subsFilter.active
+        val hide = !kids && hiddenChannels.isNotEmpty() && opened?.channel == null && (opened != null || section !in UNHIDDEN_SECTIONS)
+        if (!subs && !hide) return this
+        val hidden = if (hide) hiddenChannels.mapTo(HashSet()) { it.id } else emptySet()
+        val folderChannels = subsFilter.folder?.let { name -> folders.firstOrNull { it.name == name }?.channels.orEmpty() }
+        val kept = rows.map { row ->
+            row.copy(
+                items = row.items.filter { v ->
+                    (v.channelId == null || v.channelId !in hidden) &&
+                        (!subs || v.isChannel || subsFilter.keeps(v.channelId, v.durationMs, v.watchedPercent, v.live, folderChannels))
+                },
+            )
+        }.filter { it.items.isNotEmpty() }
+        if (kept.isEmpty() && rows.isNotEmpty() && !loading) {
+            return copy(rows = kept, error = if (subs) "Aucune vidéo avec ces filtres. Change-les en haut de la page." else error ?: "Rien à afficher ici pour l’instant.")
+        }
+        return copy(rows = kept)
+    }
 
     /** Cards with DeArrow's title / thumbnail when there's one. */
     private fun Page.withDeArrow(found: Map<String, DeArrow>): Page {
@@ -246,9 +287,14 @@ data class UiState(
     }
 }
 
+/** Sections where hidden channels still show (the account's own lists). */
+private val UNHIDDEN_SECTIONS = setOf(Section.HISTORY, Section.PLAYLISTS)
+
 class MainViewModel(application: Application, private val saved: SavedStateHandle) : AndroidViewModel(application) {
     private val prefs = PlayerPrefs(application)
     private val kidsStore = KidsStore(application)
+    /** Hidden channels, folders and visits of each profile (on this box only). */
+    private val curation = Curation(application)
     /** One kids profile change at a time (start, miryo's profile, the parental code). */
     private val kidsMutex = kotlinx.coroutines.sync.Mutex()
     private val _state = MutableStateFlow(UiState(settings = prefs.settings()))
@@ -402,6 +448,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                     else -> Page(loading = false, error = "Rien à afficher ici pour l’instant.")
                 },
             )
+            if (section == Section.SUBSCRIPTIONS && rows.isNotEmpty()) loadPastilles(rows)
         }
     }
 
@@ -591,7 +638,14 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
             kidAllowed = if (kidsStore.exists) kidsStore.isAllowed(channelId) else null,
         )
         val entry = Opened(key = channelId, title = header.name, page = Page(), channel = header, from = from ?: prev?.from)
-        _state.update { s -> s.copy(openedStack = s.openedStack.pushOrReplace(entry), focusKey = null, cardMenu = null) }
+        // Its page looked at: its pastille in Abonnements counts from now on.
+        if (_state.value.signedIn) curation.visited(profile(), channelId)
+        _state.update { s ->
+            s.copy(
+                openedStack = s.openedStack.pushOrReplace(entry), focusKey = null, cardMenu = null,
+                pastilles = s.pastilles.map { if (it.channelId == channelId) it.copy(newCount = 0) else it },
+            )
+        }
         channelJob = viewModelScope.launch {
             launch {
                 val subscribed = if (_state.value.signedIn) YouTube.isSubscribed(channelId) else null
@@ -700,6 +754,92 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
             val channelId = video.raw.channelId
             removeCards { it.key == video.key || (channel && channelId != null && it.raw.channelId == channelId) }
             showNotice(if (channel) "Cette chaîne ne sera plus recommandée." else "Tu ne verras plus cette vidéo.")
+        }
+    }
+
+    // ---- Choices kept on the box: hidden channels, folders, Abonnements' filters ---------------------
+
+    /** The profile the choices belong to: the account's opaque id, or Invité. */
+    private fun profile(): String = _state.value.accountId ?: Curation.GUEST
+
+    /** This profile's folders and hidden channels; Abonnements' filters start over. Blocking (prefs): IO. */
+    private fun loadCuration() {
+        val p = profile()
+        _state.update { it.copy(folders = curation.folders(p), hiddenChannels = curation.hidden(p), subsFilter = SubsFilter(), pastilles = emptyList(), folderFor = null) }
+    }
+
+    /** « Ne plus montrer cette chaîne »: its cards leave every page of this profile (but its own page). */
+    fun cardHideChannel(video: Video) {
+        closeCardMenu()
+        val id = video.channelId ?: return
+        val name = video.channel.ifBlank { "Cette chaîne" }
+        curation.hide(profile(), ChannelRef(id, name))
+        _state.update { it.copy(hiddenChannels = curation.hidden(profile())) }
+        showNotice("$name n’apparaîtra plus. Pour la revoir : Réglages › Compte › Chaînes masquées.")
+    }
+
+    /** Réglages › Compte › Chaînes masquées: OK on one shows it again. */
+    fun unhideChannel(channelId: String) {
+        curation.unhide(profile(), channelId)
+        _state.update { it.copy(hiddenChannels = curation.hidden(profile())) }
+    }
+
+    /** « Ranger dans un dossier » for this channel (from a card's menu or the channel's page). */
+    fun openFolderMenu(channel: ChannelRef) {
+        if (_state.value.kids) return
+        _state.update { it.copy(cardMenu = null, folderFor = channel) }
+    }
+
+    fun closeFolderMenu() = _state.update { it.copy(folderFor = null) }
+
+    /** Puts the channel in [folder] (a new name creates it), null: in none. */
+    fun fileChannel(channel: ChannelRef, folder: String?) {
+        curation.file(profile(), channel.id, folder)
+        _state.update { it.copy(folderFor = null, folders = curation.folders(profile())) }
+        showNotice(if (folder.isNullOrBlank()) "${channel.name} n’est plus dans un dossier." else "${channel.name} est rangée dans « ${folder.trim().take(Curation.NAME_MAX)} ».")
+    }
+
+    /** Removes a folder (its channels stay subscribed). */
+    fun deleteFolder(name: String) {
+        curation.deleteFolder(profile(), name)
+        _state.update { s ->
+            s.copy(folders = curation.folders(profile()), subsFilter = if (s.subsFilter.folder == name) s.subsFilter.copy(folder = null) else s.subsFilter)
+        }
+    }
+
+    fun setSubsFilter(filter: SubsFilter) = _state.update { it.copy(subsFilter = filter) }
+
+    /** OK on a pastille: that channel's videos only (again: all of them); its new ones are now seen. */
+    fun choosePastille(pastille: Pastille) {
+        curation.visited(profile(), pastille.channelId)
+        _state.update { s ->
+            val f = s.subsFilter
+            s.copy(
+                subsFilter = if (f.channel == pastille.channelId) f.copy(channel = null, channelName = null) else f.copy(channel = pastille.channelId, channelName = pastille.name),
+                pastilles = s.pastilles.map { if (it.channelId == pastille.channelId) it.copy(newCount = 0) else it },
+            )
+        }
+    }
+
+    private var pastillesJob: Job? = null
+
+    /** Abonnements loaded: its channels' pictures, the ones with new videos since last looked at first. */
+    private fun loadPastilles(rows: List<VideoRow>) {
+        pastillesJob?.cancel()
+        val profile = profile()
+        pastillesJob = viewModelScope.launch {
+            val channels = YouTube.subscribedChannelCards()
+            val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val visits = curation.visits(profile)
+                val since = curation.since(profile)
+                val byChannel = rows.flatMap { it.items }.filter { it.isVideo && it.channelId != null }.groupBy { it.channelId }
+                channels.mapNotNull { c ->
+                    val id = c.channelId ?: return@mapNotNull null
+                    val count = SubsFilter.newCount(byChannel[id].orEmpty().map { YouTube.publishedAt(it) }, visits[id] ?: since)
+                    Pastille(id, c.title.ifBlank { c.channel }, c.thumbnail, count)
+                }.sortedByDescending { it.newCount }.take(PASTILLES_MAX)
+            }
+            if (profile() == profile) _state.update { it.copy(pastilles = list) }
         }
     }
 
@@ -1411,6 +1551,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                     accounts = accounts,
                 )
             }
+            loadCuration()
         }
     }
 
@@ -1432,6 +1573,8 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         /** Profile switch: the cover lifts at the latest after this, even if Accueil is still loading. */
         const val SWITCH_MAX_MS = 1_500L
         const val SUGGEST_DELAY_MS = 300L
+        /** Abonnements' channel pictures at most. */
+        const val PASTILLES_MAX = 30
         const val NOTICE_MS = 3_000L
         /** This app's file on the update channel (miryo-releases › channel › miryotube.json). */
         const val UPDATE_APP = "miryotube"

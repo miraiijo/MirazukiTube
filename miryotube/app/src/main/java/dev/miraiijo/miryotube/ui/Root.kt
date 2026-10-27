@@ -48,7 +48,7 @@ fun Root(vm: MainViewModel) {
     val state by vm.state.collectAsState()
     // The page's rows, rebuilt only when what they show changes (state.page builds a new one each
     // time it's read): a notice, the player or a dialog doesn't recompose every card.
-    val page = remember(state.section, state.pages, state.opened, state.search, state.resume, state.deArrow) { state.page }
+    val page = remember(state.section, state.pages, state.opened, state.search, state.resume, state.deArrow, state.subsFilter, state.hiddenChannels, state.folders, state.kids) { state.page }
     val content = remember { FocusRequester() }
     val header = remember { FocusRequester() }
     // Restarted by its own update: Réglages › Mises à jour open again.
@@ -316,6 +316,20 @@ fun Root(vm: MainViewModel) {
                         // Accueil: a taste of each feed once its end is reached (the view model
                         // ignores it on any other page).
                         onEndReached = { vm.loadHomeExtras() },
+                        onFolder = shown.opened?.channel?.let { c -> { vm.openFolderMenu(dev.miraiijo.miryotube.data.ChannelRef(c.id, c.name)) } },
+                        // Abonnements: its channels' pastilles and filters above the rows.
+                        header = if (shown.section == dev.miraiijo.miryotube.data.Section.SUBSCRIPTIONS && shown.opened == null && state.signedIn && !state.kids) {
+                            { first ->
+                                SubscriptionsHeader(
+                                    pastilles = state.pastilles,
+                                    filter = state.subsFilter,
+                                    folders = state.folders,
+                                    onPastille = vm::choosePastille,
+                                    onFilter = vm::setSubsFilter,
+                                    first = first,
+                                )
+                            }
+                        } else null,
                     )
                 }
             }
@@ -357,6 +371,10 @@ fun Root(vm: MainViewModel) {
                 onDeleteKids = vm::deleteKids,
                 startOnUpdates = state.settingsOnUpdates,
                 onStarted = vm::settingsOnUpdatesShown,
+                hiddenChannels = state.hiddenChannels,
+                onUnhideChannel = vm::unhideChannel,
+                folders = state.folders,
+                onDeleteFolder = vm::deleteFolder,
             )
         } else if (state.cardMenu != null) {
             val video = state.cardMenu!!
@@ -380,7 +398,20 @@ fun Root(vm: MainViewModel) {
                     neighbourTick++
                     vm.cardNotInterested(video, channel)
                 },
+                onHideChannel = {
+                    neighbourTick++
+                    vm.cardHideChannel(video)
+                },
+                onFolder = video.channelId?.let { id -> { vm.openFolderMenu(dev.miraiijo.miryotube.data.ChannelRef(id, video.channel.ifBlank { video.title })) } },
                 onDismiss = vm::closeCardMenu,
+            )
+        } else if (state.folderFor != null) {
+            val channel = state.folderFor!!
+            FolderDialog(
+                channel = channel,
+                folders = state.folders,
+                onFile = { name -> vm.fileChannel(channel, name) },
+                onDismiss = vm::closeFolderMenu,
             )
         }
         // The parental code opens over "Qui regarde ?" and Réglages (composed after them: on top).

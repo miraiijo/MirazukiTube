@@ -394,6 +394,11 @@ fun SettingsDialog(
     /** Back from this app's own update: open on Mises à jour, focus on Vérifier. */
     startOnUpdates: Boolean = false,
     onStarted: () -> Unit = {},
+    /** Réglages › Compte: this profile's hidden channels and folders of subscriptions (on the box). */
+    hiddenChannels: List<dev.miraiijo.miryotube.data.ChannelRef> = emptyList(),
+    onUnhideChannel: (String) -> Unit = {},
+    folders: List<dev.miraiijo.miryotube.data.Folder> = emptyList(),
+    onDeleteFolder: (String) -> Unit = {},
 ) {
     MiryoDialog(onDismissRequest = onDismiss) {
         val first = remember { FocusRequester() }
@@ -558,6 +563,32 @@ fun SettingsDialog(
                             } else {
                                 SettingCard("Compte YouTube", "Pour retrouver tes abonnements, ton historique et tes playlists. Un code s’affiche, à saisir sur le téléphone.") {
                                     MiryoButton("Se connecter", icon = MiryoIcon.PLUS, contentColor = Palette.ChipText, onClick = onSignIn)
+                                }
+                            }
+                            SettingCard(
+                                "Chaînes masquées · ${hiddenChannels.size}",
+                                if (hiddenChannels.isEmpty()) "Aucune. Appui long sur une vidéo › « Ne plus montrer cette chaîne » en masque une, sur cette box et pour ce profil."
+                                else "OK sur une chaîne la fait revenir. Masquées sur cette box et pour ce profil seulement.",
+                            ) {
+                                EdgeScroll(24.dp) {
+                                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        hiddenChannels.forEach { channel ->
+                                            MiryoButton(channel.name, icon = MiryoIcon.CLOSE, contentColor = Palette.ChipText) { onUnhideChannel(channel.id) }
+                                        }
+                                    }
+                                }
+                            }
+                            if (accountName != null) SettingCard(
+                                "Dossiers d’abonnements · ${folders.size}",
+                                if (folders.isEmpty()) "Aucun. Appui long sur une vidéo › « Ranger la chaîne dans un dossier », ou le bouton sur la page d’une chaîne."
+                                else "OK sur un dossier le supprime (ses chaînes restent abonnées). Les dossiers sont des filtres en haut d’Abonnements.",
+                            ) {
+                                EdgeScroll(24.dp) {
+                                    Row(Modifier.horizontalScroll(rememberScrollState()), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        folders.forEach { folder ->
+                                            MiryoButton("${folder.name} · ${folder.channels.size}", icon = MiryoIcon.CLOSE, contentColor = Palette.ChipText) { onDeleteFolder(folder.name) }
+                                        }
+                                    }
                                 }
                             }
                         }
