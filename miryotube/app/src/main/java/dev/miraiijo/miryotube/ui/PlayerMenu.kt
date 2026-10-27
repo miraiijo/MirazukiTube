@@ -10,6 +10,8 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -53,7 +55,7 @@ import kotlinx.coroutines.launch
 import dev.miraiijo.miryotube.player.PlayerPrefs
 
 /** The player's settings panel: a main list, and one list per setting. */
-enum class PlayerMenu { MAIN, QUALITY, SUBTITLES, SPEED, AUDIO, FORMAT, INFO, CHAPTERS }
+enum class PlayerMenu { MAIN, QUALITY, SUBTITLES, SPEED, AUDIO, FORMAT, INFO, CHAPTERS, TIMER }
 
 private val SPEEDS = listOf(0.5f, 0.75f, 1f, 1.25f, 1.5f, 1.75f, 2f)
 
@@ -81,6 +83,18 @@ class VideoActions(
     val onChapter: (dev.miraiijo.miryotube.data.Chapter) -> Unit = {},
     /** Kids profile: no channel page, no account actions. */
     val kids: Boolean = false,
+    /** « Son seul »: the picture off, the sound on. */
+    val audioOnly: Boolean = false,
+    val onAudioOnly: () -> Unit = {},
+    /** « Minuterie »: what it's set to (« Désactivée », « 29 min »…) and a new choice (SleepTimer's minutes, AT_END, 0 = off). */
+    val timer: String = "Désactivée",
+    val timerMinutes: Int = 0,
+    val onTimer: (Int) -> Unit = {},
+    /** A live's chat: shown (null: the video has none), and its size (CHAT_SIZES). */
+    val liveChat: Boolean? = null,
+    val onLiveChat: () -> Unit = {},
+    val chatSize: Int = 1,
+    val onChatSize: () -> Unit = {},
 )
 
 private class Entry(
@@ -90,6 +104,8 @@ private class Entry(
     val submenu: Boolean = false,
     /** A section title in the list (not focusable). */
     val header: Boolean = false,
+    /** A picture on the left (a chapter's). */
+    val image: String? = null,
     val onClick: () -> Unit,
 )
 
@@ -97,6 +113,49 @@ private class Entry(
 private val PREFERRED_SUBTITLES = listOf("français", "french", "anglais", "english")
 
 private fun isPreferredSubtitle(name: String) = name.lowercase().let { n -> PREFERRED_SUBTITLES.any { it in n } }
+
+/**
+ * YouTube's automatic translation of the subtitles (« Français* »): the engine marks it with a
+ * star, as it does automatic captions, which also say « (générés automatiquement) ».
+ */
+internal fun isTranslatedSubtitle(name: String) = name.endsWith("*") && '(' !in name
+
+internal fun isFrenchSubtitle(name: String) = name.trimEnd('*').trim().lowercase().let { it.startsWith("français") || it.startsWith("french") }
+
+/** A subtitle track as shown: the engine's star gone, a translation said so. */
+internal fun subtitleLabel(name: String): String =
+    if (isTranslatedSubtitle(name)) name.trimEnd('*').trim() + " · traduit automatiquement" else name.trimEnd('*').trim()
+
+/**
+ * The French track to offer on a video in another language: its own French subtitles, else
+ * YouTube's translation; -1 when the video is spoken in French (its automatic captions are) or
+ * has neither.
+ */
+internal fun frenchSubtitle(tracks: List<String>): Int {
+    if (tracks.any { isFrenchSubtitle(it) && it.endsWith("*") && !isTranslatedSubtitle(it) }) return -1
+    val own = tracks.indexOfFirst { isFrenchSubtitle(it) && !it.endsWith("*") }
+    return if (own >= 0) own else tracks.indexOfFirst { isFrenchSubtitle(it) && isTranslatedSubtitle(it) }
+}
+
+/**
+ * The track in miryo's subtitle language ([iso], « fr », « en »…): the video's own subtitles in it,
+ * else its automatic captions in it, else YouTube's translation into it; -1 when none.
+ */
+internal fun languageSubtitle(tracks: List<String>, iso: String): Int {
+    val locale = java.util.Locale(iso)
+    val names = listOf(locale.getDisplayLanguage(java.util.Locale.FRENCH), locale.getDisplayLanguage(java.util.Locale.ENGLISH))
+        .map { it.lowercase() }.filter { it.isNotEmpty() && it != iso.lowercase() }
+    if (names.isEmpty()) return -1
+    fun inLanguage(name: String) = name.trimEnd('*').trim().lowercase().let { n -> names.any { n.startsWith(it) } }
+    val own = tracks.indexOfFirst { inLanguage(it) && !it.endsWith("*") }
+    if (own >= 0) return own
+    val automatic = tracks.indexOfFirst { inLanguage(it) && it.endsWith("*") && !isTranslatedSubtitle(it) }
+    if (automatic >= 0) return automatic
+    return tracks.indexOfFirst { inLanguage(it) && isTranslatedSubtitle(it) }
+}
+
+/** « Minuterie »'s choices: minutes, and [SleepTimer.AT_END] (at the end of the video). */
+private val TIMER_CHOICES = listOf(0 to "Désactivée", 15 to "15 minutes", 30 to "30 minutes", 60 to "1 heure", 120 to "2 heures", dev.miraiijo.miryotube.player.SleepTimer.AT_END to "À la fin de la vidéo")
 
 /**
  * Nuvio-like side panel on the right of the player. OK opens a setting or picks a value (back to
@@ -120,7 +179,7 @@ fun PlayerMenuPanel(
 ) {
     // Bumped after each choice: the values shown are read from the player again.
     var version by remember { mutableIntStateOf(0) }
-    val entries = remember(menu, tracksTick, version, sponsorBlock, pictureFormat, actions.details, actions.watchLaterDone, actions.stats, actions.autoFrameRate, actions.currentChapter) {
+    val entries = remember(menu, tracksTick, version, sponsorBlock, pictureFormat, actions.details, actions.watchLaterDone, actions.stats, actions.autoFrameRate, actions.currentChapter, actions.audioOnly, actions.timer, actions.liveChat, actions.chatSize) {
         buildEntries(menu, player, prefs, live, sponsorBlock, onSponsorBlock, pictureFormat, onPictureFormat, actions, onMenu) { version++ }
     }
     val title = when (menu) {
@@ -132,6 +191,7 @@ fun PlayerMenuPanel(
         PlayerMenu.FORMAT -> "Format de l’image"
         PlayerMenu.INFO -> "À propos"
         PlayerMenu.CHAPTERS -> "Chapitres"
+        PlayerMenu.TIMER -> "Minuterie"
     }
     // The level shown just before (read before it's updated below): back from a sub-list, the main
     // list opens on the line that led to it (Vitesse, Format…), not on its first line.
@@ -204,7 +264,7 @@ private fun buildEntries(
         }
         val subtitles = player.subtitleTracks()
         if (subtitles.isNotEmpty()) {
-            add(Entry("Sous-titres", subtitles.getOrNull(player.selectedSubtitle) ?: "Désactivés", submenu = true) { onMenu(PlayerMenu.SUBTITLES) })
+            add(Entry("Sous-titres", subtitles.getOrNull(player.selectedSubtitle)?.let(::subtitleLabel) ?: "Désactivés", submenu = true) { onMenu(PlayerMenu.SUBTITLES) })
         }
         val audio = player.audioTracks()
         if (audio.size > 1) add(Entry("Piste audio", audio.getOrNull(player.playingAudio) ?: "Auto", submenu = true) { onMenu(PlayerMenu.AUDIO) })
@@ -230,6 +290,19 @@ private fun buildEntries(
         if (!live) add(Entry("SponsorBlock", if (sponsorBlock) "Activé" else "Désactivé") { onSponsorBlock(!sponsorBlock) })
         add(Entry("Statistiques pour les curieux", if (actions.stats) "Affichées" else "Masquées", onClick = actions.onStats))
         add(Entry("Fréquence d’affichage automatique", selected = actions.autoFrameRate, onClick = actions.onAutoFrameRate))
+        // Music: the picture goes out, the sound goes on (less light, less data).
+        add(Entry("Son seul", if (actions.audioOnly) "Activé" else "Éteint l’image", selected = actions.audioOnly, onClick = actions.onAudioOnly))
+        add(Entry("Minuterie", actions.timer, submenu = true) { onMenu(PlayerMenu.TIMER) })
+        actions.liveChat?.let { shown ->
+            add(Entry("Chat du direct", if (shown) "Affiché" else "Masqué", selected = shown, onClick = actions.onLiveChat))
+            if (shown) add(Entry("Taille du chat", CHAT_SIZES.getOrNull(actions.chatSize)?.first ?: "Normale", onClick = actions.onChatSize))
+        }
+    }
+    PlayerMenu.TIMER -> TIMER_CHOICES.map { (minutes, name) ->
+        Entry(name, selected = minutes == actions.timerMinutes) {
+            actions.onTimer(minutes)
+            onMenu(PlayerMenu.MAIN)
+        }
     }
     PlayerMenu.FORMAT -> PICTURE_FORMATS.mapIndexed { index, name ->
         Entry(name, selected = index == pictureFormat) {
@@ -240,7 +313,7 @@ private fun buildEntries(
     PlayerMenu.INFO -> emptyList()
     // Each chapter with its start time; OK jumps there (the one playing is checked).
     PlayerMenu.CHAPTERS -> actions.chapters.mapIndexed { index, chapter ->
-        Entry(chapter.title.ifBlank { "Chapitre ${index + 1}" }, formatDuration(chapter.startMs).ifEmpty { "0:00" }, selected = index == actions.currentChapter) {
+        Entry(chapter.title.ifBlank { "Chapitre ${index + 1}" }, formatDuration(chapter.startMs).ifEmpty { "0:00" }, selected = index == actions.currentChapter, image = chapter.image) {
             actions.onChapter(chapter)
             onMenu(PlayerMenu.MAIN)
         }
@@ -265,15 +338,20 @@ private fun buildEntries(
             onMenu(PlayerMenu.MAIN)
         }
         add(Entry("Désactivés", selected = player.selectedSubtitle < 0) { pick(-1) })
+        // A video in another language: YouTube's French translation, first.
+        val french = frenchSubtitle(tracks)
+        if (french >= 0 && isTranslatedSubtitle(tracks[french])) {
+            add(Entry("Traduire en français", "traduit automatiquement", selected = player.selectedSubtitle == french) { pick(french) })
+        }
         // Français and English first (the video's own, then the automatic translations), then the rest.
         val (preferred, others) = tracks.indices.partition { isPreferredSubtitle(tracks[it]) }
         if (preferred.isNotEmpty()) {
             add(Entry("PRÉFÉRÉES", header = true) {})
-            preferred.forEach { index -> add(Entry(tracks[index], selected = player.selectedSubtitle == index) { pick(index) }) }
+            preferred.forEach { index -> add(Entry(subtitleLabel(tracks[index]), selected = player.selectedSubtitle == index) { pick(index) }) }
         }
         if (others.isNotEmpty()) {
             if (preferred.isNotEmpty()) add(Entry("AUTRES LANGUES", header = true) {})
-            others.forEach { index -> add(Entry(tracks[index], selected = player.selectedSubtitle == index) { pick(index) }) }
+            others.forEach { index -> add(Entry(subtitleLabel(tracks[index]), selected = player.selectedSubtitle == index) { pick(index) }) }
         }
     }
     PlayerMenu.SPEED -> SPEEDS.map { speed ->
@@ -332,7 +410,7 @@ private fun speedName(speed: Float) = if (speed == 1f) "Normale" else "${speed.t
 private fun MenuRow(entry: Entry, modifier: Modifier) {
     Surface(
         onClick = entry.onClick,
-        modifier = modifier.fillMaxWidth().height(48.dp),
+        modifier = modifier.fillMaxWidth().height(if (entry.image != null) 64.dp else 48.dp),
         shape = ClickableSurfaceDefaults.shape(shape = ControlShape),
         scale = ClickableSurfaceDefaults.scale(focusedScale = 1f, pressedScale = 1f),
         colors = ClickableSurfaceDefaults.colors(
@@ -345,6 +423,12 @@ private fun MenuRow(entry: Entry, modifier: Modifier) {
         ),
     ) {
         Row(Modifier.fillMaxWidth().fillMaxHeight().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+            // A chapter's picture (YouTube's), to find « the part with the dough » at a glance.
+            if (entry.image != null) {
+                Box(Modifier.padding(end = 12.dp).width(CHAPTER_IMAGE).height(CHAPTER_IMAGE * 9 / 16).clip(ControlShape).background(Palette.Tile)) {
+                    Thumbnail(null, entry.image, Modifier.fillMaxSize(), small = true, width = CHAPTER_IMAGE)
+                }
+            }
             if (entry.value == null) {
                 Text(entry.label, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             } else {
@@ -379,4 +463,7 @@ private val SUBMENU_LABELS = mapOf(
     PlayerMenu.AUDIO to "Piste audio",
     PlayerMenu.SPEED to "Vitesse",
     PlayerMenu.FORMAT to "Format de l’image",
+    PlayerMenu.TIMER to "Minuterie",
 )
+
+private val CHAPTER_IMAGE = 80.dp

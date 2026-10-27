@@ -6,6 +6,10 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import dev.miraiijo.miryotube.data.ACCOUNT_CHANGED_MESSAGE
 import dev.miraiijo.miryotube.data.Account
+import dev.miraiijo.miryotube.data.ChannelRef
+import dev.miraiijo.miryotube.data.Curation
+import dev.miraiijo.miryotube.data.Folder
+import dev.miraiijo.miryotube.data.SubsFilter
 import dev.miraiijo.miryotube.data.ActionResult
 import dev.miraiijo.miryotube.data.DeArrow
 import dev.miraiijo.miryotube.data.Section
@@ -100,7 +104,7 @@ data class Settings(
     val remote: Boolean = false,
     /** 0 = Auto, 1 = Jour, 2 = Nuit, 3 = Comme miryo (ui.Appearance). */
     val appearance: Int = dev.miraiijo.miryotube.ui.APPEARANCE_DEFAULT,
-    /** "Taille de l'interface", in % (ui.UI_SCALE_MIN..UI_SCALE_MAX). */
+    /** "Taille de l'interface", in % (ui.UI_SCALE_MIN..UI_SCALE_MAX), or ui.UI_SCALE_MIRYO (Comme miryo). */
     val uiScale: Int = UI_SCALE_DEFAULT,
     /** "Recevoir même miryo tube fermé": the phone link listens in the background (remote.CastService). */
     val backgroundCast: Boolean = false,
@@ -110,7 +114,20 @@ data class Settings(
     val navSounds: Int = 0,
     /** Réglages › Affichage › Animations: miryo (Comme miryo, the default), auto, eco or full (system.LowEnd). */
     val animations: String = dev.miraiijo.miryotube.system.LowEnd.MIRYO,
+    /** Réglages › Lecture › Sous-titres en français: Toujours (true) or Sur demande. */
+    val autoFrench: Boolean = false,
+    /** Réglages › Lecture › the subtitles' size, color and background (MiryoLook's values); null = Comme miryo. */
+    val subSize: String? = null,
+    val subColor: String? = null,
+    val subBg: String? = null,
 ) {
+    /** The subtitles' look as drawn: this box's choice, else miryo's, else Normale, blanc, bandeau. */
+    val subtitleLook: Triple<String, String, String>
+        get() {
+            val look = dev.miraiijo.miryotube.link.MiryoLook.current
+            return Triple(subSize ?: look?.subSize ?: "m", subColor ?: look?.subColor ?: "white", subBg ?: look?.subBg ?: "band")
+        }
+
     /** The clicks of the remote's arrows and OK are heard. */
     val navSoundsOn: Boolean
         get() = when (navSounds) {
@@ -133,6 +150,10 @@ data class UpdateUi(
     val found: Updater.UpdateInfo? = null,
     val message: String? = null,
 )
+
+/** A subscription at the top of Abonnements: its picture and its new videos since it was last looked at. */
+@androidx.compose.runtime.Immutable
+data class Pastille(val channelId: String, val name: String, val avatar: String?, val newCount: Int)
 
 /** "Lier un téléphone": the TV code to type in the phone's YouTube app (null while it's requested). */
 data class Pairing(val code: String? = null, val error: String? = null)
@@ -175,6 +196,8 @@ data class UiState(
     val settings: Settings = Settings(sponsorBlock = true, autoplay = true, stableVolume = true, deArrow = false),
     /** "Reprendre" row at the top of Accueil (null: none, or not signed in). */
     val resume: VideoRow? = null,
+    /** « En direct maintenant »: the subscriptions live now, first on Accueil (null: none). */
+    val liveNow: VideoRow? = null,
     val query: String = "",
     /** Search results (null before the first search). */
     val search: Page? = null,
@@ -207,6 +230,17 @@ data class UiState(
     val pin: PinPrompt? = null,
     /** A profile picked in "Qui regarde ?": a cover hides the page until its Accueil is in. */
     val switchingTo: SwitchCover? = null,
+    /** Abonnements' filters (this box, this profile's session). */
+    val subsFilter: SubsFilter = SubsFilter(),
+    /** Abonnements' channel pictures with their new videos (empty: none, or not loaded yet). */
+    val pastilles: List<Pastille> = emptyList(),
+    /** This profile's folders of subscriptions and hidden channels (kept on the box). */
+    val folders: List<Folder> = emptyList(),
+    val hiddenChannels: List<ChannelRef> = emptyList(),
+    /** « Ranger dans un dossier » open for this channel. */
+    val folderFor: ChannelRef? = null,
+    /** « À la suite »: videos to play next, in order (this box, until the app closes). */
+    val queue: List<Video> = emptyList(),
 ) {
     /**
      * The launch has something to show (the splash screen can go): Accueil's first rows or its
@@ -225,10 +259,35 @@ data class UiState(
             opened != null -> opened!!.page
             section == Section.SEARCH -> search ?: Page(loading = false)
             section == Section.HOME -> (pages[section] ?: Page()).let { home ->
-                if (resume == null) home else home.copy(rows = listOf(resume) + home.rows)
+                val top = listOfNotNull(liveNow, resume)
+                if (top.isEmpty()) home else home.copy(rows = top + home.rows)
             }
             else -> pages[section] ?: Page()
-        }.withDeArrow(deArrow)
+        }.withDeArrow(deArrow).curated()
+
+    /**
+     * The profile's own choices on the cards: hidden channels left out (not on that channel's own
+     * page, nor in Historique and Playlists), and Abonnements' filters.
+     */
+    private fun Page.curated(): Page {
+        val subs = opened == null && section == Section.SUBSCRIPTIONS && subsFilter.active
+        val hide = !kids && hiddenChannels.isNotEmpty() && opened?.channel == null && (opened != null || section !in UNHIDDEN_SECTIONS)
+        if (!subs && !hide) return this
+        val hidden = if (hide) hiddenChannels.mapTo(HashSet()) { it.id } else emptySet()
+        val folderChannels = subsFilter.folder?.let { name -> folders.firstOrNull { it.name == name }?.channels.orEmpty() }
+        val kept = rows.map { row ->
+            row.copy(
+                items = row.items.filter { v ->
+                    (v.channelId == null || v.channelId !in hidden) &&
+                        (!subs || v.isChannel || subsFilter.keeps(v.channelId, v.durationMs, v.watchedPercent, v.live, folderChannels))
+                },
+            )
+        }.filter { it.items.isNotEmpty() }
+        if (kept.isEmpty() && rows.isNotEmpty() && !loading) {
+            return copy(rows = kept, error = if (subs) "Aucune vidéo avec ces filtres. Change-les en haut de la page." else error ?: "Rien à afficher ici pour l’instant.")
+        }
+        return copy(rows = kept)
+    }
 
     /** Cards with DeArrow's title / thumbnail when there's one. */
     private fun Page.withDeArrow(found: Map<String, DeArrow>): Page {
@@ -246,9 +305,14 @@ data class UiState(
     }
 }
 
+/** Sections where hidden channels still show (the account's own lists). */
+private val UNHIDDEN_SECTIONS = setOf(Section.HISTORY, Section.PLAYLISTS)
+
 class MainViewModel(application: Application, private val saved: SavedStateHandle) : AndroidViewModel(application) {
     private val prefs = PlayerPrefs(application)
     private val kidsStore = KidsStore(application)
+    /** Hidden channels, folders and visits of each profile (on this box only). */
+    private val curation = Curation(application)
     /** One kids profile change at a time (start, miryo's profile, the parental code). */
     private val kidsMutex = kotlinx.coroutines.sync.Mutex()
     private val _state = MutableStateFlow(UiState(settings = prefs.settings()))
@@ -278,7 +342,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                 val id = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { YouTube.homeAccountId() }
                 if (id != _state.value.accountId && !_state.value.choosingAccount && _state.value.switchingTo == null) {
                     cancelLoads()
-                    _state.update { it.copy(pages = emptyMap(), resume = null, search = null, openedStack = emptyList(), focusKey = null, cardMenu = null) }
+                    _state.update { it.copy(pages = emptyMap(), resume = null, liveNow = null, search = null, openedStack = emptyList(), focusKey = null, cardMenu = null) }
                     refreshAccount()
                     show(_state.value.section.takeIf { it != Section.SEARCH } ?: Section.HOME)
                 }
@@ -402,6 +466,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                     else -> Page(loading = false, error = "Rien à afficher ici pour l’instant.")
                 },
             )
+            if (section == Section.SUBSCRIPTIONS && rows.isNotEmpty()) loadPastilles(rows)
         }
     }
 
@@ -466,6 +531,10 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
             val row = runCatching { YouTube.resumeRow() }.getOrNull()
             _state.update { it.copy(resume = row) }
             row?.let { fetchDeArrow(listOf(it)) }
+        }
+        viewModelScope.launch {
+            val row = runCatching { YouTube.liveNowRow() }.getOrNull()
+            _state.update { it.copy(liveNow = row) }
         }
     }
 
@@ -591,7 +660,14 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
             kidAllowed = if (kidsStore.exists) kidsStore.isAllowed(channelId) else null,
         )
         val entry = Opened(key = channelId, title = header.name, page = Page(), channel = header, from = from ?: prev?.from)
-        _state.update { s -> s.copy(openedStack = s.openedStack.pushOrReplace(entry), focusKey = null, cardMenu = null) }
+        // Its page looked at: its pastille in Abonnements counts from now on.
+        if (_state.value.signedIn) curation.visited(profile(), channelId)
+        _state.update { s ->
+            s.copy(
+                openedStack = s.openedStack.pushOrReplace(entry), focusKey = null, cardMenu = null,
+                pastilles = s.pastilles.map { if (it.channelId == channelId) it.copy(newCount = 0) else it },
+            )
+        }
         channelJob = viewModelScope.launch {
             launch {
                 val subscribed = if (_state.value.signedIn) YouTube.isSubscribed(channelId) else null
@@ -703,6 +779,92 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         }
     }
 
+    // ---- Choices kept on the box: hidden channels, folders, Abonnements' filters ---------------------
+
+    /** The profile the choices belong to: the account's opaque id, or Invité. */
+    private fun profile(): String = _state.value.accountId ?: Curation.GUEST
+
+    /** This profile's folders and hidden channels; Abonnements' filters start over. Blocking (prefs): IO. */
+    private fun loadCuration() {
+        val p = profile()
+        _state.update { it.copy(folders = curation.folders(p), hiddenChannels = curation.hidden(p), subsFilter = SubsFilter(), pastilles = emptyList(), folderFor = null) }
+    }
+
+    /** « Ne plus montrer cette chaîne »: its cards leave every page of this profile (but its own page). */
+    fun cardHideChannel(video: Video) {
+        closeCardMenu()
+        val id = video.channelId ?: return
+        val name = video.channel.ifBlank { "Cette chaîne" }
+        curation.hide(profile(), ChannelRef(id, name))
+        _state.update { it.copy(hiddenChannels = curation.hidden(profile())) }
+        showNotice("$name n’apparaîtra plus. Pour la revoir : Réglages › Compte › Chaînes masquées.")
+    }
+
+    /** Réglages › Compte › Chaînes masquées: OK on one shows it again. */
+    fun unhideChannel(channelId: String) {
+        curation.unhide(profile(), channelId)
+        _state.update { it.copy(hiddenChannels = curation.hidden(profile())) }
+    }
+
+    /** « Ranger dans un dossier » for this channel (from a card's menu or the channel's page). */
+    fun openFolderMenu(channel: ChannelRef) {
+        if (_state.value.kids) return
+        _state.update { it.copy(cardMenu = null, folderFor = channel) }
+    }
+
+    fun closeFolderMenu() = _state.update { it.copy(folderFor = null) }
+
+    /** Puts the channel in [folder] (a new name creates it), null: in none. */
+    fun fileChannel(channel: ChannelRef, folder: String?) {
+        curation.file(profile(), channel.id, folder)
+        _state.update { it.copy(folderFor = null, folders = curation.folders(profile())) }
+        showNotice(if (folder.isNullOrBlank()) "${channel.name} n’est plus dans un dossier." else "${channel.name} est rangée dans « ${folder.trim().take(Curation.NAME_MAX)} ».")
+    }
+
+    /** Removes a folder (its channels stay subscribed). */
+    fun deleteFolder(name: String) {
+        curation.deleteFolder(profile(), name)
+        _state.update { s ->
+            s.copy(folders = curation.folders(profile()), subsFilter = if (s.subsFilter.folder == name) s.subsFilter.copy(folder = null) else s.subsFilter)
+        }
+    }
+
+    fun setSubsFilter(filter: SubsFilter) = _state.update { it.copy(subsFilter = filter) }
+
+    /** OK on a pastille: that channel's videos only (again: all of them); its new ones are now seen. */
+    fun choosePastille(pastille: Pastille) {
+        curation.visited(profile(), pastille.channelId)
+        _state.update { s ->
+            val f = s.subsFilter
+            s.copy(
+                subsFilter = if (f.channel == pastille.channelId) f.copy(channel = null, channelName = null) else f.copy(channel = pastille.channelId, channelName = pastille.name),
+                pastilles = s.pastilles.map { if (it.channelId == pastille.channelId) it.copy(newCount = 0) else it },
+            )
+        }
+    }
+
+    private var pastillesJob: Job? = null
+
+    /** Abonnements loaded: its channels' pictures, the ones with new videos since last looked at first. */
+    private fun loadPastilles(rows: List<VideoRow>) {
+        pastillesJob?.cancel()
+        val profile = profile()
+        pastillesJob = viewModelScope.launch {
+            val channels = YouTube.subscribedChannelCards()
+            val list = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+                val visits = curation.visits(profile)
+                val since = curation.since(profile)
+                val byChannel = rows.flatMap { it.items }.filter { it.isVideo && it.channelId != null }.groupBy { it.channelId }
+                channels.mapNotNull { c ->
+                    val id = c.channelId ?: return@mapNotNull null
+                    val count = SubsFilter.newCount(byChannel[id].orEmpty().map { YouTube.publishedAt(it) }, visits[id] ?: since)
+                    Pastille(id, c.title.ifBlank { c.channel }, c.thumbnail, count)
+                }.sortedByDescending { it.newCount }.take(PASTILLES_MAX)
+            }
+            if (profile() == profile) _state.update { it.copy(pastilles = list) }
+        }
+    }
+
     private fun removeCards(matches: (Video) -> Boolean) = _state.update { s ->
         fun Page.without() = copy(rows = rows.map { row -> row.copy(items = row.items.filterNot(matches)) }.filter { it.items.isNotEmpty() })
         s.copy(
@@ -710,6 +872,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
             search = s.search?.without(),
             openedStack = s.openedStack.map { it.copy(page = it.page.without()) },
             resume = s.resume?.let { row -> row.copy(items = row.items.filterNot(matches)).takeIf { it.items.isNotEmpty() } },
+            liveNow = s.liveNow?.let { row -> row.copy(items = row.items.filterNot(matches)).takeIf { it.items.isNotEmpty() } },
         )
     }
 
@@ -787,10 +950,27 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         }
     }
 
-    /** "À suivre" from the player: the next video replaces the current one. */
+    /** "À suivre" from the player: the next video replaces the current one (out of « À la suite » if it was there). */
     fun playNext(video: Video) {
         if (_state.value.kids) return stopPlaying()
-        _state.update { it.copy(playing = video, playingId = null) }
+        _state.update { s -> s.copy(playing = video, playingId = null, queue = s.queue.filterNot { it.key == video.key }) }
+    }
+
+    /** « Lire ensuite »: at the end of « À la suite » (a video already in it stays where it is). */
+    fun cardQueue(video: Video) {
+        closeCardMenu()
+        if (!video.isVideo || video.videoId == null) return
+        val s = _state.value
+        if (s.queue.any { it.key == video.key }) return showNotice("Déjà dans « À la suite ».")
+        val queue = (s.queue + video).takeLast(QUEUE_MAX)
+        _state.update { it.copy(queue = queue) }
+        showNotice(if (queue.size == 1) "À la suite : elle démarre à la fin de la vidéo." else "À la suite · ${queue.size} vidéos.")
+    }
+
+    fun clearQueue() {
+        closeCardMenu()
+        _state.update { it.copy(queue = emptyList()) }
+        showNotice("« À la suite » est vide.")
     }
 
     fun closeOpened() = _state.update { s ->
@@ -871,7 +1051,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     private fun reloadHome() {
         cancelLoads()
         channelJob?.cancel()
-        _state.update { it.copy(pages = emptyMap(), resume = null, search = null, openedStack = emptyList(), focusKey = null) }
+        _state.update { it.copy(pages = emptyMap(), resume = null, liveNow = null, search = null, openedStack = emptyList(), focusKey = null) }
         refreshAccount()
         show(_state.value.section.takeIf { it != Section.SEARCH } ?: Section.HOME)
     }
@@ -977,7 +1157,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                 kids = true, kidsLocked = fromMiryo, pin = null,
                 choosingAccount = false, accountsOpen = false, settingsOpen = false, pairing = null, cardMenu = null,
                 playing = null, playingId = null, minimized = false,
-                pages = emptyMap(), resume = null, search = null, section = Section.HOME, openedStack = emptyList(), focusKey = null,
+                pages = emptyMap(), resume = null, liveNow = null, search = null, section = Section.HOME, openedStack = emptyList(), focusKey = null,
             )
         }
         kidsUi()
@@ -997,7 +1177,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
 
     private fun reloadAfterKids() {
         cancelLoads()
-        _state.update { it.copy(pages = emptyMap(), resume = null, search = null, section = Section.HOME, openedStack = emptyList(), focusKey = null, playing = null, playingId = null, minimized = false) }
+        _state.update { it.copy(pages = emptyMap(), resume = null, liveNow = null, search = null, section = Section.HOME, openedStack = emptyList(), focusKey = null, playing = null, playingId = null, minimized = false) }
         refreshAccount()
         show(Section.HOME)
     }
@@ -1108,7 +1288,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     private fun loadKids() {
         loads[Section.HOME]?.cancel()
         val channels = kidsStore.channels
-        _state.update { it.copy(pages = it.pages + (Section.HOME to Page(loading = true)), resume = null) }
+        _state.update { it.copy(pages = it.pages + (Section.HOME to Page(loading = true)), resume = null, liveNow = null) }
         loads[Section.HOME] = viewModelScope.launch {
             fun set(page: Page) = _state.update { it.copy(pages = it.pages + (Section.HOME to page)) }
             if (channels.isEmpty()) {
@@ -1276,6 +1456,10 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         prefs.backgroundCast = settings.backgroundCast
         prefs.background = settings.background
         prefs.navSounds = settings.navSounds
+        prefs.autoFrench = settings.autoFrench
+        prefs.subSize = settings.subSize
+        prefs.subColor = settings.subColor
+        prefs.subBg = settings.subBg
         prefs.animations = settings.animations
         dev.miraiijo.miryotube.system.LowEnd.choice = settings.animations
         if (settings.remote != _state.value.settings.remote) {
@@ -1301,7 +1485,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
             onError = { message -> _state.update { it.copy(signInError = message) } },
             onDone = {
                 // A new account is the selected one: everything reloads for it.
-                _state.update { it.copy(signingIn = false, signInCode = null, choosingAccount = false, accountsOpen = false, settingsOpen = false, pages = emptyMap(), resume = null) }
+                _state.update { it.copy(signingIn = false, signInCode = null, choosingAccount = false, accountsOpen = false, settingsOpen = false, pages = emptyMap(), resume = null, liveNow = null) }
                 refreshAccount()
                 show(Section.HOME)
             },
@@ -1357,7 +1541,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         _state.update {
             it.copy(
                 switchingTo = cover, accountName = cover.name, accountAvatar = cover.avatar, cardMenu = null,
-                pages = emptyMap(), resume = null, search = null, section = Section.HOME, openedStack = emptyList(), focusKey = null,
+                pages = emptyMap(), resume = null, liveNow = null, search = null, section = Section.HOME, openedStack = emptyList(), focusKey = null,
             )
         }
         viewModelScope.launch {
@@ -1389,7 +1573,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     fun signOut() {
         viewModelScope.launch(kotlinx.coroutines.Dispatchers.IO) {
             YouTube.signOut()
-            _state.update { it.copy(pages = emptyMap(), resume = null, settingsOpen = false, section = Section.HOME) }
+            _state.update { it.copy(pages = emptyMap(), resume = null, liveNow = null, settingsOpen = false, section = Section.HOME) }
             refreshAccount()
             launch(kotlinx.coroutines.Dispatchers.Main) { show(Section.HOME) }
         }
@@ -1411,6 +1595,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                     accounts = accounts,
                 )
             }
+            loadCuration()
         }
     }
 
@@ -1432,6 +1617,10 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         /** Profile switch: the cover lifts at the latest after this, even if Accueil is still loading. */
         const val SWITCH_MAX_MS = 1_500L
         const val SUGGEST_DELAY_MS = 300L
+        /** « À la suite »: videos at most. */
+        const val QUEUE_MAX = 50
+        /** Abonnements' channel pictures at most. */
+        const val PASTILLES_MAX = 30
         const val NOTICE_MS = 3_000L
         /** This app's file on the update channel (miryo-releases › channel › miryotube.json). */
         const val UPDATE_APP = "miryotube"

@@ -116,9 +116,19 @@ fun BrowsePage(
     onEndReached: () -> Unit = {},
     /** "Pour Enfant" on a channel page (null: no kids profile, no button). */
     onKid: (() -> Unit)? = null,
+    /** « Ranger dans un dossier » on a channel page (null: no button). */
+    onFolder: (() -> Unit)? = null,
+    /**
+     * Above the rows, scrolling with them (Abonnements' pastilles and filters); kept when the
+     * filters leave no row. Its argument goes on its first control (the focus when no card is left).
+     */
+    header: (@Composable (FocusRequester) -> Unit)? = null,
 ) {
     val first = remember { FocusRequester() }
     val action = remember { FocusRequester() }
+    val headerFocus = remember { FocusRequester() }
+    /** The rows' index in the list: after the header when there's one. */
+    val offset = if (header != null) 1 else 0
     /** The last focusTick served: each one moves the focus once, not again when data arrives later. */
     var servedTick by remember { mutableIntStateOf(0) }
     /** The focus is in the channel's header (S'abonner, a sort): rows arriving don't take it away. */
@@ -147,10 +157,10 @@ fun BrowsePage(
             return@LaunchedEffect
         }
         if (targetPos != null && page.rows.isNotEmpty()) {
-            listState.scrollToItem(targetRow)
+            listState.scrollToItem(targetRow + offset)
         }
         withFrameNanos { }
-        if (first.tryRequestFocus() || action.tryRequestFocus()) servedTick = focusTick
+        if (first.tryRequestFocus() || action.tryRequestFocus() || (header != null && headerFocus.tryRequestFocus())) servedTick = focusTick
     }
     // "Réessayer" goes away with the error, focus and all: the page's first card takes it once loaded.
     val retry = {
@@ -173,7 +183,7 @@ fun BrowsePage(
     val firstKey = page.rows.firstOrNull()?.key
     LaunchedEffect(firstKey) {
         withFrameNanos { }
-        if (firstKey != null && listState.firstVisibleItemIndex == 1 && listState.firstVisibleItemScrollOffset == 0) {
+        if (firstKey != null && listState.firstVisibleItemIndex == 1 + offset && listState.firstVisibleItemScrollOffset == 0) {
             listState.requestScrollToItem(0)
         }
     }
@@ -181,7 +191,7 @@ fun BrowsePage(
     Column(Modifier.fillMaxSize()) {
         Spacer(Modifier.height(top))
         when {
-            channel != null -> ChannelSheet(channel, signedIn, onSubscribe, onSort, onSignIn, onKid, Modifier.onFocusChanged { sheetFocused = it.hasFocus })
+            channel != null -> ChannelSheet(channel, signedIn, onSubscribe, onSort, onSignIn, onKid, onFolder, Modifier.onFocusChanged { sheetFocused = it.hasFocus })
             title != null -> Text(
                 title,
                 fontSize = 34.sp,
@@ -205,6 +215,11 @@ fun BrowsePage(
                     onClick = onSignIn,
                 )
                 page.rows.isEmpty() && page.loading -> Message("Chargement…")
+                // The filters left nothing: they stay on screen, to change them.
+                page.rows.isEmpty() && header != null -> Column(Modifier.onFocusChanged { sheetFocused = it.hasFocus }) {
+                    header(headerFocus)
+                    Message(page.error ?: "Rien à afficher.")
+                }
                 page.rows.isEmpty() -> Message(
                     page.error ?: "Rien à afficher.",
                     button = if (showRetry) "Réessayer" else null,
@@ -217,6 +232,9 @@ fun BrowsePage(
                         modifier = Modifier.fillMaxSize(),
                         contentPadding = PaddingValues(bottom = SafeArea.bottom + 16.dp),
                     ) {
+                        if (header != null) item(key = "header", contentType = 1) {
+                            Box(Modifier.onFocusChanged { sheetFocused = it.hasFocus }) { header(headerFocus) }
+                        }
                         itemsIndexed(page.rows, key = { _, row -> row.key }, contentType = { _, _ -> 0 }) { index, row ->
                             VideoRowView(
                                 row,
@@ -455,7 +473,7 @@ private fun Modifier.menuKey(action: (() -> Unit)?): Modifier = if (action == nu
  * large, then "S’abonner" / "Abonné" and its orders (Accueil, Plus récentes, Populaires…).
  */
 @Composable
-private fun ChannelSheet(channel: ChannelHeader, signedIn: Boolean, onSubscribe: () -> Unit, onSort: (Int) -> Unit, onSignIn: () -> Unit, onKid: (() -> Unit)?, modifier: Modifier = Modifier) {
+private fun ChannelSheet(channel: ChannelHeader, signedIn: Boolean, onSubscribe: () -> Unit, onSort: (Int) -> Unit, onSignIn: () -> Unit, onKid: (() -> Unit)?, onFolder: (() -> Unit)?, modifier: Modifier = Modifier) {
     Column(
         // 54 dp under the sorts before the first row (the redesign's room between header and rows).
         modifier.fillMaxWidth().padding(top = 36.dp, bottom = 54.dp),
@@ -501,6 +519,10 @@ private fun ChannelSheet(channel: ChannelHeader, signedIn: Boolean, onSubscribe:
                     icon = if (channel.kidAllowed) MiryoIcon.CHECK else MiryoIcon.PLUS,
                     onClick = onKid,
                 )
+            }
+            // Subscribed: into a folder of Abonnements (kept on the box).
+            if (onFolder != null && signedIn && channel.subscribed == true) {
+                MiryoButton("Ranger dans un dossier", icon = MiryoIcon.PLAYLIST, onClick = onFolder)
             }
             if (channel.sorts.isNotEmpty()) {
                 Spacer(Modifier.width(12.dp))

@@ -14,6 +14,7 @@ import io.reactivex.Observable
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -55,6 +56,8 @@ data class Video(
     val customThumbnail: String? = null,
     /** When it was published, as YouTube says it (« il y a 3 jours »); null when unknown. */
     val published: String? = null,
+    /** Its channel (null: unknown, or a playlist). */
+    val channelId: String? = null,
 ) {
     val isChannel get() = kind == MediaItem.TYPE_CHANNEL
     val isVideo get() = kind == MediaItem.TYPE_VIDEO || kind == MediaItem.TYPE_MUSIC || kind == MediaItem.TYPE_UNDEFINED && videoId != null
@@ -73,7 +76,8 @@ data class Segment(val startMs: Long, val endMs: Long, val category: String) {
         }
 }
 
-data class Chapter(val title: String, val startMs: Long)
+/** A chapter: its title, start and YouTube's picture of it (null: none). */
+data class Chapter(val title: String, val startMs: Long, val image: String? = null)
 
 /** What the player shows next to a video: description, actions' state, chapters, next video. */
 @androidx.compose.runtime.Immutable
@@ -92,7 +96,13 @@ data class Details(
     val chapters: List<Chapter>,
     /** Next video: the playlist's next item, else YouTube's "À suivre". */
     val next: Video?,
+    /** A live's chat (LiveChatService), null when it has none. */
+    val liveChatKey: String? = null,
 )
+
+/** A message of a live's chat (read only: nothing is ever written from the box). */
+@androidx.compose.runtime.Immutable
+data class ChatMessage(val id: String, val author: String, val text: String)
 
 /** A YouTube account linked on this box. */
 data class Account(val name: String, val avatar: String?, val selected: Boolean, val raw: com.liskovsoft.mediaserviceinterfaces.oauth.Account)
@@ -568,6 +578,31 @@ object YouTube {
         if (started.isEmpty()) null else VideoRow("resume", "Reprendre", started, history, canLoadMore = false)
     }
 
+    /**
+     * « En direct maintenant »: the subscriptions live right now, with their viewers when YouTube
+     * says it (« 1,2 k spectateurs »); null when none (or signed out). One request (the
+     * subscriptions' first page, also given to miryo's feed).
+     */
+    suspend fun liveNowRow(): VideoRow? = withContext(Dispatchers.IO) {
+        if (!signedIn) return@withContext null
+        val subs = runCatching { subscriptionsForFeed() }.getOrNull() ?: return@withContext null
+        val live = subs.mediaItems.orEmpty().filterNotNull()
+            .filter { it.isLive && !it.isShorts && it.videoId != null }
+            .map { item -> item.toVideo().copy(published = item.viewersText()) }
+            .distinctBy { it.key }
+            .take(20)
+        if (live.isEmpty()) null else VideoRow(LIVE_NOW, "En direct maintenant", live, subs, canLoadMore = false)
+    }
+
+    const val LIVE_NOW = "live-now"
+
+    /** « 1,2 k spectateurs » / « 3 k watching »: the part of the second line that says it. */
+    private fun MediaItem.viewersText(): String? =
+        secondTitle?.toString().orEmpty().split('•', '·').map { it.trim() }
+            .firstOrNull { part -> VIEWERS.any { part.contains(it, ignoreCase = true) } }
+
+    private val VIEWERS = listOf("spectateur", "regardent", "watching", "viewers")
+
     /** Next page of a row (null when there's no more). */
     suspend fun more(row: VideoRow): VideoRow? = withContext(Dispatchers.IO) {
         val next = runCatching { service.contentService.continueGroup(row.raw) }.getOrNull()
@@ -691,10 +726,11 @@ object YouTube {
             liked = meta.likeStatus == MediaItemMetadata.LIKE_STATUS_LIKE,
             disliked = meta.likeStatus == MediaItemMetadata.LIKE_STATUS_DISLIKE,
             commentsKey = meta.commentsKey?.takeIf { it.isNotBlank() },
+            liveChatKey = meta.liveChatKey?.takeIf { it.isNotBlank() },
             subscribed = meta.isSubscribed,
             channelId = meta.channelId,
             channel = meta.author,
-            chapters = meta.chapters.orEmpty().filterNotNull().map { Chapter(it.title.orEmpty(), it.startTimeMs) }.sortedBy { it.startMs },
+            chapters = meta.chapters.orEmpty().filterNotNull().map { Chapter(it.title.orEmpty(), it.startTimeMs, it.cardImageUrl?.takeIf { url -> url.startsWith("http") }) }.sortedBy { it.startMs },
             next = meta.nextVideo?.takeIf { it.videoId != null && it.videoId != videoId }?.toVideo(),
         )
     }
@@ -768,6 +804,21 @@ object YouTube {
             },
             next = group.nextCommentsKey?.takeIf { it.isNotBlank() },
         )
+    }
+
+    /** A live's chat as it comes (read only); ends with the flow's collector. */
+    fun liveChat(key: String): Flow<ChatMessage> = kotlinx.coroutines.flow.callbackFlow {
+        val subscription = service.liveChatService.openLiveChatObserve(key)
+            .subscribeOn(Schedulers.io())
+            .subscribe(
+                { item ->
+                    val text = item?.message?.trim().orEmpty()
+                    if (text.isNotEmpty()) trySend(ChatMessage(item.id ?: "${item.authorName}:${text.hashCode()}", item.authorName.orEmpty(), text))
+                },
+                { close() },
+                { close() },
+            )
+        awaitClose { subscription.dispose() }
     }
 
     /** Adds the video to "À regarder plus tard" (YouTube's WL playlist), as [account] only. */
@@ -967,6 +1018,19 @@ object YouTube {
         }
     }
 
+    /** When a video was published (ms, from [ageHours]: to the hour), null when unknown. */
+    fun publishedAt(video: Video): Long? = ageHours(video)?.let { System.currentTimeMillis() - it * 3_600_000L }
+
+    /**
+     * The account's subscriptions as channel cards (avatar, name), the ones with new videos first
+     * (YouTube's order); empty when signed out or on failure. Blocking-free for the caller (IO).
+     */
+    suspend fun subscribedChannelCards(): List<Video> = withContext(Dispatchers.IO) {
+        if (!signedIn) return@withContext emptyList()
+        runCatching { service.contentService.subscribedChannelsByNewContent?.mediaItems.orEmpty() }.getOrDefault(emptyList())
+            .filterNotNull().filter { !it.channelId.isNullOrBlank() }.map { it.toVideo() }.distinctBy { it.channelId }
+    }
+
     /** Hours since publication: the engine's date when it has one, else read from the card's text. */
     private fun ageHours(video: Video): Long? {
         // Milliseconds (seconds on some engine versions: read as such when too small to be ms).
@@ -1044,6 +1108,7 @@ object YouTube {
         kind = type,
         raw = this,
         published = if (type == MediaItem.TYPE_CHANNEL || type == MediaItem.TYPE_PLAYLIST || isLive || isUpcoming) null else publishedText(),
+        channelId = channelId?.takeIf { it.isNotBlank() },
     )
 
     /**

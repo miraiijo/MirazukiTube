@@ -48,7 +48,7 @@ fun Root(vm: MainViewModel) {
     val state by vm.state.collectAsState()
     // The page's rows, rebuilt only when what they show changes (state.page builds a new one each
     // time it's read): a notice, the player or a dialog doesn't recompose every card.
-    val page = remember(state.section, state.pages, state.opened, state.search, state.resume, state.deArrow) { state.page }
+    val page = remember(state.section, state.pages, state.opened, state.search, state.resume, state.liveNow, state.deArrow, state.subsFilter, state.hiddenChannels, state.folders, state.kids) { state.page }
     val content = remember { FocusRequester() }
     val header = remember { FocusRequester() }
     // Restarted by its own update: Réglages › Mises à jour open again.
@@ -316,6 +316,20 @@ fun Root(vm: MainViewModel) {
                         // Accueil: a taste of each feed once its end is reached (the view model
                         // ignores it on any other page).
                         onEndReached = { vm.loadHomeExtras() },
+                        onFolder = shown.opened?.channel?.let { c -> { vm.openFolderMenu(dev.miraiijo.miryotube.data.ChannelRef(c.id, c.name)) } },
+                        // Abonnements: its channels' pastilles and filters above the rows.
+                        header = if (shown.section == dev.miraiijo.miryotube.data.Section.SUBSCRIPTIONS && shown.opened == null && state.signedIn && !state.kids) {
+                            { first ->
+                                SubscriptionsHeader(
+                                    pastilles = state.pastilles,
+                                    filter = state.subsFilter,
+                                    folders = state.folders,
+                                    onPastille = vm::choosePastille,
+                                    onFilter = vm::setSubsFilter,
+                                    first = first,
+                                )
+                            }
+                        } else null,
                     )
                 }
             }
@@ -357,6 +371,10 @@ fun Root(vm: MainViewModel) {
                 onDeleteKids = vm::deleteKids,
                 startOnUpdates = state.settingsOnUpdates,
                 onStarted = vm::settingsOnUpdatesShown,
+                hiddenChannels = state.hiddenChannels,
+                onUnhideChannel = vm::unhideChannel,
+                folders = state.folders,
+                onDeleteFolder = vm::deleteFolder,
             )
         } else if (state.cardMenu != null) {
             val video = state.cardMenu!!
@@ -380,7 +398,23 @@ fun Root(vm: MainViewModel) {
                     neighbourTick++
                     vm.cardNotInterested(video, channel)
                 },
+                queued = state.queue.size,
+                onQueue = { vm.cardQueue(video) },
+                onClearQueue = vm::clearQueue,
+                onHideChannel = {
+                    neighbourTick++
+                    vm.cardHideChannel(video)
+                },
+                onFolder = video.channelId?.let { id -> { vm.openFolderMenu(dev.miraiijo.miryotube.data.ChannelRef(id, video.channel.ifBlank { video.title })) } },
                 onDismiss = vm::closeCardMenu,
+            )
+        } else if (state.folderFor != null) {
+            val channel = state.folderFor!!
+            FolderDialog(
+                channel = channel,
+                folders = state.folders,
+                onFile = { name -> vm.fileChannel(channel, name) },
+                onDismiss = vm::closeFolderMenu,
             )
         }
         // The parental code opens over "Qui regarde ?" and Réglages (composed after them: on top).
@@ -433,7 +467,9 @@ fun Root(vm: MainViewModel) {
                 item = playing?.raw,
                 signedIn = state.signedIn,
                 onNext = vm::playNext,
+                queued = state.queue.firstOrNull(),
                 onExit = {
+                    AudioOnly.on = false
                     vm.stopPlaying()
                     returnFocusTick++
                     // The video ended in the system's window with nothing after it: the window goes
@@ -442,6 +478,7 @@ fun Root(vm: MainViewModel) {
                 },
                 // Retour closes the player and stays in miryo tube (the bar's button gives the small window).
                 onBack = {
+                    AudioOnly.on = false
                     vm.stopPlaying()
                     returnFocusTick++
                 },
@@ -459,6 +496,7 @@ fun Root(vm: MainViewModel) {
                 onPosition = { seconds -> vm.notePosition(playingId, seconds) },
                 frameRate = frameRate,
                 kids = state.kids,
+                screenTimeProfile = if (state.kids && state.kidsLocked) dev.miraiijo.miryotube.kids.MiryoProfile.currentKidsId else null,
                 modifier = if (miniLayout && !PictureInPicture.active) {
                     // A third of the screen's width, whatever the interface size (a fixed 400 dp
                     // took half the screen at 120 %), inside the TV's safe zone.
