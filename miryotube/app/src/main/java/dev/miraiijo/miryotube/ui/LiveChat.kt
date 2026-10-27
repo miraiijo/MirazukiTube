@@ -5,6 +5,7 @@ package dev.miraiijo.miryotube.ui
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.calculateEndPadding
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
@@ -22,6 +23,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.tv.material3.ExperimentalTvMaterial3Api
@@ -55,7 +57,7 @@ fun LiveChatPanel(chatKey: String, size: Int, modifier: Modifier = Modifier) {
             .width(CHAT_WIDTH)
             .fillMaxHeight()
             .background(Brush.horizontalGradient(0f to Color.Transparent, 0.12f to Color.Black.copy(alpha = 0.55f), 1f to Color.Black.copy(alpha = 0.7f)))
-            .padding(start = 28.dp, end = safe.calculateEndPadding(androidx.compose.ui.unit.LayoutDirection.Ltr), top = safe.calculateTopPadding(), bottom = safe.calculateBottomPadding()),
+            .padding(start = 28.dp, end = safe.calculateEndPadding(LayoutDirection.Ltr), top = safe.calculateTopPadding(), bottom = safe.calculateBottomPadding()),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Text("Chat du direct", fontSize = Dimens.TextMin, fontWeight = FontWeight.SemiBold, color = Color.White.copy(alpha = 0.6f))
