@@ -496,6 +496,7 @@ fun Root(vm: MainViewModel) {
                 onPosition = { seconds -> vm.notePosition(playingId, seconds) },
                 frameRate = frameRate,
                 kids = state.kids,
+                screenTimeProfile = if (state.kids && state.kidsLocked) dev.miraiijo.miryotube.kids.MiryoProfile.currentKidsId else null,
                 modifier = if (miniLayout && !PictureInPicture.active) {
                     // A third of the screen's width, whatever the interface size (a fixed 400 dp
                     // took half the screen at 120 %), inside the TV's safe zone.

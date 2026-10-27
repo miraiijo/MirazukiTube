@@ -104,7 +104,7 @@ data class Settings(
     val remote: Boolean = false,
     /** 0 = Auto, 1 = Jour, 2 = Nuit, 3 = Comme miryo (ui.Appearance). */
     val appearance: Int = dev.miraiijo.miryotube.ui.APPEARANCE_DEFAULT,
-    /** "Taille de l'interface", in % (ui.UI_SCALE_MIN..UI_SCALE_MAX). */
+    /** "Taille de l'interface", in % (ui.UI_SCALE_MIN..UI_SCALE_MAX), or ui.UI_SCALE_MIRYO (Comme miryo). */
     val uiScale: Int = UI_SCALE_DEFAULT,
     /** "Recevoir même miryo tube fermé": the phone link listens in the background (remote.CastService). */
     val backgroundCast: Boolean = false,
@@ -116,7 +116,18 @@ data class Settings(
     val animations: String = dev.miraiijo.miryotube.system.LowEnd.MIRYO,
     /** Réglages › Lecture › Sous-titres en français: Toujours (true) or Sur demande. */
     val autoFrench: Boolean = false,
+    /** Réglages › Lecture › the subtitles' size, color and background (MiryoLook's values); null = Comme miryo. */
+    val subSize: String? = null,
+    val subColor: String? = null,
+    val subBg: String? = null,
 ) {
+    /** The subtitles' look as drawn: this box's choice, else miryo's, else Normale, blanc, bandeau. */
+    val subtitleLook: Triple<String, String, String>
+        get() {
+            val look = dev.miraiijo.miryotube.link.MiryoLook.current
+            return Triple(subSize ?: look?.subSize ?: "m", subColor ?: look?.subColor ?: "white", subBg ?: look?.subBg ?: "band")
+        }
+
     /** The clicks of the remote's arrows and OK are heard. */
     val navSoundsOn: Boolean
         get() = when (navSounds) {
@@ -1446,6 +1457,9 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         prefs.background = settings.background
         prefs.navSounds = settings.navSounds
         prefs.autoFrench = settings.autoFrench
+        prefs.subSize = settings.subSize
+        prefs.subColor = settings.subColor
+        prefs.subBg = settings.subBg
         prefs.animations = settings.animations
         dev.miraiijo.miryotube.system.LowEnd.choice = settings.animations
         if (settings.remote != _state.value.settings.remote) {

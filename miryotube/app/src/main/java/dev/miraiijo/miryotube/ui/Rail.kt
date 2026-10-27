@@ -363,6 +363,9 @@ private enum class SettingsPage(val label: String) { SEARCH("Rechercher"), ACCOU
 /** Réglages opens on its first page (Rechercher is right above it). */
 private val OPENING = SettingsPage.ACCOUNT
 
+/** Réglages › Lecture › Taille des sous-titres, in miryo's words (link.MiryoLook.SUB_SIZES). */
+private val SUBTITLE_SIZE_NAMES = listOf("s" to "Petite", "m" to "Normale", "l" to "Grande", "xl" to "Très grande")
+
 /**
  * Réglages (the redesign: full screen, like miryo's): the categories on the left (the one focused
  * shows its settings), and on the right one card per setting with its choices as pills (the
@@ -483,6 +486,26 @@ fun SettingsDialog(
                                 Choice("Toujours", settings.autoFrench) { onSettings(settings.copy(autoFrench = true)) }
                                 Choice("Sur demande", !settings.autoFrench) { onSettings(settings.copy(autoFrench = false)) }
                             }
+                            // The subtitles' look: Comme miryo (the default) follows what is set in miryo for the 3 apps.
+                            val suite = dev.miraiijo.miryotube.link.MiryoLook.current?.subSize != null
+                            val (subSize, subColor, subBg) = settings.subtitleLook
+                            SettingCard("Taille des sous-titres", if (suite) "Comme miryo : la même taille dans les 3 applis, réglée dans miryo." else "Appliquée à la prochaine vidéo.") {
+                                if (suite || settings.subSize != null) Choice("Comme miryo", settings.subSize == null) { onSettings(settings.copy(subSize = null)) }
+                                SUBTITLE_SIZE_NAMES.forEach { (value, name) ->
+                                    Choice(name, (settings.subSize != null || !suite) && subSize == value) { onSettings(settings.copy(subSize = value)) }
+                                }
+                            }
+                            SettingCard("Couleur et fond des sous-titres", "Le bandeau sombre se lit le mieux sur les images claires.") {
+                                if (suite || settings.subColor != null || settings.subBg != null) {
+                                    Choice("Comme miryo", settings.subColor == null && settings.subBg == null) { onSettings(settings.copy(subColor = null, subBg = null)) }
+                                }
+                                val own = (settings.subColor != null || settings.subBg != null) || !suite
+                                Choice("Blanc", own && subColor == "white") { onSettings(settings.copy(subColor = "white", subBg = subBg)) }
+                                Choice("Jaune", own && subColor == "yellow") { onSettings(settings.copy(subColor = "yellow", subBg = subBg)) }
+                                Choice("Bandeau", own && subBg == "band") { onSettings(settings.copy(subColor = subColor, subBg = "band")) }
+                                Choice("Ombre", own && subBg == "shadow") { onSettings(settings.copy(subColor = subColor, subBg = "shadow")) }
+                                Choice("Sans fond", own && subBg == "none") { onSettings(settings.copy(subColor = subColor, subBg = "none")) }
+                            }
                             // No « Petite fenêtre » setting: the player's button does it, Accueil
                             // always opens the system's window (as in miryo iptv).
                         }
@@ -498,11 +521,18 @@ fun SettingsDialog(
                                 Choice("Auto", settings.appearance == 0) { onSettings(settings.copy(appearance = 0)) }
                             }
                             // The size in the title: the pills never move under the focus as it changes.
-                            val size = settings.uiScale
-                            SettingCard("Taille de l’interface · $size %", "De $UI_SCALE_MIN à $UI_SCALE_MAX % par pas de $UI_SCALE_STEP %, appliqué tout de suite. Par défaut : $UI_SCALE_DEFAULT %.") {
-                                MiryoButton("Plus petit", contentColor = Palette.ChipText) { onSettings(settings.copy(uiScale = (size - UI_SCALE_STEP).coerceAtLeast(UI_SCALE_MIN))) }
-                                MiryoButton("Plus grand", contentColor = Palette.ChipText) { onSettings(settings.copy(uiScale = (size + UI_SCALE_STEP).coerceAtMost(UI_SCALE_MAX))) }
-                                Choice("Par défaut", size == UI_SCALE_DEFAULT) { onSettings(settings.copy(uiScale = UI_SCALE_DEFAULT)) }
+                            val size = effectiveUiScale(settings.uiScale)
+                            val likeMiryo = settings.uiScale == UI_SCALE_MIRYO
+                            val miryoText = dev.miraiijo.miryotube.link.MiryoLook.current?.textScale != null
+                            SettingCard(
+                                "Taille de l’interface · $size %",
+                                (if (miryoText) "Comme miryo suit sa Taille du texte. " else "") +
+                                    "De $UI_SCALE_MIN à $UI_SCALE_MAX % par pas de $UI_SCALE_STEP %, appliqué tout de suite. Par défaut : $UI_SCALE_DEFAULT %.",
+                            ) {
+                                MiryoButton("Plus petit", contentColor = Palette.ChipText) { onSettings(settings.copy(uiScale = (size - UI_SCALE_STEP).coerceIn(UI_SCALE_MIN, UI_SCALE_MAX))) }
+                                MiryoButton("Plus grand", contentColor = Palette.ChipText) { onSettings(settings.copy(uiScale = (size + UI_SCALE_STEP).coerceIn(UI_SCALE_MIN, UI_SCALE_MAX))) }
+                                if (miryoText || likeMiryo) Choice("Comme miryo", likeMiryo) { onSettings(settings.copy(uiScale = UI_SCALE_MIRYO)) }
+                                Choice("Par défaut", !likeMiryo && size == UI_SCALE_DEFAULT) { onSettings(settings.copy(uiScale = UI_SCALE_DEFAULT)) }
                             }
                             SettingCard("DeArrow", "Titres et miniatures de la communauté, sans racolage, quand il y en a.") {
                                 Choice("Activé", settings.deArrow) { onSettings(settings.copy(deArrow = true)) }

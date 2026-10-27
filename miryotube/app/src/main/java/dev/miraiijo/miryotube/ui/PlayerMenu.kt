@@ -137,6 +137,23 @@ internal fun frenchSubtitle(tracks: List<String>): Int {
     return if (own >= 0) own else tracks.indexOfFirst { isFrenchSubtitle(it) && isTranslatedSubtitle(it) }
 }
 
+/**
+ * The track in miryo's subtitle language ([iso], « fr », « en »…): the video's own subtitles in it,
+ * else its automatic captions in it, else YouTube's translation into it; -1 when none.
+ */
+internal fun languageSubtitle(tracks: List<String>, iso: String): Int {
+    val locale = java.util.Locale(iso)
+    val names = listOf(locale.getDisplayLanguage(java.util.Locale.FRENCH), locale.getDisplayLanguage(java.util.Locale.ENGLISH))
+        .map { it.lowercase() }.filter { it.isNotEmpty() && it != iso.lowercase() }
+    if (names.isEmpty()) return -1
+    fun inLanguage(name: String) = name.trimEnd('*').trim().lowercase().let { n -> names.any { n.startsWith(it) } }
+    val own = tracks.indexOfFirst { inLanguage(it) && !it.endsWith("*") }
+    if (own >= 0) return own
+    val automatic = tracks.indexOfFirst { inLanguage(it) && it.endsWith("*") && !isTranslatedSubtitle(it) }
+    if (automatic >= 0) return automatic
+    return tracks.indexOfFirst { inLanguage(it) && isTranslatedSubtitle(it) }
+}
+
 /** « Minuterie »'s choices: minutes, and [SleepTimer.AT_END] (at the end of the video). */
 private val TIMER_CHOICES = listOf(0 to "Désactivée", 15 to "15 minutes", 30 to "30 minutes", 60 to "1 heure", 120 to "2 heures", dev.miraiijo.miryotube.player.SleepTimer.AT_END to "À la fin de la vidéo")
 

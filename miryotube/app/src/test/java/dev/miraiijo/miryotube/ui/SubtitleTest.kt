@@ -22,4 +22,14 @@ class SubtitleTest {
         assertEquals(-1, frenchSubtitle(listOf("Français (générés automatiquement)*", "Anglais*")))
         assertEquals(-1, frenchSubtitle(listOf("Anglais")))
     }
+
+    @Test fun miryoLanguage() {
+        val tracks = listOf("Allemand", "Anglais (générés automatiquement)*", "Français*", "English")
+        assertEquals(3, languageSubtitle(tracks, "en"))
+        assertEquals(1, languageSubtitle(tracks.dropLast(1), "en"))
+        assertEquals(2, languageSubtitle(tracks, "fr"))
+        assertEquals(0, languageSubtitle(tracks, "de"))
+        assertEquals(-1, languageSubtitle(tracks, "es"))
+        assertEquals(-1, languageSubtitle(tracks, "zz"))
+    }
 }

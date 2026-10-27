@@ -200,6 +200,17 @@ const val UI_SCALE_DEFAULT = 100
 const val UI_SCALE_MIN = 60
 const val UI_SCALE_MAX = 120
 const val UI_SCALE_STEP = 5
+/** « Comme miryo »: miryo's « Taille du texte » (text_scale 1.0 / 1.15 / 1.3 → 100 / 115 / 130 %). */
+const val UI_SCALE_MIRYO = 0
+private const val UI_SCALE_MIRYO_MAX = 130
+
+/** The size drawn, in %: [uiScale] itself, or miryo's when it is « Comme miryo » (100 % without miryo). */
+fun effectiveUiScale(uiScale: Int, look: dev.miraiijo.miryotube.link.MiryoLook.Look? = dev.miraiijo.miryotube.link.MiryoLook.current): Int =
+    if (uiScale == UI_SCALE_MIRYO) {
+        look?.textScale?.let { kotlin.math.round(it * 100).toInt().coerceIn(UI_SCALE_MIN, UI_SCALE_MIRYO_MAX) } ?: UI_SCALE_DEFAULT
+    } else {
+        uiScale.coerceIn(UI_SCALE_MIN, UI_SCALE_MAX)
+    }
 private const val DAY_END_MIN = 20 * 60
 
 @Composable
@@ -238,7 +249,7 @@ fun MiryoTubeTheme(appearance: Appearance = Appearance.NIGHT, uiScale: Int = UI_
         // "Taille de l'interface": everything drawn at uiScale % — dp and sp alike, dialogs included
         // (100 % by default). The safe zone ([Safe]) is not scaled: it's given back in scaled dp.
         val density = androidx.compose.ui.platform.LocalDensity.current
-        val scale = uiScale.coerceIn(UI_SCALE_MIN, UI_SCALE_MAX) / 100f
+        val scale = effectiveUiScale(uiScale, miryoLook) / 100f
         val scaled = androidx.compose.runtime.remember(density, scale) {
             androidx.compose.ui.unit.Density(density.density * scale, density.fontScale)
         }

@@ -23,6 +23,8 @@ object SettingsIndex {
         e("Passer les sponsors (SponsorBlock)", "PLAYBACK", "sponsor", "pub", "publicité", "autopromo", "sauter"),
         e("Volume stable", "PLAYBACK", "volume", "son", "fort", "niveau sonore"),
         e("Sous-titres en français", "PLAYBACK", "sous-titres", "traduire", "traduction", "anglais", "japonais", "langue"),
+        e("Taille des sous-titres", "PLAYBACK", "sous-titres", "taille", "gros", "grand", "lire", "texte", "miryo"),
+        e("Couleur et fond des sous-titres", "PLAYBACK", "sous-titres", "jaune", "blanc", "bandeau", "ombre", "fond", "lisible"),
         e("Apparence (Jour, Nuit, Auto, Comme miryo)", "DISPLAY", "thème", "clair", "sombre", "mode sombre", "nuit", "jour", "miryo"),
         e("Animations : Auto, Économes ou Complètes", "DISPLAY", "animation", "fluide", "performance", "lent", "saccade", "effets", "économe", "rapide"),
         e("Sons de navigation", "SOUNDS", "son", "sons", "clic", "bip", "bruit", "touches", "télécommande", "muet", "couper"),

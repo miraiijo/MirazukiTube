@@ -12,11 +12,17 @@ import dev.miraiijo.miryotube.link.MiryoLink
 object MiryoProfile {
     private val URI: Uri = Uri.parse("content://${MiryoLink.PROFILES_AUTHORITY}/profiles")
 
+    /** miryo's current profile when it is a kids one (its id, for Temps d'écran enfant), as last read. */
+    @Volatile var currentKidsId: String? = null
+        private set
+
     /** True: miryo's current profile is a kids one; false: an adult one; null: no trusted miryo. Blocking. */
     fun currentIsKids(context: Context): Boolean? {
+        currentKidsId = null
         if (!MiryoLink.partner(context, MiryoLink.MIRYO, MiryoLink.PROFILES_AUTHORITY)) return null
         return runCatching {
-            context.contentResolver.query(URI, arrayOf("kids", "current"), null, null, null)?.use { cursor ->
+            context.contentResolver.query(URI, arrayOf("profile_id", "kids", "current"), null, null, null)?.use { cursor ->
+                val id = cursor.getColumnIndex("profile_id")
                 val kids = cursor.getColumnIndex("kids")
                 val current = cursor.getColumnIndex("current")
                 if (kids < 0 || current < 0) return@use null
@@ -24,6 +30,7 @@ object MiryoProfile {
                 while (cursor.moveToNext()) {
                     if (cursor.getString(current) == "1") {
                         found = cursor.getString(kids) == "1"
+                        if (found && id >= 0) currentKidsId = cursor.getString(id)
                         break
                     }
                 }

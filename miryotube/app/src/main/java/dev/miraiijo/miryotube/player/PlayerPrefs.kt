@@ -2,7 +2,7 @@ package dev.miraiijo.miryotube.player
 
 import android.content.Context
 import dev.miraiijo.miryotube.Settings
-import dev.miraiijo.miryotube.ui.UI_SCALE_DEFAULT
+import dev.miraiijo.miryotube.ui.UI_SCALE_MIRYO
 
 /** miryo tube's own preferences (not SmartTube's): player choices and the app's switches. */
 class PlayerPrefs(context: Context) {
@@ -16,7 +16,7 @@ class PlayerPrefs(context: Context) {
     /** Name of the last subtitle track chosen ("Français"), null = off. Used when the video has it. */
     var subtitles: String?
         get() = prefs.getString(KEY_SUBTITLES, null)
-        set(value) = prefs.edit().putString(KEY_SUBTITLES, value).apply()
+        set(value) = prefs.edit().putString(KEY_SUBTITLES, value).putBoolean(KEY_SUBTITLES_CHOSEN, true).apply()
 
     var sponsorBlock: Boolean
         get() = prefs.getBoolean(KEY_SPONSORBLOCK, true)
@@ -62,10 +62,13 @@ class PlayerPrefs(context: Context) {
         get() = prefs.getInt(KEY_APPEARANCE, dev.miraiijo.miryotube.ui.APPEARANCE_DEFAULT)
         set(value) = prefs.edit().putInt(KEY_APPEARANCE, value).apply()
 
-    /** "Taille de l'interface", in %; 0.12.1's "Grande" (large_ui) is read as 100 %. */
+    /**
+     * "Taille de l'interface", in %, or UI_SCALE_MIRYO (« Comme miryo », the default: 100 % without
+     * miryo); 0.12.1's "Grande" (large_ui) is read as 100 %.
+     */
     var uiScale: Int
-        get() = if (prefs.contains(KEY_UI_SCALE)) prefs.getInt(KEY_UI_SCALE, UI_SCALE_DEFAULT)
-            else if (prefs.getBoolean(KEY_LARGE_UI, false)) 100 else UI_SCALE_DEFAULT
+        get() = if (prefs.contains(KEY_UI_SCALE)) prefs.getInt(KEY_UI_SCALE, UI_SCALE_MIRYO)
+            else if (prefs.getBoolean(KEY_LARGE_UI, false)) 100 else UI_SCALE_MIRYO
         set(value) = prefs.edit().putInt(KEY_UI_SCALE, value).remove(KEY_LARGE_UI).apply()
 
     /** "Recevoir même miryo tube fermé" (off by default: ~50–80 MB kept in memory). */
@@ -96,6 +99,26 @@ class PlayerPrefs(context: Context) {
         get() = prefs.getInt(KEY_CHAT_SIZE, 1)
         set(value) = prefs.edit().putInt(KEY_CHAT_SIZE, value).apply()
 
+    /**
+     * The subtitles' look, in miryo's words (MiryoLook.SUB_SIZES…): null = « Comme miryo », the
+     * default (Normale, blanc sur bandeau without miryo).
+     */
+    var subSize: String?
+        get() = prefs.getString(KEY_SUB_SIZE, null)
+        set(value) = prefs.edit().putString(KEY_SUB_SIZE, value).apply()
+
+    var subColor: String?
+        get() = prefs.getString(KEY_SUB_COLOR, null)
+        set(value) = prefs.edit().putString(KEY_SUB_COLOR, value).apply()
+
+    var subBg: String?
+        get() = prefs.getString(KEY_SUB_BG, null)
+        set(value) = prefs.edit().putString(KEY_SUB_BG, value).apply()
+
+    /** A subtitle choice was made here (on or off): miryo's language no longer picks them. */
+    val subtitlesChosen: Boolean
+        get() = prefs.getBoolean(KEY_SUBTITLES_CHOSEN, false)
+
     /** Réglages › Affichage › Animations (system.LowEnd): suits this box, not in backups. */
     var animations: String
         get() = prefs.getString(KEY_ANIMATIONS, null)?.takeIf { it in dev.miraiijo.miryotube.system.LowEnd.CHOICES } ?: dev.miraiijo.miryotube.system.LowEnd.MIRYO
@@ -107,6 +130,7 @@ class PlayerPrefs(context: Context) {
         background = background,
         navSounds = navSounds,
         autoFrench = autoFrench,
+        subSize = subSize, subColor = subColor, subBg = subBg,
         animations = animations.also { dev.miraiijo.miryotube.system.LowEnd.choice = it },
     )
 
@@ -131,5 +155,9 @@ class PlayerPrefs(context: Context) {
         const val KEY_AUTO_FRENCH = "auto_french"
         const val KEY_LIVE_CHAT = "live_chat"
         const val KEY_CHAT_SIZE = "chat_size"
+        const val KEY_SUB_SIZE = "sub_size"
+        const val KEY_SUB_COLOR = "sub_color"
+        const val KEY_SUB_BG = "sub_bg"
+        const val KEY_SUBTITLES_CHOSEN = "subtitles_chosen"
     }
 }
