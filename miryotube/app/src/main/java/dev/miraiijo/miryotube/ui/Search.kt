@@ -249,7 +249,7 @@ private fun SearchBar(
                             onTyping(it)
                         },
                         singleLine = true,
-                        textStyle = TextStyle(color = Palette.TextPrimary, fontSize = 22.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium, fontFamily = InterFamily),
+                        textStyle = TextStyle(color = Palette.TextPrimary, fontSize = 22.sp, fontWeight = androidx.compose.ui.text.font.FontWeight.Medium, fontFamily = MiryoFont),
                         cursorBrush = SolidColor(Palette.Highlight),
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
                         keyboardActions = KeyboardActions(onSearch = { finish(run = true) }, onDone = { finish(run = true) }),

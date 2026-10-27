@@ -466,7 +466,7 @@ private fun ChannelSheet(channel: ChannelHeader, signedIn: Boolean, onSubscribe:
             AvatarPicture(channel.avatar, channel.name, 66.dp, 28.sp)
             Column {
                 Text("CHAÎNE", fontSize = Dimens.TextMin, fontWeight = FontWeight.Bold, letterSpacing = 0.08.em, color = Palette.TextSecondary)
-                Text(channel.name, fontSize = 48.sp, lineHeight = 52.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, letterSpacing = (-0.035).em)
+                Text(channel.name, fontSize = 48.sp, lineHeight = 52.sp, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis, letterSpacing = DisplayTracking)
             }
         }
         // S'abonner and the sorts scroll when they don't fit (120 %, long names): full width, the
@@ -543,7 +543,7 @@ private fun ChannelCard(video: Video, modifier: Modifier, onFocus: () -> Unit, o
                     scaleX = s
                     scaleY = s
                 }
-                .then(if (isFocused) Modifier.border(2.5.dp, Palette.FocusRing, CircleShape) else Modifier),
+                .then(if (isFocused) Modifier.border(3.dp, Palette.FocusRing, CircleShape) else Modifier),
             contentAlignment = Alignment.Center,
         ) {
             Surface(
@@ -584,8 +584,8 @@ private val CHANNEL_LINE = 16.sp
 private fun lines(lineHeight: androidx.compose.ui.unit.TextUnit, count: Int): androidx.compose.ui.unit.Dp =
     with(androidx.compose.ui.platform.LocalDensity.current) { (lineHeight * count).toDp() }
 private val CHANNEL_AVATAR = 96.dp
-/** The avatar, a 4 dp gap and the 2.5 dp ring. */
-private val CHANNEL_RING = CHANNEL_AVATAR + 13.dp
+/** The avatar, a 6 dp gap and the 3 dp ring (as « Qui regarde ? »). */
+private val CHANNEL_RING = CHANNEL_AVATAR + 18.dp
 private const val CHANNEL_FOCUS_SCALE = 1.06f
 
 private val OPTIONS_KEYS = setOf(

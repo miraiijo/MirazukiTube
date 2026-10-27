@@ -228,7 +228,7 @@ private fun RoundButton(onClick: () -> Unit, filled: Boolean = true, content: @C
             border = if (filled) androidx.tv.material3.Border(glassRim(), shape = CircleShape) else androidx.tv.material3.Border.None,
             focusedBorder = if (filled) androidx.tv.material3.Border.None else androidx.tv.material3.Border(androidx.compose.foundation.BorderStroke(3.dp, Palette.Focus), inset = 3.dp, shape = CircleShape),
         ),
-        glow = ClickableSurfaceDefaults.glow(focusedGlow = androidx.tv.material3.Glow(elevationColor = Palette.Shadow, elevation = 12.dp)),
+        glow = ClickableSurfaceDefaults.glow(focusedGlow = androidx.tv.material3.Glow(elevationColor = Palette.Shadow, elevation = 10.dp)),
     ) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { content() }
     }

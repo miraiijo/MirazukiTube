@@ -1,13 +1,14 @@
 <title>Storyboard miryo tube</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Open+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap">
 <style>
 /* Layout: storyboard document, one section per screen; each section = sequence player + Jour/Nuit frames (1080×608 canvas, scaled). */
 :root{
   --pg:#EEF0F4; --card:#FFFFFF; --ink:#16171A; --muted:#62656D; --line:rgba(22,23,26,.10);
   --accent:#5B48D9; --accent-soft:rgba(91,72,217,.10);
   --f-ui:"Inter",system-ui,-apple-system,"Segoe UI",sans-serif;
+  --f-tv:"Open Sans","Inter",system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,"SF Mono",Menlo,monospace;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
@@ -75,7 +76,7 @@ td kbd{min-width:26px;height:24px;font-size:11px}
    which the app lays out at the default « Taille de l'interface » of 100 %), zoomed to fit (×1.125).
    Safe zone (Theme.kt Safe, system dp): 48 on the sides, 32 at the top, 48 at the bottom. */
 @property --h{syntax:"<number>";inherits:true;initial-value:210}
-.stage{position:absolute;left:0;top:0;width:1080px;height:608px;transform-origin:0 0;overflow:hidden;font-family:var(--f-ui);letter-spacing:-.011em;
+.stage{position:absolute;left:0;top:0;width:1080px;height:608px;transform-origin:0 0;overflow:hidden;font-family:var(--f-tv);
   background:radial-gradient(circle 788px at 100% 0%,var(--g1),transparent),radial-gradient(circle 675px at 0% 100%,var(--g2),transparent),linear-gradient(to bottom right,var(--a0) 0%,var(--a1) 55%,var(--a2) 100%);
   color:var(--tp);-webkit-font-smoothing:antialiased}
 /* Theme.kt NightColors / DayColors */
