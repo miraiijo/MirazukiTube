@@ -73,6 +73,11 @@ jobs:
           set -o pipefail
           ./gradlew --no-daemon --build-cache :app:testReleaseUnitTest :app:assembleRelease 2>&1 | tee build.log
 
+      - name: Run Android Lint
+        continue-on-error: true
+        working-directory: miryotube
+        run: ./gradlew --no-daemon --build-cache :app:lintRelease
+
       - name: Report build errors
         if: failure()
         working-directory: miryotube

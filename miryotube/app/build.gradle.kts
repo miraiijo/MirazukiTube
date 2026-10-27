@@ -54,7 +54,13 @@ android {
         }
     }
 
-    lint { checkReleaseBuilds = false }
+    lint {
+        checkReleaseBuilds = false
+        // miryo tube's own code only (SmartTube's modules are upstream's); problems in the CI log.
+        checkDependencies = false
+        textReport = true
+        textOutput = file("stdout")
+    }
 
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
