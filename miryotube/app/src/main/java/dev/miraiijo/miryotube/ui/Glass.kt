@@ -60,11 +60,12 @@ fun glassRim(width: Dp = 1.dp, light: Boolean = Palette.colors.isLight): BorderS
  * is one path, both built once per size.
  * [flat]: for a large panel (Accueil's favourites), an opaque body and the rim only, so the GPU
  * fills that area once instead of blending a light and a shadow over the page.
+ * [shadow]: false drops Jour's shadow only (Économes, many small cards in a row): the body keeps its light.
  */
-fun Modifier.liquidGlass(shape: Shape, fill: Color = Palette.Glass, light: Boolean = Palette.colors.isLight, flat: Boolean = false): Modifier = this
+fun Modifier.liquidGlass(shape: Shape, fill: Color = Palette.Glass, light: Boolean = Palette.colors.isLight, flat: Boolean = false, shadow: Boolean = !flat): Modifier = this
     .drawWithCache {
         val outline = shape.createOutline(size, layoutDirection, this)
-        val shadow = if (light && !flat) {
+        val drop = if (light && shadow) {
             val body = outline.toPath()
             val dropped = Path().apply { addPath(body, Offset(0f, 2.dp.toPx())) }
             Path().apply { op(dropped, body, PathOperation.Difference) }
@@ -79,7 +80,7 @@ fun Modifier.liquidGlass(shape: Shape, fill: Color = Palette.Glass, light: Boole
             Brush.linearGradient(0f to Color.White.copy(alpha = 0.10f).compositeOver(fill), 0.45f to fill, start = Offset.Zero, end = Offset.Infinite)
         }
         onDrawBehind {
-            shadow?.let { drawPath(it, ShadowColor) }
+            drop?.let { drawPath(it, ShadowColor) }
             if (lit != null) drawOutline(outline, lit) else drawOutline(outline, fill)
         }
     }

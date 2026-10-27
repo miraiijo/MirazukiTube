@@ -255,7 +255,7 @@ fun ProfileDialog(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Text("Qui regarde ?", fontSize = 44.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.03).em, color = Palette.TextPrimary)
+            Text("Qui regarde ?", fontSize = 44.sp, fontWeight = FontWeight.Bold, letterSpacing = DisplayTracking, color = Palette.TextPrimary)
             Spacer(Modifier.height(40.dp))
             Row(
                 // The safe zone (the column's padding) keeps the tiles, ring and zoom off the edges.
@@ -426,7 +426,7 @@ fun SettingsDialog(
         // Rechercher › a result: its page's menu item takes the focus (which shows the page).
         val navFocus = remember { SettingsPage.entries.associateWith { FocusRequester() } }
         Column(Modifier.fillMaxSize().miryoBackground().safePadding()) {
-            Text("Réglages", fontSize = 44.sp, lineHeight = 50.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.03).em, color = Palette.TextPrimary)
+            Text("Réglages", fontSize = 44.sp, lineHeight = 50.sp, fontWeight = FontWeight.Bold, letterSpacing = DisplayTracking, color = Palette.TextPrimary)
             Row(Modifier.weight(1f).padding(top = 22.dp), horizontalArrangement = Arrangement.spacedBy(22.dp)) {
                 Column(
                     Modifier
@@ -698,7 +698,7 @@ fun SettingsDialog(
                             SettingCard("Licence de SmartTube", mit) {}
                             SettingCard(
                                 "Autres composants",
-                                "ExoPlayer, AndroidX, Cronet, OkHttp, RxJava et ZXing : licence Apache 2.0. Glide : licences BSD, MIT et Apache 2.0. Police Inter : SIL Open Font License 1.1. Les textes complets sont dans l’APK (assets/licenses).",
+                                "ExoPlayer, AndroidX, Cronet, OkHttp, RxJava et ZXing : licence Apache 2.0. Glide : licences BSD, MIT et Apache 2.0. Police Open Sans : SIL Open Font License 1.1. Les textes complets sont dans l’APK (assets/licenses).",
                             ) {}
                         }
                     }
@@ -780,7 +780,7 @@ private fun SettingsSearch(pages: Set<String>, onOpen: (String) -> Unit) {
                         value = text,
                         onValueChange = { text = it.take(40) },
                         singleLine = true,
-                        textStyle = androidx.compose.ui.text.TextStyle(color = Palette.TextPrimary, fontSize = 18.sp, fontFamily = InterFamily),
+                        textStyle = androidx.compose.ui.text.TextStyle(color = Palette.TextPrimary, fontSize = 18.sp, fontFamily = MiryoFont),
                         cursorBrush = androidx.compose.ui.graphics.SolidColor(Palette.Highlight),
                         keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(imeAction = androidx.compose.ui.text.input.ImeAction.Search),
                         keyboardActions = androidx.compose.foundation.text.KeyboardActions(onSearch = { done() }, onDone = { done() }),
@@ -839,7 +839,7 @@ private fun SettingCard(title: String, help: String, choices: @Composable () -> 
     ) {
         Text(title, fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Palette.TextPrimary)
         Row(Modifier.padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) { choices() }
-        Text(help, fontSize = Dimens.TextMin, color = if (Palette.colors.isLight) Palette.TextSecondary else SETTINGS_HELP_NIGHT, modifier = Modifier.padding(top = 8.dp))
+        Text(help, fontSize = Dimens.TextMin, color = Palette.TextSecondary, modifier = Modifier.padding(top = 8.dp))
     }
 }
 
@@ -847,9 +847,6 @@ private fun SettingCard(title: String, help: String, choices: @Composable () -> 
 private fun readLicence(context: android.content.Context, name: String): String =
     runCatching { context.assets.open("licenses/$name").bufferedReader().use { it.readText() } }.getOrDefault("")
         .trim().split(Regex("\\n\\s*\\n")).joinToString("\n\n") { it.replace(Regex("\\s*\\n\\s*"), " ") }
-
-/** The settings' help text at night (the redesign's, a touch lighter than TextSecondary). */
-private val SETTINGS_HELP_NIGHT = Color(0xFFA3A5AD)
 
 /** A choice of a setting: a pill, checked when it's the current one. */
 @Composable
@@ -946,7 +943,7 @@ fun ProfileSwitchCover(cover: dev.miraiijo.miryotube.SwitchCover?) {
             }
         }
         Spacer(Modifier.height(24.dp))
-        Text(current.name, fontSize = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = (-0.03).em, color = Palette.TextPrimary)
+        Text(current.name, fontSize = 32.sp, fontWeight = FontWeight.Bold, letterSpacing = DisplayTracking, color = Palette.TextPrimary)
     }
 }
 

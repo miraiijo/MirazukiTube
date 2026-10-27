@@ -22,7 +22,7 @@ import androidx.tv.material3.Typography
 import androidx.tv.material3.darkColorScheme
 import dev.miraiijo.miryotube.R
 
-/* miryo's design tokens (same palettes, radii, Inter typography): miryo tube looks like miryo. */
+/* miryo's design tokens (same palettes, radii, Open Sans typography): miryo tube looks like miryo. */
 
 /**
  * The two looks of the redesign (miryo's): Nuit (dark) and Jour (light). Colors are read from the
@@ -84,7 +84,7 @@ val DayColors = MiryoColors(
     focus = Color(0xFF16171A), onFocus = MOONLIGHT, focusRing = Color(0xFF16171A),
     glowWarm = Color(0x4DC8A46A), glowCool = Color(0x1F5A8CFF), isLight = true,
     backgroundMid = Color(0xFFDFDBD2), backgroundEnd = Color(0xFFDAD6CC),
-    glass = MOONLIGHT.copy(alpha = 0.70f), glassBorder = MOONLIGHT.copy(alpha = 0.90f), shadow = Color(0xFF2A2418).copy(alpha = 0.20f),
+    glass = MOONLIGHT.copy(alpha = 0.70f), glassBorder = MOONLIGHT.copy(alpha = 0.90f), shadow = Color(0xFF141928).copy(alpha = 0.22f),
 )
 
 object Palette {
@@ -120,8 +120,8 @@ object Palette {
     /** The redesign's red (S'abonner, "EN DIRECT") and SponsorBlock's yellow on the bar. */
     val Live = Color(0xFFE5383B)
     val Sponsor = Color(0xFFF2C230)
-    /** Text of a choice pill (filters, sorts, settings): a touch softer than TextPrimary. */
-    val ChipText get() = if (colors.isLight) Color(0xFF2A2C33) else Color(0xFFE4E5E9)
+    /** Text of a choice pill (filters, sorts, settings): the text colour, as in miryo and miryo iptv. */
+    val ChipText get() = colors.textPrimary
 }
 
 /** Three focus lifts only: controls, cards, avatars. */
@@ -137,28 +137,32 @@ object FocusScale {
 
 
 /**
- * Inter: the closest open font to SF Pro (Apple TV's system font, licensed for Apple platforms
- * only). Bundled in res/font, Latin subset, 4 weights; licence in licenses/Inter-OFL.txt.
+ * Open Sans: the suite's font (the same as miryo), bundled in res/font, static instances of the
+ * variable font, 5 weights; licence in licenses/OpenSans-OFL.txt.
  */
-val InterFamily = FontFamily(
-    Font(R.font.inter_regular, FontWeight.Normal),
-    Font(R.font.inter_medium, FontWeight.Medium),
-    Font(R.font.inter_semibold, FontWeight.SemiBold),
-    Font(R.font.inter_bold, FontWeight.Bold),
+val MiryoFont = FontFamily(
+    Font(R.font.open_sans_light, FontWeight.Light),
+    Font(R.font.open_sans_regular, FontWeight.Normal),
+    Font(R.font.open_sans_medium, FontWeight.Medium),
+    Font(R.font.open_sans_semibold, FontWeight.SemiBold),
+    Font(R.font.open_sans_bold, FontWeight.Bold),
 )
 
-/** Tight tracking for large titles (SF Pro Display-like). */
-val DisplayTracking = (-0.022).em
+/** Former name of [MiryoFont] (Inter until 2026-10-27), kept for code written against it. */
+val InterFamily: FontFamily get() = MiryoFont
 
-/** Every Material text style (also those set inside tv-material buttons) uses Inter. */
+/** Slightly tight tracking for large titles (miryo's value: Open Sans is already open). */
+val DisplayTracking = (-0.01).em
+
+/** Every Material text style (also those set inside tv-material buttons) uses Open Sans. */
 private val MiryoTypography: Typography = Typography().let { t ->
-    // Closer to SF Pro: Material's wide default tracking (up to +0.5 sp) replaced by Apple-like
-    // tight tracking, relative to the size (em) so it holds for every explicit fontSize.
+    // Material's wide default tracking (up to +0.5 sp) dropped, as in miryo: natural spacing for
+    // text, slightly tight for large titles (em: holds for every explicit fontSize).
     // lineHeight unspecified: Material's fixed ones (24 sp for bodyLarge, the default Text style)
     // made every Text without its own lineHeight 24 dp tall whatever its size, so big titles and
     // codes overflowed their line and small labels (badges, captions) took far too much room.
-    fun TextStyle.text() = copy(fontFamily = InterFamily, letterSpacing = (-0.011).em, lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified)
-    fun TextStyle.display() = copy(fontFamily = InterFamily, letterSpacing = (-0.022).em, lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified)
+    fun TextStyle.text() = copy(fontFamily = MiryoFont, letterSpacing = 0.em, lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified)
+    fun TextStyle.display() = copy(fontFamily = MiryoFont, letterSpacing = DisplayTracking, lineHeight = androidx.compose.ui.unit.TextUnit.Unspecified)
     Typography(
         displayLarge = t.displayLarge.display(), displayMedium = t.displayMedium.display(), displaySmall = t.displaySmall.display(),
         headlineLarge = t.headlineLarge.display(), headlineMedium = t.headlineMedium.display(), headlineSmall = t.headlineSmall.display(),
@@ -303,7 +307,7 @@ object Dimens {
     val RadiusControl = 14.dp
     /** Opale's cards: 13 dp. */
     val RadiusCard = 13.dp
-    val RadiusDialog = 24.dp
+    val RadiusDialog = 20.dp
 
     /** Smallest text used anywhere (10-foot legibility). */
     val TextMin = 13.sp
