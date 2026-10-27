@@ -18,10 +18,12 @@ android {
         applicationId = "dev.miraiijo.lumentube"
         minSdk = 28
         targetSdk = 35
-        versionCode = 83
-        versionName = "1.0 bêta 22"
-        // The Freebox Player POP runs a 32-bit userspace; arm64 kept for other boxes.
-        ndk { abiFilters += listOf("armeabi-v7a", "arm64-v8a") }
+        versionCode = 84
+        versionName = "1.0 bêta 23"
+        // 32-bit only (Jordan, 2026-10-27): the Freebox Player POP runs a 32-bit userspace
+        // (abilist armeabi-v7a, armeabi) and almost every Android TV box runs 32-bit code, so one
+        // copy of the native libraries halves their weight. A 64-bit-only device can't install it.
+        ndk { abiFilters += listOf("armeabi-v7a") }
         // Upstream modules have SmartTube's build flavors: use the "stable" one.
         missingDimensionStrategy("default", "ststable")
         // miryo-link v3: signing certificates of the miryo apps (public SHA-256, see gradle.properties,
