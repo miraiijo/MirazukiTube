@@ -90,6 +90,11 @@ class VideoActions(
     val timer: String = "Désactivée",
     val timerMinutes: Int = 0,
     val onTimer: (Int) -> Unit = {},
+    /** A live's chat: shown (null: the video has none), and its size (CHAT_SIZES). */
+    val liveChat: Boolean? = null,
+    val onLiveChat: () -> Unit = {},
+    val chatSize: Int = 1,
+    val onChatSize: () -> Unit = {},
 )
 
 private class Entry(
@@ -157,7 +162,7 @@ fun PlayerMenuPanel(
 ) {
     // Bumped after each choice: the values shown are read from the player again.
     var version by remember { mutableIntStateOf(0) }
-    val entries = remember(menu, tracksTick, version, sponsorBlock, pictureFormat, actions.details, actions.watchLaterDone, actions.stats, actions.autoFrameRate, actions.currentChapter, actions.audioOnly, actions.timer) {
+    val entries = remember(menu, tracksTick, version, sponsorBlock, pictureFormat, actions.details, actions.watchLaterDone, actions.stats, actions.autoFrameRate, actions.currentChapter, actions.audioOnly, actions.timer, actions.liveChat, actions.chatSize) {
         buildEntries(menu, player, prefs, live, sponsorBlock, onSponsorBlock, pictureFormat, onPictureFormat, actions, onMenu) { version++ }
     }
     val title = when (menu) {
@@ -271,6 +276,10 @@ private fun buildEntries(
         // Music: the picture goes out, the sound goes on (less light, less data).
         add(Entry("Son seul", if (actions.audioOnly) "Activé" else "Éteint l’image", selected = actions.audioOnly, onClick = actions.onAudioOnly))
         add(Entry("Minuterie", actions.timer, submenu = true) { onMenu(PlayerMenu.TIMER) })
+        actions.liveChat?.let { shown ->
+            add(Entry("Chat du direct", if (shown) "Affiché" else "Masqué", selected = shown, onClick = actions.onLiveChat))
+            if (shown) add(Entry("Taille du chat", CHAT_SIZES.getOrNull(actions.chatSize)?.first ?: "Normale", onClick = actions.onChatSize))
+        }
     }
     PlayerMenu.TIMER -> TIMER_CHOICES.map { (minutes, name) ->
         Entry(name, selected = minutes == actions.timerMinutes) {

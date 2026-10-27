@@ -87,6 +87,15 @@ class PlayerPrefs(context: Context) {
         get() = prefs.getBoolean(KEY_AUTO_FRENCH, false)
         set(value) = prefs.edit().putBoolean(KEY_AUTO_FRENCH, value).apply()
 
+    /** A live's chat shown on the right (read only), and its text size (0 small, 1 normal, 2 large). */
+    var liveChat: Boolean
+        get() = prefs.getBoolean(KEY_LIVE_CHAT, true)
+        set(value) = prefs.edit().putBoolean(KEY_LIVE_CHAT, value).apply()
+
+    var chatSize: Int
+        get() = prefs.getInt(KEY_CHAT_SIZE, 1)
+        set(value) = prefs.edit().putInt(KEY_CHAT_SIZE, value).apply()
+
     /** Réglages › Affichage › Animations (system.LowEnd): suits this box, not in backups. */
     var animations: String
         get() = prefs.getString(KEY_ANIMATIONS, null)?.takeIf { it in dev.miraiijo.miryotube.system.LowEnd.CHOICES } ?: dev.miraiijo.miryotube.system.LowEnd.MIRYO
@@ -120,5 +129,7 @@ class PlayerPrefs(context: Context) {
         const val KEY_NAV_SOUNDS = "nav_sounds"
         const val KEY_ANIMATIONS = "animations"
         const val KEY_AUTO_FRENCH = "auto_french"
+        const val KEY_LIVE_CHAT = "live_chat"
+        const val KEY_CHAT_SIZE = "chat_size"
     }
 }

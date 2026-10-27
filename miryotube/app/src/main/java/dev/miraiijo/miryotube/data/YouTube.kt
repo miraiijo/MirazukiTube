@@ -14,6 +14,7 @@ import io.reactivex.Observable
 import io.reactivex.disposables.Disposable
 import io.reactivex.schedulers.Schedulers
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.flowOn
@@ -95,7 +96,13 @@ data class Details(
     val chapters: List<Chapter>,
     /** Next video: the playlist's next item, else YouTube's "À suivre". */
     val next: Video?,
+    /** A live's chat (LiveChatService), null when it has none. */
+    val liveChatKey: String? = null,
 )
+
+/** A message of a live's chat (read only: nothing is ever written from the box). */
+@androidx.compose.runtime.Immutable
+data class ChatMessage(val id: String, val author: String, val text: String)
 
 /** A YouTube account linked on this box. */
 data class Account(val name: String, val avatar: String?, val selected: Boolean, val raw: com.liskovsoft.mediaserviceinterfaces.oauth.Account)
@@ -719,6 +726,7 @@ object YouTube {
             liked = meta.likeStatus == MediaItemMetadata.LIKE_STATUS_LIKE,
             disliked = meta.likeStatus == MediaItemMetadata.LIKE_STATUS_DISLIKE,
             commentsKey = meta.commentsKey?.takeIf { it.isNotBlank() },
+            liveChatKey = meta.liveChatKey?.takeIf { it.isNotBlank() },
             subscribed = meta.isSubscribed,
             channelId = meta.channelId,
             channel = meta.author,
@@ -796,6 +804,21 @@ object YouTube {
             },
             next = group.nextCommentsKey?.takeIf { it.isNotBlank() },
         )
+    }
+
+    /** A live's chat as it comes (read only); ends with the flow's collector. */
+    fun liveChat(key: String): Flow<ChatMessage> = kotlinx.coroutines.flow.callbackFlow {
+        val subscription = service.liveChatService.openLiveChatObserve(key)
+            .subscribeOn(Schedulers.io())
+            .subscribe(
+                { item ->
+                    val text = item?.message?.trim().orEmpty()
+                    if (text.isNotEmpty()) trySend(ChatMessage(item.id ?: "${item.authorName}:${text.hashCode()}", item.authorName.orEmpty(), text))
+                },
+                { close() },
+                { close() },
+            )
+        awaitClose { subscription.dispose() }
     }
 
     /** Adds the video to "À regarder plus tard" (YouTube's WL playlist), as [account] only. */

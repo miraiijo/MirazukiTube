@@ -207,6 +207,9 @@ fun PlayerScreen(
     var activity by remember { mutableIntStateOf(0) }
     var loadTick by remember(videoId) { mutableIntStateOf(0) }
     var retried by remember(videoId) { mutableStateOf(false) }
+    /** A live's chat on the right (read only), and its size. */
+    var chatShown by remember { mutableStateOf(prefs.liveChat) }
+    var chatSize by remember { mutableIntStateOf(prefs.chatSize) }
     /** « Minuterie »: « Toujours là ? » on screen (the last minute). */
     var askStill by remember { mutableStateOf(false) }
     /** Seek preview on the progress bar (committed when the arrow is released). */
@@ -850,8 +853,19 @@ fun PlayerScreen(
                     // play-pause key still toggles directly.
                     AndroidKeyEvent.KEYCODE_DPAD_CENTER, AndroidKeyEvent.KEYCODE_ENTER, AndroidKeyEvent.KEYCODE_NUMPAD_ENTER -> { swallowOkUp = true; show(); true }
                     // Seek without bringing the buttons (nor their focus): only the time line flashes.
-                    AndroidKeyEvent.KEYCODE_DPAD_LEFT -> { nudge(-1, native.repeatCount); true }
-                    AndroidKeyEvent.KEYCODE_DPAD_RIGHT -> { nudge(1, native.repeatCount); true }
+                    // A live that can't be seeked: Right shows its chat, Left hides it.
+                    AndroidKeyEvent.KEYCODE_DPAD_LEFT, AndroidKeyEvent.KEYCODE_DPAD_RIGHT
+                    -> if (live && duration <= 0 && details?.liveChatKey != null) {
+                        val show = native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_RIGHT
+                        if (native.repeatCount == 0 && chatShown != show) {
+                            chatShown = show
+                            prefs.liveChat = show
+                        }
+                        true
+                    } else {
+                        nudge(if (native.keyCode == AndroidKeyEvent.KEYCODE_DPAD_LEFT) -1 else 1, native.repeatCount)
+                        true
+                    }
                     // Up / Down: the controls (focus on the bar); nothing ever closes the video but Back.
                     AndroidKeyEvent.KEYCODE_DPAD_UP, AndroidKeyEvent.KEYCODE_DPAD_DOWN -> { if (native.repeatCount == 0) show(); true }
                     else -> false
@@ -1014,6 +1028,11 @@ fun PlayerScreen(
             )
         }
 
+        val chatKey = details?.liveChatKey
+        if (live && chatKey != null && chatShown && !minimized && !commentsOpen && menu == null && error == null && !AudioOnly.on) {
+            LiveChatPanel(chatKey, chatSize, Modifier.align(Alignment.CenterEnd))
+        }
+
         menu?.let { level ->
             PlayerMenuPanel(
                 menu = level,
@@ -1070,6 +1089,16 @@ fun PlayerScreen(
                         }
                         AudioOnly.on = on
                         if (!on) show()
+                    },
+                    liveChat = chatShown.takeIf { live && details?.liveChatKey != null },
+                    onLiveChat = {
+                        chatShown = !chatShown
+                        prefs.liveChat = chatShown
+                    },
+                    chatSize = chatSize,
+                    onChatSize = {
+                        chatSize = (chatSize + 1) % CHAT_SIZES.size
+                        prefs.chatSize = chatSize
                     },
                     timer = SleepTimer.label(),
                     timerMinutes = SleepTimer.minutes,
