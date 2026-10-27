@@ -13,7 +13,7 @@ object SettingsIndex {
     /** Réglages' pages: name → label, as in its menu. */
     val PAGES = linkedMapOf(
         "PLAYBACK" to "Lecture", "DISPLAY" to "Affichage", "PHONE" to "Téléphone", "ACCOUNT" to "Compte",
-        "KIDS" to "Enfant", "UPDATES" to "Mises à jour", "ABOUT" to "À propos",
+        "KIDS" to "Contrôle parental", "UPDATES" to "Mises à jour", "ABOUT" to "À propos",
     )
 
     private fun e(label: String, page: String, vararg words: String) = SettingEntry(label, page, words.toList())
@@ -30,8 +30,8 @@ object SettingsIndex {
         e("Lier un téléphone", "PHONE", "code tv", "associer", "appairer", "téléphone"),
         e("Recevoir même miryo tube fermé", "PHONE", "arrière-plan", "fermé", "autoriser", "autorisation"),
         e("Compte YouTube (se connecter, se déconnecter)", "ACCOUNT", "connexion", "connecter", "déconnecter", "abonnements", "historique", "playlists", "google"),
-        e("Chaînes autorisées pour Enfant", "KIDS", "enfant", "kids", "autorisées", "chaînes"),
-        e("Code parent", "KIDS", "code", "pin", "parental", "parent", "verrou"),
+        e("Chaînes autorisées pour Enfant", "KIDS", "contrôle", "enfant", "kids", "autorisées", "chaînes"),
+        e("Code parental", "KIDS", "code", "pin", "parental", "parent", "verrou"),
         e("Supprimer le profil enfant", "KIDS", "enfant", "supprimer", "profil"),
         e("Vérifier les mises à jour", "UPDATES", "mise à jour", "version", "installer", "nouvelle version"),
         e("Recevoir les versions bêta", "UPDATES", "bêta", "beta", "test"),

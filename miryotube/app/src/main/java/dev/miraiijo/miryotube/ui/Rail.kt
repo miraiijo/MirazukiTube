@@ -357,7 +357,7 @@ private fun ProfileTile(name: String, caption: String?, modifier: Modifier, onCl
 }
 
 /** Réglages' categories (left column). */
-private enum class SettingsPage(val label: String) { SEARCH("Rechercher"), PLAYBACK("Lecture"), DISPLAY("Affichage"), PHONE("Téléphone"), ACCOUNT("Compte"), KIDS("Enfant"), UPDATES("Mises à jour"), ABOUT("À propos") }
+private enum class SettingsPage(val label: String) { SEARCH("Rechercher"), PLAYBACK("Lecture"), DISPLAY("Affichage"), PHONE("Téléphone"), ACCOUNT("Compte"), KIDS("Contrôle parental"), UPDATES("Mises à jour"), ABOUT("À propos") }
 
 /**
  * Réglages (the redesign: full screen, like miryo's): the categories on the left (the one focused
@@ -561,7 +561,7 @@ fun SettingsDialog(
                                 }
                             }
                             SettingCard(
-                                "Code parent",
+                                "Code parental",
                                 if (kidsMiryoCode) "C'est le code parental de miryo. Il se change dans miryo › Réglages › Contrôle parental."
                                 else "Demandé pour quitter le profil enfant. Le profil enfant de miryo se quitte dans miryo.",
                             ) {
