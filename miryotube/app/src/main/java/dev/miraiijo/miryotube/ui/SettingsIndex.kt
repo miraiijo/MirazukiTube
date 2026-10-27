@@ -12,8 +12,8 @@ data class SettingEntry(val label: String, val page: String, val words: List<Str
 object SettingsIndex {
     /** Réglages' pages: name → label, as in its menu. */
     val PAGES = linkedMapOf(
-        "PLAYBACK" to "Lecture", "DISPLAY" to "Affichage", "PHONE" to "Téléphone", "ACCOUNT" to "Compte",
-        "KIDS" to "Contrôle parental", "UPDATES" to "Mises à jour", "ABOUT" to "À propos",
+        "ACCOUNT" to "Compte", "KIDS" to "Contrôle parental", "DISPLAY" to "Affichage", "SOUNDS" to "Sons",
+        "PLAYBACK" to "Lecture", "PHONE" to "Téléphone", "UPDATES" to "Mises à jour", "ABOUT" to "À propos",
     )
 
     private fun e(label: String, page: String, vararg words: String) = SettingEntry(label, page, words.toList())
@@ -23,7 +23,8 @@ object SettingsIndex {
         e("Passer les sponsors (SponsorBlock)", "PLAYBACK", "sponsor", "pub", "publicité", "autopromo", "sauter"),
         e("Volume stable", "PLAYBACK", "volume", "son", "fort", "niveau sonore"),
         e("Apparence (Jour, Nuit, Auto, Comme miryo)", "DISPLAY", "thème", "clair", "sombre", "mode sombre", "nuit", "jour", "miryo"),
-        e("Sons de navigation", "DISPLAY", "son", "sons", "clic", "bip", "bruit", "touches", "télécommande", "muet", "couper"),
+        e("Animations : Auto, Économes ou Complètes", "DISPLAY", "animation", "fluide", "performance", "lent", "saccade", "effets", "économe", "rapide"),
+        e("Sons de navigation", "SOUNDS", "son", "sons", "clic", "bip", "bruit", "touches", "télécommande", "muet", "couper"),
         e("Taille de l'interface", "DISPLAY", "taille", "zoom", "grand", "petit", "texte", "lisible"),
         e("DeArrow (titres sans racolage)", "DISPLAY", "titres", "miniatures", "clickbait", "racolage"),
         e("Regarder sur la TV (depuis le téléphone)", "PHONE", "cast", "caster", "envoyer", "télécommande", "youtube du téléphone", "chromecast"),

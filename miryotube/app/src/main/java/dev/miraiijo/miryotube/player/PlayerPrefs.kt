@@ -82,11 +82,17 @@ class PlayerPrefs(context: Context) {
         get() = prefs.getInt(KEY_NAV_SOUNDS, 0)
         set(value) = prefs.edit().putInt(KEY_NAV_SOUNDS, value).apply()
 
+    /** Réglages › Affichage › Animations (system.LowEnd): suits this box, not in backups. */
+    var animations: String
+        get() = prefs.getString(KEY_ANIMATIONS, null)?.takeIf { it in dev.miraiijo.miryotube.system.LowEnd.CHOICES } ?: dev.miraiijo.miryotube.system.LowEnd.MIRYO
+        set(value) = prefs.edit().putString(KEY_ANIMATIONS, value).apply()
+
     fun settings() = Settings(
         sponsorBlock = sponsorBlock, autoplay = autoplay, stableVolume = stableVolume, deArrow = deArrow,
         remote = remote, appearance = appearance, uiScale = uiScale, backgroundCast = backgroundCast,
         background = background,
         navSounds = navSounds,
+        animations = animations.also { dev.miraiijo.miryotube.system.LowEnd.choice = it },
     )
 
     private companion object {
@@ -106,5 +112,6 @@ class PlayerPrefs(context: Context) {
         const val KEY_BACKGROUND_CAST = "background_cast"
         const val KEY_BACKGROUND = "background"
         const val KEY_NAV_SOUNDS = "nav_sounds"
+        const val KEY_ANIMATIONS = "animations"
     }
 }

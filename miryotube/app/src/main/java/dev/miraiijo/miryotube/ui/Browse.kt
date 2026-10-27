@@ -411,8 +411,10 @@ private const val SHINE_ALPHA = 0.16f
 @Composable
 private fun androidx.compose.foundation.layout.BoxScope.CardShine(focused: Boolean) {
     val sweep = remember { androidx.compose.animation.core.Animatable(0f) }
+    // Économes: no sweep (a layer redrawn every frame for 600 ms on each card the focus crosses).
+    val reduced = dev.miraiijo.miryotube.system.LowEnd.reduced(androidx.compose.ui.platform.LocalContext.current)
     LaunchedEffect(focused) {
-        if (focused) {
+        if (focused && !reduced) {
             sweep.snapTo(0f)
             sweep.animateTo(1f, androidx.compose.animation.core.tween(SHINE_MS))
         }

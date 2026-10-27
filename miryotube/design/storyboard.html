@@ -599,7 +599,7 @@ V.who=()=>`<div class="who"><h3>Qui regarde ?</h3><div class="ptiles">
  ${codeDlg('si','Connecter un compte YouTube','Scanne le QR code avec ton téléphone, ou ouvre youtube.com/activate et saisis ce code :','miryo tube reste connecté ensuite. Tu peux lier plusieurs comptes et choisir lequel à l’ouverture.',cbtn('si-0','','Annuler'),7)}`;
 const HINT='Les bêtas arrivent plus tôt mais peuvent planter ou contenir des bugs. Sans elles, seules les versions stables sont proposées.';
 V.set=()=>`<div class="stitle">Réglages</div>
- <div class="snav" data-grp="sn">${[['Rechercher','s'],['Lecture',0],['Affichage',1],['Téléphone',2],['Compte',3],['Mises à jour',4],['À propos',5]].map(([l,i])=>`<div class="sitem ${i===0?'sel':''}" data-id="sn-${i}">${l}</div>`).join('')}</div>
+ <div class="snav" data-grp="sn">${[['Rechercher','s'],['Compte',3],['Affichage',1],['Sons','so'],['Lecture',0],['Téléphone',2],['Mises à jour',4],['À propos',5]].map(([l,i])=>`<div class="sitem ${i===0?'sel':''}" data-id="sn-${i}">${l}</div>`).join('')}</div>
  <div class="spage" data-id="sp-s" style="opacity:0">
   ${scard('Rechercher un réglage',`<div class="btn c" data-id="fd-field" style="width:440px;justify-content:flex-start">${I.search}<span data-id="fd-q">Nom d’un réglage</span></div>`,'Par exemple : sombre, volume, bêta, enfant, téléphone.',{hid:'fd-h'})}
   <div data-id="fd-hits" style="opacity:0;display:flex;flex-direction:column;gap:11px">
@@ -840,7 +840,7 @@ const SCREENS=[
  {k:'▼▶',t:'SponsorBlock',f:'lb-1'},
  {k:'OK',t:'Désactivé',sel:{lb:'lb-1'},n:'La coche passe sur le choix.'},
  {k:'◀◀',t:'Gauche ×2',f:'sn-0',n:'Gauche revient sur la catégorie en cours.'},
- {k:'▼',t:'Affichage',f:'sn-1',sel:{sn:'sn-1'},st:{'sp-0':{opacity:'0'},'sp-1':{opacity:'1'}},n:'Apparence : Jour, Nuit ou Auto (les deux colonnes de ce storyboard). Taille de l’interface. DeArrow.'},
+ {k:'▼',t:'Affichage',f:'sn-1',sel:{sn:'Bêta 22 : même ordre que miryo et miryo iptv (Compte, Contrôle parental, Affichage, Sons, Lecture, Téléphone, Mises à jour, À propos), Réglages s’ouvre sur Compte ; Sons de navigation passent dans « Sons » ; Affichage gagne Animations (Comme miryo, Auto, Économes, Complètes : Économes coupe le fondu entre pages et le reflet des cartes). Maquette pas encore redessinée. sn-1'},st:{'sp-0':{opacity:'0'},'sp-1':{opacity:'1'}},n:'Apparence : Jour, Nuit ou Auto (les deux colonnes de ce storyboard). Taille de l’interface. DeArrow.'},
  {k:'▶▼▶',t:'Plus grand',f:'sz-1'},
  {k:'OK',t:'Valider',txt:{'sz-t':'Taille de l’interface · 105 %'},sel:{szd:''},n:'Appliqué tout de suite ; le pourcentage est dans le titre, les pastilles ne bougent pas sous le focus. La zone sûre reste la même en dp de la TV : les marges suivent la taille. (Ce storyboard reste dessiné à 100 %.)'},
  {k:'◀▼▼',t:'Compte',f:'sn-3',sel:{sn:'sn-3'},st:{'sp-1':{opacity:'0'},'sp-3':{opacity:'1'}},n:'Compte : se déconnecter ; les autres comptes liés restent sur la box.'},
