@@ -3,8 +3,10 @@ package dev.miraiijo.miryotube.system
 import android.app.ActivityManager
 import android.content.Context
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
+import androidx.core.content.edit
 
 /**
  * Réglages › Affichage › Animations, same rule as miryo. « Économes »: what only decorates goes
@@ -34,19 +36,62 @@ object LowEnd {
 
     private fun auto(context: Context?): Boolean = detected ?: context?.let(::detectedLowEnd) ?: false
 
-    /** What « Auto » picks on this box (true: Économes). */
-    fun detectedLowEnd(context: Context): Boolean = detected ?: run {
+    /** What « Auto » picks on this box (true: Économes): the fluidity test when it was run, else the processor and memory. */
+    fun detectedLowEnd(context: Context): Boolean {
+        // Read for Compose: a new test result recomposes the screens that asked.
+        revision
+        return detected ?: report(context).low.also { detected = it }
+    }
+
+    /** What is known of this box, for « Auto » and to explain its choice. Same rule as miryo. */
+    data class Report(val low: Boolean, val ramGb: Double?, val littleCores: Boolean?, val cores: Int, val latePercent: Int?)
+
+    fun report(context: Context): Report {
         val am = context.getSystemService(ActivityManager::class.java)
         val info = ActivityManager.MemoryInfo().also { am?.getMemoryInfo(it) }
         val cores = littleCoresOnly()
-        val low = am == null || am.isLowRamDevice || info.totalMem in 1 until MIN_RAM_BYTES ||
+        val late = measured(context)
+        // Too little memory: Économes whatever the test says.
+        val memoryLow = am == null || am.isLowRamDevice || info.totalMem in 1 until MIN_RAM_BYTES
+        val low = memoryLow || when {
+            // The test was run on this box: it decides.
+            late != null -> late >= LATE_LIMIT
             // Only small cores (Cortex-A53 / A55 / A35: Freebox POP, most sticks and cheap boxes)
             // means a modest GPU too; big cores (Shield's A57, A72, A76…) keep everything.
-            cores == true ||
-            (cores == null && info.totalMem in 1 until LOW_END_RAM_BYTES)
-        detected = low
-        low
+            cores != null -> cores
+            else -> info.totalMem in 1 until LOW_END_RAM_BYTES
+        }
+        val ram = info.totalMem.takeIf { it > 0 }?.let { it / (1024.0 * 1024 * 1024) }
+        return Report(low, ram, cores, Runtime.getRuntime().availableProcessors(), late)
     }
+
+    /** The report in words: « processeur d'entrée de gamme (4 cœurs), mémoire 1,9 Go, … ». */
+    fun describe(report: Report): String = listOfNotNull(
+        when (report.littleCores) {
+            true -> "processeur d'entrée de gamme (${report.cores} cœurs)"
+            false -> "processeur puissant (${report.cores} cœurs)"
+            null -> null
+        },
+        report.ramGb?.let { "mémoire " + "%.1f".format(java.util.Locale.FRANCE, it) + " Go" },
+        when {
+            report.latePercent == null -> "test de fluidité pas encore fait"
+            report.latePercent < LATE_LIMIT -> "test de fluidité réussi (${report.latePercent} % d'images en retard)"
+            else -> "test de fluidité : ${report.latePercent} % d'images en retard"
+        },
+    ).joinToString(", ")
+
+    /** Share of late frames (%) found by the fluidity test on this box; null: never run. */
+    fun measured(context: Context): Int? =
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).getInt(KEY_LATE, -1).takeIf { it >= 0 }
+
+    /** Keeps the fluidity test's result for this box (« Auto » follows it from now on). */
+    fun saveMeasure(context: Context, latePercent: Int) {
+        context.getSharedPreferences(PREFS, Context.MODE_PRIVATE).edit { putInt(KEY_LATE, latePercent.coerceIn(0, 100)) }
+        detected = null
+        revision++
+    }
+
+    private var revision by mutableIntStateOf(0)
 
     /** true: every core is a small one; false: at least one big core; null: unknown. */
     private fun littleCoresOnly(): Boolean? = runCatching {
@@ -60,5 +105,9 @@ object LowEnd {
     /** ARM Cortex-A53, A55, A35, A7. */
     private val LITTLE_CORES = setOf("0xd03", "0xd05", "0xd04", "0xc07")
     private const val MIN_RAM_BYTES = 3L * 512 * 1024 * 1024
+    /** From this share of late frames in the fluidity test, the box is modest: Économes. */
+    const val LATE_LIMIT = 10
+    private const val PREFS = "box_perf"
+    private const val KEY_LATE = "late_frames"
     private const val LOW_END_RAM_BYTES = 3L * 1024 * 1024 * 1024
 }

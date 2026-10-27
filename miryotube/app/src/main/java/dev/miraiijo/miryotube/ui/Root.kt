@@ -397,7 +397,13 @@ fun Root(vm: MainViewModel) {
         LaunchedEffect(state.signedIn) { if (state.signedIn && firstRun) closeFirstRun() }
         if (firstRun && !state.signingIn && state.playing == null) {
             val withMiryo = remember { dev.miraiijo.miryotube.link.MiryoLink.partner(setupContext, dev.miraiijo.miryotube.link.MiryoLink.MIRYO, dev.miraiijo.miryotube.link.MiryoLink.PROFILES_AUTHORITY) }
-            FirstRunTube(withMiryo, onSignIn = vm::startSignIn, onDone = closeFirstRun)
+            FirstRunTube(
+                withMiryo,
+                animations = state.settings.animations,
+                onAnimations = { vm.updateSettings(state.settings.copy(animations = it)) },
+                onSignIn = vm::startSignIn,
+                onDone = closeFirstRun,
+            )
         }
         if (state.signingIn) {
             SignInDialog(code = state.signInCode, error = state.signInError, onRetry = vm::startSignIn, onDismiss = vm::cancelSignIn)
