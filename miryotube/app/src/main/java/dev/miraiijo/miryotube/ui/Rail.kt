@@ -499,17 +499,15 @@ fun SettingsDialog(
                                 Choice("Activé", settings.deArrow) { onSettings(settings.copy(deArrow = true)) }
                                 Choice("Désactivé", !settings.deArrow) { onSettings(settings.copy(deArrow = false)) }
                             }
-                            val eco = dev.miraiijo.miryotube.system.LowEnd.detectedLowEnd(androidx.compose.ui.platform.LocalContext.current)
-                            SettingCard(
-                                "Animations",
-                                "Économes : moins d’effets, plus fluide sur une petite box. Complètes : tous les effets. Auto choisit pour cette box : " +
-                                    (if (eco) "Économes." else "Complètes.") + if (miryo) " Comme miryo suit son réglage." else "",
+                            // Measured on this box (fluidity test), with the recommended choice; Complètes on a modest box asks first.
+                            Column(
+                                Modifier
+                                    .fillMaxWidth()
+                                    .liquidGlass(RoundedCornerShape(16.dp))
+                                    .padding(horizontal = 18.dp, vertical = 16.dp),
                             ) {
-                                // Without miryo, « Comme miryo » means Auto: Auto shows as chosen.
-                                if (miryo) Choice("Comme miryo", settings.animations == dev.miraiijo.miryotube.system.LowEnd.MIRYO) { onSettings(settings.copy(animations = dev.miraiijo.miryotube.system.LowEnd.MIRYO)) }
-                                Choice("Auto", settings.animations == dev.miraiijo.miryotube.system.LowEnd.AUTO || (!miryo && settings.animations == dev.miraiijo.miryotube.system.LowEnd.MIRYO)) { onSettings(settings.copy(animations = dev.miraiijo.miryotube.system.LowEnd.AUTO)) }
-                                Choice("Économes", settings.animations == dev.miraiijo.miryotube.system.LowEnd.ECO) { onSettings(settings.copy(animations = dev.miraiijo.miryotube.system.LowEnd.ECO)) }
-                                Choice("Complètes", settings.animations == dev.miraiijo.miryotube.system.LowEnd.FULL) { onSettings(settings.copy(animations = dev.miraiijo.miryotube.system.LowEnd.FULL)) }
+                                Text("Animations", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Palette.TextPrimary, modifier = Modifier.padding(bottom = 8.dp))
+                                AnimationsChoice(settings.animations, { onSettings(settings.copy(animations = it)) })
                             }
                         }
                         SettingsPage.SOUNDS -> {

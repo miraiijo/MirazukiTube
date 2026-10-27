@@ -12,7 +12,10 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -45,11 +48,15 @@ object FirstRun {
 }
 
 /**
- * miryo tube's short first launch: one question, the YouTube account (the usual sign-in by code
+ * miryo tube's short first launch: without miryo, the box's fluidity first (measured, then
+ * Économes or Complètes recommended; with miryo, its choice is followed). Then one question, the YouTube account (the usual sign-in by code
  * and QR), or « Sans compte ». It closes by itself once an account is linked; Retour = sans compte.
  */
 @Composable
-fun FirstRunTube(withMiryo: Boolean, onSignIn: () -> Unit, onDone: () -> Unit) {
+fun FirstRunTube(withMiryo: Boolean, animations: String, onAnimations: (String) -> Unit, onSignIn: () -> Unit, onDone: () -> Unit) {
+    // With miryo, its animations are followed (« Comme miryo »): no question.
+    var fluidity by remember { mutableStateOf(!withMiryo) }
+    if (fluidity) return FluidityPage(animations, onAnimations) { fluidity = false }
     MiryoDialog(onDismissRequest = onDone) {
         val connect = remember { FocusRequester() }
         Box(Modifier.fillMaxSize().miryoBackground(), contentAlignment = Alignment.Center) {
@@ -83,6 +90,47 @@ fun FirstRunTube(withMiryo: Boolean, onSignIn: () -> Unit, onDone: () -> Unit) {
         LaunchedEffect(Unit) {
             withFrameNanos { }
             runCatching { connect.requestFocus() }
+        }
+    }
+}
+
+/** First launch without miryo: the fluidity test (once), then the recommended animations. */
+@Composable
+private fun FluidityPage(animations: String, onAnimations: (String) -> Unit, onNext: () -> Unit) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    var testing by remember { mutableStateOf(dev.miraiijo.miryotube.system.LowEnd.measured(context) == null) }
+    if (testing) {
+        FluidityTest { late ->
+            if (late != null) dev.miraiijo.miryotube.system.LowEnd.saveMeasure(context, late)
+            testing = false
+        }
+        return
+    }
+    MiryoDialog(onDismissRequest = onNext) {
+        val first = remember { FocusRequester() }
+        Box(Modifier.fillMaxSize().miryoBackground(), contentAlignment = Alignment.Center) {
+            Column(
+                Modifier.padding(horizontal = 96.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                BrandLogo(Modifier.height(40.dp))
+                Spacer(Modifier.height(22.dp))
+                Text("Fluidité", color = Palette.TextPrimary, fontSize = 40.sp, fontWeight = FontWeight.Bold)
+                Text(
+                    "miryo tube a mesuré ta box pour choisir ses animations. Garde la recommandation pour que tout reste fluide ; ça se change ensuite dans Réglages › Affichage.",
+                    color = Palette.TextSecondary,
+                    fontSize = 15.sp,
+                    lineHeight = 21.sp,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.padding(top = 14.dp, bottom = 22.dp).widthIn(max = 620.dp),
+                )
+                AnimationsChoice(animations, onAnimations, first)
+                MiryoButton("Continuer", modifier = Modifier.padding(top = 22.dp), onClick = onNext)
+            }
+        }
+        LaunchedEffect(Unit) {
+            withFrameNanos { }
+            runCatching { first.requestFocus() }
         }
     }
 }
