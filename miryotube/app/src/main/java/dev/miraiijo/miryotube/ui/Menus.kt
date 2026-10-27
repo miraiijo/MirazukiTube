@@ -192,8 +192,8 @@ fun FolderDialog(
 }
 
 /**
- * "Lier un téléphone": the TV code for the phone's YouTube app (Paramètres › Regarder sur la TV ›
- * Saisir le code TV). Closes by itself once the phone is connected.
+ * "Lier un téléphone": the TV code for the phone's YouTube app (the QR opens « Regarder sur
+ * téléviseur » › Votre TV ne s'affiche pas › Associer avec un code TV). Closes by itself once the phone is connected.
  */
 @Composable
 fun PairingDialog(pairing: Pairing, onRetry: () -> Unit, onDismiss: () -> Unit) {
@@ -207,7 +207,9 @@ fun PairingDialog(pairing: Pairing, onRetry: () -> Unit, onDismiss: () -> Unit) 
             Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(14.dp)) {
                 Text("Lier un téléphone", fontSize = 22.sp, fontWeight = FontWeight.SemiBold)
                 Text(
-                    "Scanne le QR code avec le téléphone. Ou dans l’app YouTube : photo de profil › Paramètres › Regarder sur la TV › Saisir le code TV, puis tape ce code :",
+                    // YouTube ignores the code in the QR's link: it only opens « Regarder sur téléviseur »,
+                    // where « Freebox Player POP » is the box's own Chromecast, not miryo tube.
+                    "Scanne le QR code : YouTube s’ouvre sur « Regarder sur téléviseur ». Touche « Votre TV ne s’affiche pas » (pas « Freebox Player POP »), puis « Associer avec un code TV », et tape ce code :",
                     color = Palette.TextSecondary,
                     fontSize = 15.sp,
                     lineHeight = 21.sp,
