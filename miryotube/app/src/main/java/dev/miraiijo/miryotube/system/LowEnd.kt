@@ -54,7 +54,7 @@ object LowEnd {
         // Too little memory: Économes whatever the test says.
         val memoryLow = am == null || am.isLowRamDevice || info.totalMem in 1 until MIN_RAM_BYTES
         // Only small cores (Cortex-A53 / A55 / A35: Freebox POP, most sticks and cheap boxes) means a
-        // modest GPU too: Économes whatever the test says (the POP passes the 3 s test, yet the real
+        // modest GPU too: Économes whatever the test says (the POP passed the old 3 s test, yet the real
         // screens dropped up to 9 frames in 10). Otherwise the test decides when it was run; big cores
         // (Shield's A57, A72, A76…) keep everything; processor not readable: memory decides.
         val low = memoryLow || cores == true || when {
@@ -109,6 +109,7 @@ object LowEnd {
     /** From this share of late frames in the fluidity test, the box is modest: Économes. */
     const val LATE_LIMIT = 10
     private const val PREFS = "box_perf"
-    private const val KEY_LATE = "late_frames"
+    /** v2: the 5 s test of real-like rows (the old 3 s test let the POP pass): old results are not kept. */
+    private const val KEY_LATE = "late_frames_v2"
     private const val LOW_END_RAM_BYTES = 3L * 1024 * 1024 * 1024
 }

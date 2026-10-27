@@ -910,12 +910,13 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         _state.update { it.copy(pairing = Pairing()) }
         if (!_state.value.settings.remote) updateSettings(_state.value.settings.copy(remote = true))
         viewModelScope.launch {
+            // YouTube already spaces the code ("391 868 694 022"): keep the digits only, then group by 3.
             val code = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
                 runCatching { RemoteControl.pairingCode().timeout(20, java.util.concurrent.TimeUnit.SECONDS).blockingFirst() }.getOrNull()
             }
             _state.update { s ->
                 if (s.pairing == null) s
-                else s.copy(pairing = if (code.isNullOrBlank()) Pairing(error = "Code indisponible. Réessaie.") else Pairing(code = code.chunked(3).joinToString(" ")))
+                else s.copy(pairing = if (code.isNullOrBlank()) Pairing(error = "Code indisponible. Réessaie.") else Pairing(code = code.filter(Char::isDigit).chunked(3).joinToString(" ")))
             }
         }
     }

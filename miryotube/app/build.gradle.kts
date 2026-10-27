@@ -50,8 +50,12 @@ android {
 
     buildTypes {
         release {
-            // Not minified, like SmartTube: its engine relies on reflection (Retrofit, Gson, JsonPath).
-            isMinifyEnabled = false
+            // R8 for Compose only: un-shrunk Compose runs interpreted-heavy on the Player POP (its home
+            // spent 13 to 22 ms per frame composing while a row scrolled). Everything else, SmartTube's
+            // engine first (reflection: Retrofit, Gson, JsonPath), is kept whole and unrenamed, see
+            // proguard-rules.pro.
+            isMinifyEnabled = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = if (releaseKeystore != null) signingConfigs.getByName("release") else null
         }
     }
