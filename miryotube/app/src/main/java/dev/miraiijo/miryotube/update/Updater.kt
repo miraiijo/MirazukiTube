@@ -16,9 +16,9 @@ import java.security.MessageDigest
 
 /**
  * Self-update of the miryo apps. Same file in miryo, miryo tube and miryo iptv (only the package line
- * differs): fix it in the three.
+ * and, here, [REPOS] differ): fix it in the three.
  *
- * Channel: the public repo miraiijo/miryo-releases, release « channel », one `<app>.json` per app,
+ * Channel: a public repo (see [REPOS]), release « channel », one `<app>.json` per app,
  * written by the release script (tools/):
  *   {"format":1,"package":"dev.miraiijo.<app>","stable":{…}|null,"beta":{…}|null}
  *   entry: {"versionCode","versionName","apk","sha256","size","notes","date"}
@@ -29,8 +29,15 @@ import java.security.MessageDigest
  * refuses an APK signed with another key). Blocking calls: IO dispatcher only.
  */
 object Updater {
-    private const val RELEASES = "https://github.com/miraiijo/miryo-releases/releases/download/"
-    private const val CHANNEL = "${RELEASES}channel/"
+    /**
+     * Where miryo tube is published: its own repo (since 1.0 bêta 29), then the suite's shared
+     * repo it used before. The release script writes both during the move; the newest wins.
+     * (This list is miryo tube's only: miryo and miryo iptv keep the shared repo.)
+     */
+    private val REPOS = listOf(
+        "https://github.com/miraiijo/miryo-tube/releases/download/",
+        "https://github.com/miraiijo/miryo-releases/releases/download/",
+    )
     private const val TIMEOUT_MS = 15_000
     private const val MAX_JSON = 64 * 1024
     private const val MAX_APK = 300L * 1024 * 1024
@@ -103,18 +110,34 @@ object Updater {
      */
     fun checkFor(context: Context, app: String, pkg: String, beta: Boolean): UpdateInfo? {
         require(APP.matches(app)) { "Appli inconnue" }
-        val text = try {
-            fetchText(CHANNEL + "$app.json")
-        } catch (_: NotPublished) {
-            return null
+        // Each repo read on its own: one that fails or has nothing doesn't hide the other.
+        var failure: IOException? = null
+        var published = false
+        val picks = REPOS.mapNotNull { repo ->
+            try {
+                checkIn(repo, app, pkg, beta).also { published = true }
+            } catch (_: NotPublished) {
+                null
+            } catch (e: IOException) {
+                if (failure == null) failure = e
+                null
+            } catch (e: org.json.JSONException) {
+                if (failure == null) failure = IOException("Canal de mise à jour illisible")
+                null
+            }
         }
-        val json = JSONObject(text)
+        if (!published) failure?.let { throw it }
+        return picks.maxByOrNull { it.versionCode }?.takeIf { it.versionCode > (installedCode(context, pkg) ?: 0L) }
+    }
+
+    /** What the channel of [repo] offers (null: no version for this choice of beta/stable). */
+    private fun checkIn(repo: String, app: String, pkg: String, beta: Boolean): UpdateInfo? {
+        val json = JSONObject(fetchText(repo + "channel/$app.json"))
         if (json.optInt("format") != 1) throw IOException("Format de mise à jour inconnu : installe la dernière version à la main")
         if (json.optString("package") != pkg) throw IOException("Ce canal est celui d'une autre appli")
-        val stableEntry = json.optJSONObject("stable")?.let { entry(it, pkg, beta = false) }
-        val betaEntry = json.optJSONObject("beta")?.let { entry(it, pkg, beta = true) }
-        val pick = if (beta) listOfNotNull(stableEntry, betaEntry).maxByOrNull { it.versionCode } else stableEntry
-        return pick?.takeIf { it.versionCode > (installedCode(context, pkg) ?: 0L) }
+        val stableEntry = json.optJSONObject("stable")?.let { entry(it, repo, pkg, beta = false) }
+        val betaEntry = json.optJSONObject("beta")?.let { entry(it, repo, pkg, beta = true) }
+        return if (beta) listOfNotNull(stableEntry, betaEntry).maxByOrNull { it.versionCode } else stableEntry
     }
 
     /** Installed version of [pkg] (code, name), or null when it isn't installed. */
@@ -204,10 +227,10 @@ object Updater {
 
     // ---- Checks ------------------------------------------------------------------------------
 
-    private fun entry(o: JSONObject, pkg: String, beta: Boolean): UpdateInfo {
+    private fun entry(o: JSONObject, repo: String, pkg: String, beta: Boolean): UpdateInfo {
         val apk = o.optString("apk")
         // Only an APK of a release of the same repo (never the channel itself, never another host).
-        if (!apk.startsWith(RELEASES) || apk.startsWith(CHANNEL) || ".." in apk) throw IOException("Adresse de l'APK inattendue")
+        if (!apk.startsWith(repo) || apk.startsWith(repo + "channel/") || ".." in apk) throw IOException("Adresse de l'APK inattendue")
         val sha = o.optString("sha256").lowercase()
         if (!SHA256.matches(sha)) throw IOException("Empreinte de l'APK invalide")
         val size = o.optLong("size")

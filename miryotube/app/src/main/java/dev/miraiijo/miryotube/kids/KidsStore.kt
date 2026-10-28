@@ -43,6 +43,9 @@ class KidsStore(context: Context) {
 
     val exists: Boolean get() = prefs.getString(KEY_PIN, null) != null || (prefs.getBoolean(KEY_SUITE, false) && usesMiryoCode)
 
+    /** miryo tube's own code exists (not only miryo's). */
+    val hasOwnPin: Boolean get() = prefs.getString(KEY_PIN, null) != null
+
     /** The kids profile created under miryo's code (no code of its own to choose). */
     fun createWithMiryoCode() = prefs.edit().putBoolean(KEY_SUITE, true).apply()
 
