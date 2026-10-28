@@ -1,3 +1,6 @@
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.util.zip.ZipFile
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -97,7 +100,7 @@ val checkNativeLibsStripped = tasks.register("checkNativeLibsStripped") {
     doLast {
         // Names of an ELF file's sections (little-endian, 32 or 64 bits): stripped = no .debug_info.
         fun sectionNames(elf: ByteArray): List<String> {
-            val b = java.nio.ByteBuffer.wrap(elf).order(java.nio.ByteOrder.LITTLE_ENDIAN)
+            val b = ByteBuffer.wrap(elf).order(ByteOrder.LITTLE_ENDIAN)
             val is64 = elf[4].toInt() == 2
             val shoff = if (is64) b.getLong(0x28).toInt() else b.getInt(0x20)
             val shentsize = b.getShort(if (is64) 0x3A else 0x2E).toInt()
@@ -114,7 +117,7 @@ val checkNativeLibsStripped = tasks.register("checkNativeLibsStripped") {
         }
         val apks = apkDir.get().asFile.listFiles { f -> f.extension == "apk" }.orEmpty()
         check(apks.isNotEmpty()) { "No release APK in ${apkDir.get().asFile}" }
-        for (apk in apks) java.util.zip.ZipFile(apk).use { zip ->
+        for (apk in apks) ZipFile(apk).use { zip ->
             val unstripped = zip.entries().asSequence()
                 .filter { it.name.startsWith("lib/") && it.name.endsWith(".so") }
                 .filter { entry -> ".debug_info" in sectionNames(zip.getInputStream(entry).use { it.readBytes() }) }
