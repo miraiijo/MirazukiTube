@@ -410,6 +410,7 @@ fun Root(vm: MainViewModel) {
                 onUnhideChannel = vm::unhideChannel,
                 folders = state.folders,
                 onDeleteFolder = vm::deleteFolder,
+                guest = state.miryoGuest,
             )
         } else if (state.cardMenu != null) {
             val video = state.cardMenu!!
