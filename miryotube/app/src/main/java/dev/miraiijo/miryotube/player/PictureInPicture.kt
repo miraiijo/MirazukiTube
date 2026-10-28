@@ -1,6 +1,7 @@
 package dev.miraiijo.miryotube.player
 
 import android.content.Context
+import android.media.MediaMetadata
 import android.media.session.MediaSession
 import android.media.session.PlaybackState
 import android.os.Handler
@@ -25,6 +26,20 @@ object PictureInPicture {
         private set
 
     private var session: PipSession? = null
+
+    /** The video's title and channel: Android TV shows them on the window's notice (else « Programme sans titre »). */
+    var title: String = ""
+        private set
+    var channel: String = ""
+        private set
+
+    /** The player screen's title and channel, once known (a link learns them after loading). */
+    fun describe(p: MiryoPlayer, title: String, channel: String) {
+        if (player !== p) return
+        this.title = title
+        this.channel = channel
+        session?.describe(title, channel)
+    }
 
     /** Opens the window (MainActivity); false when the box can't or nothing plays. */
     var enter: () -> Boolean = { false }
@@ -58,7 +73,7 @@ object PictureInPicture {
 
     private fun restartSession(context: Context) {
         session?.release()
-        session = player?.let { PipSession(context.applicationContext, it) }
+        session = player?.let { PipSession(context.applicationContext, it).also { s -> s.describe(title, channel) } }
     }
 
     /** Former « Petite fenêtre » setting value (kept only so that saved settings still read). */
@@ -96,6 +111,15 @@ class PipSession(context: Context, private val player: MiryoPlayer) {
             PlaybackState.Builder()
                 .setActions(PlaybackState.ACTION_PLAY or PlaybackState.ACTION_PAUSE or PlaybackState.ACTION_PLAY_PAUSE)
                 .setState(if (playing) PlaybackState.STATE_PLAYING else PlaybackState.STATE_PAUSED, player.exo.currentPosition.coerceAtLeast(0), if (playing) 1f else 0f)
+                .build(),
+        )
+    }
+
+    fun describe(title: String, channel: String) {
+        session.setMetadata(
+            MediaMetadata.Builder()
+                .putString(MediaMetadata.METADATA_KEY_TITLE, title.ifBlank { "miryo tube" })
+                .putString(MediaMetadata.METADATA_KEY_ARTIST, channel)
                 .build(),
         )
     }

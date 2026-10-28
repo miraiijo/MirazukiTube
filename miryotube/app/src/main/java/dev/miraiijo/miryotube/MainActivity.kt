@@ -104,6 +104,10 @@ class MainActivity : ComponentActivity() {
             .setAspectRatio(android.util.Rational((fitted * 1000).toInt(), 1000))
             // From the full-screen picture (the small in-app window: the system's default animation).
             .setSourceRectHint(if (vm.state.value.minimized) null else pictureRect(fitted))
+            .apply {
+                // Android 13+: the window's own title (older boxes read the media session's).
+                if (android.os.Build.VERSION.SDK_INT >= 33) PictureInPicture.title.takeIf { it.isNotBlank() }?.let { setTitle(it).setSubtitle(PictureInPicture.channel) }
+            }
             .build()
         MiryoPip.tell(this, true)
         pipTold = true
