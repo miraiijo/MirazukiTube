@@ -29,7 +29,7 @@ enum class MiryoIcon {
     DICE, PLAY, PLUS, CHECK, HEART, STAR, REFRESH, CLOSE, MIC, EYE_OFF,
     CHEVRON_UP, CHEVRON_DOWN, INFO, HOME, LIBRARY, APPS, GAMEPAD, MORE,
     // miryo tube
-    PAUSE, PIP, SUBTITLES, MUSIC, NEWS, LIVE, HISTORY, PLAYLIST, SUBSCRIPTIONS, REWIND, FORWARD, USER, THUMB_UP, TROPHY,
+    PAUSE, PIP, SUBTITLES, MUSIC, NEWS, LIVE, SHORTS, HISTORY, PLAYLIST, SUBSCRIPTIONS, REWIND, FORWARD, USER, THUMB_UP, TROPHY,
     // Thumbs: filled = active (liked / disliked), outline otherwise; comments bubble.
     THUMB_UP_OUTLINE, THUMB_DOWN, THUMB_DOWN_OUTLINE, COMMENT,
     // Chapters: three lines (the last shorter), no play triangle.
@@ -267,6 +267,11 @@ private fun DrawScope.drawIcon(icon: MiryoIcon, color: Color) {
             drawArc(color, 130f, 100f, false, p(6.5f, 6.5f), Size(11f * u, 11f * u), style = stroke)
             drawArc(color, -50f, 100f, false, p(2.5f, 2.5f), Size(19f * u, 19f * u), style = stroke)
             drawArc(color, 130f, 100f, false, p(2.5f, 2.5f), Size(19f * u, 19f * u), style = stroke)
+        }
+        // A phone-shaped frame with a play triangle: the vertical videos.
+        MiryoIcon.SHORTS -> {
+            drawRoundRect(color, p(6.5f, 2.5f), Size(11f * u, 19f * u), CornerRadius(3f * u), style = stroke)
+            polygon(listOf(p(10.5f, 9f), p(15f, 12f), p(10.5f, 15f)), filled = true)
         }
         MiryoIcon.HISTORY -> {
             ring(12f, 12f, 8.5f)

@@ -352,7 +352,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         // Back after the process was killed in the background: the section, the video and the
         // answer to "Qui regarde ?" come back (not a video played as another account for miryo).
         val restored = saved.get<Boolean>(KEY_PICKED) != null
-        val savedSection = saved.get<String>(KEY_SECTION)?.let { name -> Section.entries.firstOrNull { it.name == name } } ?: Section.HOME
+        val savedSection = saved.get<String>(KEY_SECTION)?.let { name -> Section.entries.firstOrNull { it.name == name } }?.takeIf { it != Section.SHORTS } ?: Section.HOME
         saved.get<String>(KEY_VIDEO)?.takeIf { VIDEO_ID.matches(it) }?.let { id ->
             _state.update { it.copy(playingId = id, playingStart = saved.get<Int>(KEY_POSITION) ?: 0) }
         }

@@ -34,6 +34,8 @@ object MiryoLook {
         val subBg: String? = null,
         val subLang: String? = null,
         val dnd: Boolean? = null,
+        /** « Aides des touches » (null: miryo too old to say). */
+        val keyHints: Boolean? = null,
     ) {
         fun isLight(now: LocalDateTime): Boolean = when (appearance) {
             "day" -> true
@@ -69,6 +71,7 @@ object MiryoLook {
                 subBg = str("sub_bg")?.takeIf { it in SUB_BACKGROUNDS },
                 subLang = str("sub_lang")?.trim()?.lowercase()?.takeIf { it.length in 2..3 },
                 dnd = str("dnd")?.let { it == "1" },
+                keyHints = str("key_hints")?.let { it == "1" },
             )
         }
     }.getOrNull()

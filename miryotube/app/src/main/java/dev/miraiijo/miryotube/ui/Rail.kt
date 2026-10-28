@@ -538,6 +538,25 @@ fun SettingsDialog(
                                 Choice("Activé", settings.deArrow) { onSettings(settings.copy(deArrow = true)) }
                                 Choice("Désactivé", !settings.deArrow) { onSettings(settings.copy(deArrow = false)) }
                             }
+                            // miryo's choice wins when it says one (Réglages › Affichage there).
+                            val hintsContext = androidx.compose.ui.platform.LocalContext.current
+                            val miryoHints = dev.miraiijo.miryotube.link.MiryoLook.current?.keyHints
+                            var ownHints by remember { mutableStateOf(KeyHints.ownEnabled(hintsContext)) }
+                            var hintsReset by remember { mutableStateOf(false) }
+                            SettingCard(
+                                "Aides des touches",
+                                when {
+                                    hintsReset -> "C’est fait : chaque écran remontre ses aides."
+                                    miryoHints != null -> "Les touches à utiliser, en bas à droite quand un écran s’ouvre. Réglé dans miryo : " + (if (miryoHints) "affichées." else "masquées.")
+                                    else -> "Les touches à utiliser, en bas à droite quand un écran s’ouvre, ses 3 premières fois."
+                                },
+                            ) {
+                                if (miryoHints == null) {
+                                    Choice("Activées", ownHints) { KeyHints.setEnabled(hintsContext, true); ownHints = true }
+                                    Choice("Désactivées", !ownHints) { KeyHints.setEnabled(hintsContext, false); ownHints = false }
+                                }
+                                MiryoButton("Les revoir", contentColor = Palette.ChipText) { KeyHints.reset(hintsContext); hintsReset = true }
+                            }
                             // Measured on this box (fluidity test), with the recommended choice; Complètes on a modest box asks first.
                             Column(
                                 Modifier

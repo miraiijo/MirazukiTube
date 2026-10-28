@@ -185,8 +185,11 @@ class MainActivity : ComponentActivity() {
      * its key dispatch); overriding Activity.dispatchKeyEvent is the public Android API.
      */
     @android.annotation.SuppressLint("RestrictedApi")
-    override fun dispatchKeyEvent(event: KeyEvent): Boolean =
-        dev.miraiijo.miryotube.ui.OkRelease.dispatch(event, ::dispatchMapped)
+    override fun dispatchKeyEvent(event: KeyEvent): Boolean {
+        // The key hints of the screen go once their key is used.
+        dev.miraiijo.miryotube.ui.KeyHints.onKey(event)
+        return dev.miraiijo.miryotube.ui.OkRelease.dispatch(event, ::dispatchMapped)
+    }
 
     // RestrictedApi: same false positive as above (super.dispatchKeyEvent is the public Activity API).
     @android.annotation.SuppressLint("RestrictedApi")
