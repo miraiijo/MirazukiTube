@@ -1488,8 +1488,14 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     fun openAccounts() {
         val s = _state.value
         when {
-            // miryo's kids profile: the way out is in miryo, behind its own parental code.
-            s.kidsLocked -> showNotice("Profil enfant de miryo : change de profil dans miryo.")
+            // miryo's kids profile: the way out is in miryo, behind its own parental code. miryo
+            // gone meanwhile: the kids profile stays (removing miryo never opens miryo tube up);
+            // miryo tube's own code, if it has one, leaves it.
+            s.kidsLocked -> when {
+                miryoThere() -> showNotice("Profil enfant de miryo : change de profil dans miryo.")
+                kidsStore.hasOwnPin -> _state.update { it.copy(pin = PinPrompt(PinStep.UNLOCK)) }
+                else -> showNotice("Profil enfant gardé depuis que miryo n'est plus là. Pour en sortir, un adulte réinstalle miryo, ou efface les données de miryo tube (Paramètres Android › Applis).")
+            }
             // miryo's Invité: YouTube without account, nothing to choose.
             s.miryoGuest -> showNotice("Profil Invité de miryo : YouTube sans compte. Choisis ton profil dans miryo pour retrouver le tien.")
             // miryo tube's kids profile: the parental code first.
@@ -1500,6 +1506,9 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
             }
         }
     }
+
+    /** A trusted miryo is installed (its kids profiles decide). */
+    private fun miryoThere(): Boolean = dev.miraiijo.miryotube.link.MiryoLink.run { partner(getApplication(), MIRYO, PROFILES_AUTHORITY) }
 
     fun closeAccounts() = _state.update { it.copy(accountsOpen = false) }
 
@@ -1682,7 +1691,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         /** Abonnements' channel pictures at most. */
         const val PASTILLES_MAX = 30
         const val NOTICE_MS = 3_000L
-        /** This app's file on the update channel (miryo-releases › channel › miryotube.json). */
+        /** This app's file on the update channel (miryo-tube › channel › miryotube.json, and miryo-releases during the move). */
         const val UPDATE_APP = "miryotube"
         /** After a play-as video stops: the player's last position save starts (dispose)… */
         const val HISTORY_SETTLE_MS = 400L

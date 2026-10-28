@@ -25,7 +25,7 @@ YouTube sans pubs pour Android TV, avec l'interface de miryo. C'est un fork de
 5. Aucun secret dans GitHub : la CI construit un APK **non signé** (artefact `miryotube-unsigned`). Il est signé sur le PC avec `mirazuki-ship` (clé créée par `mirazuki-keys init`, qui ne quitte jamais le PC).
 
 ## Distribution et mises à jour
-- Les APK signés sont publiés sur le dépôt public `miraiijo/miryo-releases` (une release par version, plus la release `channel` qui contient `miryotube.json`).
+- Les APK signés sont publiés dans les Releases de ce dépôt (une release par version, plus la release `channel` qui contient `miryotube.json`). Pendant la transition, ils le sont aussi sur `miraiijo/miryo-releases`.
 - Dans l'appli : **Réglages › Mises à jour**. Seules les versions **stables** sont proposées par défaut ; « Recevoir les versions bêta » ajoute les bêtas (plus tôt, mais elles peuvent planter ou contenir des bugs). Une bêta installée active l'option par défaut. Vérification silencieuse une fois par jour au démarrage.
 - Avant l'installation, l'appli vérifie la taille, l'empreinte SHA-256, le paquet, la version et le certificat de l'APK ; Android refuse de son côté toute mise à jour signée par une autre clé.
 - Les versions de travail s'appellent « 1.0 bêta N » ; une version stable n'a pas le mot « bêta ».
