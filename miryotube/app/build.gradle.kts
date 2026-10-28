@@ -1,3 +1,6 @@
+import java.nio.ByteBuffer
+import java.nio.ByteOrder
+import java.util.zip.ZipFile
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 plugins {
@@ -9,10 +12,19 @@ plugins {
 // Release signing from the environment only (never from the repo). Without it the release APK is
 // unsigned: CI builds it that way and mirazuki-ship signs it on the PC (the key never reaches GitHub).
 val releaseKeystore: String? = System.getenv("MIRYOTUBE_KEYSTORE_PATH")
+// NDK that strips the native libraries on the PC (see ndkPath / ndkVersion below).
+val pcNdkVersion = "28.2.13676358"
 
 android {
     namespace = "dev.miraiijo.miryotube"
     compileSdk = 37
+    // NDK used only to strip the native libraries' debug symbols (stripReleaseDebugSymbols): J2V8 ships
+    // with them, 24.3 MB instead of 14.8 MB. GitHub's runners: their newest NDK. PC: this version,
+    // installed once (SDK Manager > SDK Tools > NDK). checkNativeLibsStripped fails the build without it.
+    val ciNdk = System.getenv("ANDROID_NDK_LATEST_HOME")?.let { file(it) }?.takeIf { it.isDirectory }
+    // (AGP wants ndkVersion to match the NDK at ndkPath: its folder is named after its version.)
+    ndkVersion = ciNdk?.name ?: pcNdkVersion
+    if (ciNdk != null) ndkPath = ciNdk.path
 
     defaultConfig {
         applicationId = "dev.miraiijo.lumentube"
@@ -50,10 +62,11 @@ android {
 
     buildTypes {
         release {
-            // R8 for Compose only: un-shrunk Compose runs interpreted-heavy on the Player POP (its home
-            // spent 13 to 22 ms per frame composing while a row scrolled). Everything else, SmartTube's
-            // engine first (reflection: Retrofit, Gson, JsonPath), is kept whole and unrenamed, see
-            // proguard-rules.pro.
+            // R8 shrinks and optimizes the well-behaved libraries (AndroidX with Compose, Kotlin, Guava,
+            // RxJava, ExoPlayer, Glide, ZXing): un-shrunk Compose ran interpreted-heavy on the Player POP
+            // (13 to 22 ms per frame composing while a row scrolled), and their unused classes only
+            // made the dex heavier (bêta 26: 24.5 MB). SmartTube's engine (reflection: Retrofit, Gson,
+            // JsonPath) and the JNI libraries are kept whole and unrenamed, see proguard-rules.pro.
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = if (releaseKeystore != null) signingConfigs.getByName("release") else null
@@ -82,6 +95,45 @@ android {
 kotlin {
     compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
 }
+
+// Without an NDK, AGP only warns and packages the native libraries unstripped (bêta 26: +9.5 MB of
+// J2V8 debug info). The release APK must never ship that silently: the build fails here instead.
+val checkNativeLibsStripped = tasks.register("checkNativeLibsStripped") {
+    val apkDir = layout.buildDirectory.dir("outputs/apk/release")
+    inputs.dir(apkDir)
+    doLast {
+        // Names of an ELF file's sections (little-endian, 32 or 64 bits): stripped = no .debug_info.
+        fun sectionNames(elf: ByteArray): List<String> {
+            val b = ByteBuffer.wrap(elf).order(ByteOrder.LITTLE_ENDIAN)
+            val is64 = elf[4].toInt() == 2
+            val shoff = if (is64) b.getLong(0x28).toInt() else b.getInt(0x20)
+            val shentsize = b.getShort(if (is64) 0x3A else 0x2E).toInt()
+            val shnum = b.getShort(if (is64) 0x3C else 0x30).toInt()
+            val shstrndx = b.getShort(if (is64) 0x3E else 0x32).toInt()
+            fun offset(i: Int) = shoff + i * shentsize + if (is64) 0x18 else 0x10
+            val strtab = if (is64) b.getLong(offset(shstrndx)).toInt() else b.getInt(offset(shstrndx))
+            return (0 until shnum).map { i ->
+                var p = strtab + b.getInt(shoff + i * shentsize)
+                val start = p
+                while (elf[p].toInt() != 0) p++
+                String(elf, start, p - start)
+            }
+        }
+        val apks = apkDir.get().asFile.listFiles { f -> f.extension == "apk" }.orEmpty()
+        check(apks.isNotEmpty()) { "No release APK in ${apkDir.get().asFile}" }
+        for (apk in apks) ZipFile(apk).use { zip ->
+            val unstripped = zip.entries().asSequence()
+                .filter { it.name.startsWith("lib/") && it.name.endsWith(".so") }
+                .filter { entry -> ".debug_info" in sectionNames(zip.getInputStream(entry).use { it.readBytes() }) }
+                .map { it.name }.toList()
+            check(unstripped.isEmpty()) {
+                "Native libraries not stripped in ${apk.name}: $unstripped. Install NDK $pcNdkVersion " +
+                    "(Android Studio > SDK Manager > SDK Tools > NDK (Side by side)), then rebuild."
+            }
+        }
+    }
+}
+tasks.matching { it.name == "assembleRelease" }.configureEach { finalizedBy(checkNativeLibsStripped) }
 
 dependencies {
     // SmartTube's engine (built from the fork's folders, see settings.gradle).
