@@ -388,6 +388,7 @@ fun PlayerScreen(
             else -> {
                 if (shownTitle.isBlank()) shownTitle = info.title.orEmpty()
                 if (shownChannel.isBlank()) shownChannel = info.author.orEmpty()
+                PictureInPicture.describe(player, shownTitle, shownChannel)
                 live = info.isLive
                 player.setVolumeLevel(if (prefs.stableVolume) info.volumeLevel else 1f)
                 player.open(info, resumeAt)?.let { error = it }
@@ -479,6 +480,7 @@ fun PlayerScreen(
         player.exo.addListener(listener)
         // The system's picture-in-picture window plays this player (and its Lecture / Pause follows it).
         PictureInPicture.attach(context, player)
+        PictureInPicture.describe(player, shownTitle, shownChannel)
         onDispose {
             PictureInPicture.detach(player)
             val seconds = player.exo.currentPosition / 1000f
