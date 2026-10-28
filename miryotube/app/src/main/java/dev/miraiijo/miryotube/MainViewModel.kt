@@ -75,7 +75,7 @@ data class ChannelHeader(
 )
 
 /** A step of the parental code dialog (kids profile). */
-enum class PinStep { CREATE, CONFIRM, UNLOCK, CHANGE_CHECK, CHANGE_NEW, CHANGE_CONFIRM, DELETE_CHECK }
+enum class PinStep { CREATE, CONFIRM, UNLOCK, CHANGE_CHECK, CHANGE_NEW, CHANGE_CONFIRM, DELETE_CHECK, CHANNEL_CHECK }
 
 /** The parental code dialog: its step, the code typed first (to confirm it), a note instead of the hint. */
 data class PinPrompt(val step: PinStep, val first: String? = null, val note: String? = null) {
@@ -85,6 +85,7 @@ data class PinPrompt(val step: PinStep, val first: String? = null, val note: Str
             PinStep.CONFIRM, PinStep.CHANGE_CONFIRM -> "Confirme le code parental"
             PinStep.UNLOCK -> "Quitter le profil enfant"
             PinStep.CHANGE_CHECK, PinStep.DELETE_CHECK -> "Code parental actuel"
+            PinStep.CHANNEL_CHECK -> "Chaînes du profil enfant"
             PinStep.CHANGE_NEW -> "Nouveau code parental"
         }
     val hint: String
@@ -1245,11 +1246,26 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
 
     fun removeKidChannel(id: String) {
         if (_state.value.kids) return
-        kidsStore.disallow(id)
-        kidsUi()
+        withKidsCode {
+            kidsStore.disallow(id)
+            kidsUi()
+        }
     }
 
-    fun closePin() = _state.update { it.copy(pin = null) }
+    /** A change to the kids profile's channels, once the parental code was given (then [KIDS_EDIT_MS] without asking again). */
+    private var pendingKidsEdit: (() -> Unit)? = null
+    private var kidsEditOpenUntil = 0L
+
+    private fun withKidsCode(edit: () -> Unit) {
+        if (android.os.SystemClock.elapsedRealtime() < kidsEditOpenUntil) return edit()
+        pendingKidsEdit = edit
+        _state.update { it.copy(pin = PinPrompt(PinStep.CHANNEL_CHECK)) }
+    }
+
+    fun closePin() {
+        pendingKidsEdit = null
+        _state.update { it.copy(pin = null) }
+    }
 
     /** The 4 digits typed in the parental code dialog: an error to show, or null (the dialog moves on). */
     suspend fun submitPin(code: String): String? {
@@ -1277,7 +1293,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                 }
                 null
             }
-            PinStep.UNLOCK, PinStep.CHANGE_CHECK, PinStep.DELETE_CHECK -> when (val result = kotlinx.coroutines.withContext(io) { kidsStore.verify(code) }) {
+            PinStep.UNLOCK, PinStep.CHANGE_CHECK, PinStep.DELETE_CHECK, PinStep.CHANNEL_CHECK -> when (val result = kotlinx.coroutines.withContext(io) { kidsStore.verify(code) }) {
                 PinResult.Ok -> {
                     when (prompt.step) {
                         PinStep.UNLOCK -> {
@@ -1287,6 +1303,13 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
                             _state.update { it.copy(accountsOpen = true) }
                         }
                         PinStep.CHANGE_CHECK -> _state.update { it.copy(pin = PinPrompt(PinStep.CHANGE_NEW)) }
+                        PinStep.CHANNEL_CHECK -> {
+                            kidsEditOpenUntil = android.os.SystemClock.elapsedRealtime() + KIDS_EDIT_MS
+                            val edit = pendingKidsEdit
+                            pendingKidsEdit = null
+                            _state.update { it.copy(pin = null) }
+                            if (!_state.value.kids) edit?.invoke()
+                        }
                         else -> {
                             kidsStore.delete()
                             _state.update { it.copy(pin = null) }
@@ -1307,11 +1330,13 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
     fun toggleKidChannel() {
         val channel = _state.value.opened?.channel ?: return
         if (_state.value.kids || !kidsStore.exists) return
-        val allowed = kidsStore.isAllowed(channel.id)
-        if (allowed) kidsStore.disallow(channel.id) else kidsStore.allow(KidChannel(channel.id, channel.name, channel.avatar))
-        updateChannel(channel.id) { it.copy(kidAllowed = !allowed) }
-        kidsUi()
-        showNotice(if (allowed) "${channel.name} retirée du profil enfant." else "${channel.name} autorisée pour le profil enfant.")
+        withKidsCode {
+            val allowed = kidsStore.isAllowed(channel.id)
+            if (allowed) kidsStore.disallow(channel.id) else kidsStore.allow(KidChannel(channel.id, channel.name, channel.avatar))
+            updateChannel(channel.id) { it.copy(kidAllowed = !allowed) }
+            kidsUi()
+            showNotice(if (allowed) "${channel.name} retirée du profil enfant." else "${channel.name} autorisée pour le profil enfant.")
+        }
     }
 
     /**
@@ -1666,6 +1691,8 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         /** Kids profile: Accueil's rows' keys, and channels read at once (the Freebox Player POP is slow). */
         const val KIDS_ROW = "kids-"
         const val KIDS_PARALLEL = 3
+        /** After the parental code, the kids profile's channels can be changed for this long without asking again. */
+        const val KIDS_EDIT_MS = 5 * 60_000L
         const val KIDS_EMPTY = "Aucune chaîne autorisée pour l’instant. Un parent en choisit depuis un profil adulte : « Pour Enfant » sur la page d’une chaîne."
     }
 

@@ -87,7 +87,7 @@ class KidsStore(context: Context) {
 
     /** Sets (or replaces) the parental code: the profile exists from then on. Off the main thread. */
     fun setPin(pin: String) {
-        prefs.edit().putString(KEY_PIN, PinHash.hash(pin)).putInt(KEY_FAILS, 0).putLong(KEY_LOCKED_UNTIL, 0L).apply()
+        prefs.edit().putString(KEY_PIN, PinHash.hash(pin)).putInt(KEY_FAILS, 0).putLong(KEY_LOCKED_UNTIL, 0L).putLong(KEY_LOCKED_ELAPSED, 0L).apply()
     }
 
     /** Checks the parental code, counting wrong ones. Off the main thread. */
@@ -103,17 +103,21 @@ class KidsStore(context: Context) {
             }
         }
         val now = System.currentTimeMillis()
+        val since = android.os.SystemClock.elapsedRealtime()
         val lockedUntil = prefs.getLong(KEY_LOCKED_UNTIL, 0L)
-        // A clock set back never extends the lock beyond LOCK_MS.
-        if (lockedUntil > now && lockedUntil - now <= LOCK_MS) return PinResult.Locked(minutesLeft(lockedUntil - now))
+        // A clock set back never extends the lock beyond LOCK_MS; one moved forward doesn't end it
+        // either: the same lock is counted on the boot clock (until the box restarts).
+        val wallLeft = (lockedUntil - now).takeIf { it in 1..LOCK_MS } ?: 0L
+        val bootLeft = (prefs.getLong(KEY_LOCKED_ELAPSED, 0L) - since).takeIf { it in 1..LOCK_MS } ?: 0L
+        if (maxOf(wallLeft, bootLeft) > 0) return PinResult.Locked(minutesLeft(maxOf(wallLeft, bootLeft)))
         val stored = prefs.getString(KEY_PIN, null) ?: return PinResult.Wrong
         if (PinHash.verify(pin, stored)) {
-            prefs.edit().putInt(KEY_FAILS, 0).putLong(KEY_LOCKED_UNTIL, 0L).apply()
+            prefs.edit().putInt(KEY_FAILS, 0).putLong(KEY_LOCKED_UNTIL, 0L).putLong(KEY_LOCKED_ELAPSED, 0L).apply()
             return PinResult.Ok
         }
         val fails = prefs.getInt(KEY_FAILS, 0) + 1
         if (fails >= MAX_TRIES) {
-            prefs.edit().putInt(KEY_FAILS, 0).putLong(KEY_LOCKED_UNTIL, now + LOCK_MS).apply()
+            prefs.edit().putInt(KEY_FAILS, 0).putLong(KEY_LOCKED_UNTIL, now + LOCK_MS).putLong(KEY_LOCKED_ELAPSED, since + LOCK_MS).apply()
             return PinResult.Locked(minutesLeft(LOCK_MS))
         }
         prefs.edit().putInt(KEY_FAILS, fails).apply()
@@ -134,6 +138,7 @@ class KidsStore(context: Context) {
         const val KEY_CHANNELS = "channels"
         const val KEY_FAILS = "fails"
         const val KEY_LOCKED_UNTIL = "locked_until"
+        const val KEY_LOCKED_ELAPSED = "locked_elapsed"
         const val MAX_TRIES = 5
         const val LOCK_MS = 5 * 60_000L
     }
