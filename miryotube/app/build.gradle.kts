@@ -12,14 +12,17 @@ plugins {
 // Release signing from the environment only (never from the repo). Without it the release APK is
 // unsigned: CI builds it that way and mirazuki-ship signs it on the PC (the key never reaches GitHub).
 val releaseKeystore: String? = System.getenv("MIRYOTUBE_KEYSTORE_PATH")
+// NDK that strips the native libraries on the PC (see ndkPath / ndkVersion below).
+val pcNdkVersion = "28.2.13676358"
 
 android {
     namespace = "dev.miraiijo.miryotube"
     compileSdk = 37
     // NDK used only to strip the native libraries' debug symbols (stripReleaseDebugSymbols): J2V8 ships
-    // with them, 24.3 MB instead of 14.8 MB. AGP downloads this version if it's missing; it's also one
-    // of the versions preinstalled on GitHub's runners. checkNativeLibsStripped fails the build if not.
-    ndkVersion = "28.2.13676358"
+    // with them, 24.3 MB instead of 14.8 MB. GitHub's runners: their newest NDK. PC: this version,
+    // installed once (SDK Manager > SDK Tools > NDK). checkNativeLibsStripped fails the build without it.
+    val ciNdk = System.getenv("ANDROID_NDK_LATEST_HOME")?.let { file(it) }?.takeIf { it.isDirectory }
+    if (ciNdk != null) ndkPath = ciNdk.path else ndkVersion = pcNdkVersion
 
     defaultConfig {
         applicationId = "dev.miraiijo.lumentube"
@@ -95,7 +98,6 @@ kotlin {
 // J2V8 debug info). The release APK must never ship that silently: the build fails here instead.
 val checkNativeLibsStripped = tasks.register("checkNativeLibsStripped") {
     val apkDir = layout.buildDirectory.dir("outputs/apk/release")
-    val ndk = android.ndkVersion
     inputs.dir(apkDir)
     doLast {
         // Names of an ELF file's sections (little-endian, 32 or 64 bits): stripped = no .debug_info.
@@ -123,7 +125,7 @@ val checkNativeLibsStripped = tasks.register("checkNativeLibsStripped") {
                 .filter { entry -> ".debug_info" in sectionNames(zip.getInputStream(entry).use { it.readBytes() }) }
                 .map { it.name }.toList()
             check(unstripped.isEmpty()) {
-                "Native libraries not stripped in ${apk.name}: $unstripped. Install NDK $ndk " +
+                "Native libraries not stripped in ${apk.name}: $unstripped. Install NDK $pcNdkVersion " +
                     "(Android Studio > SDK Manager > SDK Tools > NDK (Side by side)), then rebuild."
             }
         }
