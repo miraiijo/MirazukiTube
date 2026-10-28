@@ -30,6 +30,7 @@ object SettingsIndex {
         e("Sons de navigation", "SOUNDS", "son", "sons", "clic", "bip", "bruit", "touches", "télécommande", "muet", "couper"),
         e("Taille de l'interface", "DISPLAY", "taille", "zoom", "grand", "petit", "texte", "lisible"),
         e("DeArrow (titres sans racolage)", "DISPLAY", "titres", "miniatures", "clickbait", "racolage"),
+        e("Aides des touches", "DISPLAY", "aide", "touches", "télécommande", "flèches", "indications", "astuces"),
         e("Regarder sur la TV (depuis le téléphone)", "PHONE", "cast", "caster", "envoyer", "télécommande", "youtube du téléphone", "chromecast"),
         e("Lier un téléphone", "PHONE", "code tv", "associer", "appairer", "téléphone"),
         e("Recevoir même miryo tube fermé", "PHONE", "arrière-plan", "fermé", "autoriser", "autorisation"),

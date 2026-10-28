@@ -32,6 +32,8 @@ enum class Section(val label: String, val icon: MiryoIcon, val account: Boolean 
     NEWS("Actus", MiryoIcon.NEWS),
     SPORTS("Sport", MiryoIcon.TROPHY),
     LIVE("Direct", MiryoIcon.LIVE),
+    /** YouTube's Shorts, one after the other (never on the other pages, nor in miryo's feed). */
+    SHORTS("Shorts", MiryoIcon.SHORTS),
     HISTORY("Historique", MiryoIcon.HISTORY, account = true),
     PLAYLISTS("Playlists", MiryoIcon.PLAYLIST, account = true),
 }
@@ -195,6 +197,14 @@ object YouTube {
             Section.NEWS -> addFeed(content.newsObserve)
             Section.SPORTS -> addFeed(content.sportsObserve)
             Section.LIVE -> addFeed(content.liveObserve)
+            // One endless row, played one by one (ShortsScreen); its next pages come through [more].
+            Section.SHORTS -> safely {
+                val group = content.shortsObserve.timeout(OBSERVE_TIMEOUT_S, TimeUnit.SECONDS).blockingIterable().firstOrNull()
+                group?.toRow(SHORTS_ROW, Section.SHORTS.label)?.let {
+                    rows += it
+                    emit(rows.toList())
+                }
+            }
             Section.HISTORY -> historyForFeed()?.let {
                 rows += it.bucketed("HISTORY", HISTORY_BUCKETS) { v -> if (v.watchedPercent in 1..RESUME_MAX_PERCENT) "À reprendre" else "Déjà vues" }
                 emit(rows.toList())
@@ -241,6 +251,9 @@ object YouTube {
         }
         if (rows.isEmpty()) emit(emptyList())
     }.flowOn(Dispatchers.IO)
+
+    /** Key of the Shorts page's one row. */
+    const val SHORTS_ROW = "SHORTS-row"
 
     /** Key prefix of Accueil's extra rows (told apart from YouTube's home rows). */
     const val HOME_EXTRA = "HOME-x-"
@@ -1059,7 +1072,9 @@ object YouTube {
     private val AGE = Regex("""(\d+)\s*(secondes?|seconds?|minutes?|mins?|heures?|hours?|h\b|jours?|days?|semaines?|weeks?|mois|months?|ans?|années?|years?)""")
 
     private fun MediaGroup.toRow(key: String, fallbackTitle: String? = null): VideoRow? {
-        val items = mediaItems.orEmpty().filterNotNull().filter { !it.isShorts }.map { it.toVideo() }.distinctBy { it.key }
+        // Shorts are kept only in their own page's row.
+        val shorts = key.startsWith(SHORTS_ROW)
+        val items = mediaItems.orEmpty().filterNotNull().filter { if (shorts) it.videoId != null else !it.isShorts }.map { it.toVideo() }.distinctBy { it.key }
         if (items.isEmpty()) return null
         val own = title?.takeIf { it.isNotBlank() }
         // A feed's row on Accueil: "Musique · Top titres" (or just "Musique").

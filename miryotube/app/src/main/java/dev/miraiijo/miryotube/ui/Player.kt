@@ -1573,7 +1573,7 @@ private fun Clock() {
 
 /** Three pulsing dots (loading). */
 @Composable
-private fun LoadingDots(modifier: Modifier = Modifier) {
+internal fun LoadingDots(modifier: Modifier = Modifier) {
     var phase by remember { mutableIntStateOf(0) }
     LaunchedEffect(Unit) {
         while (true) {
@@ -1615,10 +1615,15 @@ private fun AudioOnlyScreen(title: String, channel: String, modifier: Modifier) 
                     Text(time, fontSize = 44.sp, fontWeight = FontWeight.Light, color = Color.White.copy(alpha = 0.55f))
                     Text(title, fontSize = 20.sp, fontWeight = FontWeight.SemiBold, color = Color.White.copy(alpha = 0.7f), maxLines = 2, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
                     if (channel.isNotBlank()) Text(channel, fontSize = 15.sp, color = Color.White.copy(alpha = 0.5f), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Text("Son seul · ↑ ou OK : l’image revient · → : titre suivant", fontSize = Dimens.TextMin, color = Color.White.copy(alpha = 0.35f), modifier = Modifier.padding(top = 10.dp))
                 }
             }
         }
+        KeyHintBar(
+            screen = "tube.audioOnly",
+            hints = listOf(KeyHint(RemoteKey.OK, "Image"), KeyHint(RemoteKey.RIGHT, "Titre suivant")),
+            style = HintStyle.ART,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(end = SafeArea.side, bottom = SafeArea.bottom),
+        )
     }
 }
 

@@ -106,6 +106,15 @@ fun Root(vm: MainViewModel) {
     // The header (tabs) is shown on the sections' pages, not on Rechercher nor an opened channel.
     val showHeader = state.opened == null && state.section != Search
 
+    // Shorts: full screen over the page while watching (Down from the « Shorts » tab), the tabs
+    // under it; Back goes back to the tab. The short one was on is kept while the app lives.
+    val Shorts = dev.miraiijo.miryotube.data.Section.SHORTS
+    var watchingShorts by remember { mutableStateOf(false) }
+    var shortsIndex by remember { mutableIntStateOf(0) }
+    val shortsShown = watchingShorts && state.section == Shorts && state.opened == null && !state.kids &&
+        state.playingId == null && state.playing == null
+    LaunchedEffect(state.section, state.kids) { if (state.section != Shorts || state.kids) watchingShorts = false }
+
     // Back: channel / playlist → its page; Rechercher → the section before; rows → the tabs;
     // tabs → Accueil; then, with a video in the small window, the last Back closes it; then
     // « Retour encore pour quitter » (3 s), as in miryo iptv: a single Back never leaves the app.
@@ -179,7 +188,7 @@ fun Root(vm: MainViewModel) {
                 // POP couldn't keep up with. Not over the full-screen video: there, a held arrow
                 // seeks faster and faster. (Réglages and the other dialogs are windows of their own:
                 // they keep the remote's repeat.)
-                if (native.repeatCount > 0 && native.keyCode in ARROW_KEYS && !fullScreenPlayer) {
+                if (native.repeatCount > 0 && native.keyCode in ARROW_KEYS && !fullScreenPlayer && !shortsShown) {
                     val vertical = native.keyCode == android.view.KeyEvent.KEYCODE_DPAD_UP || native.keyCode == android.view.KeyEvent.KEYCODE_DPAD_DOWN
                     val step = if (vertical) HOLD_ROW_MS else HOLD_STEP_MS
                     if (native.eventTime - heldStep[0] < step) return@onPreviewKeyEvent true
@@ -188,7 +197,7 @@ fun Root(vm: MainViewModel) {
                 // Search key (gamepad Select): straight to Rechercher, from any page (not over the video).
                 // The remote's mic (SEARCH or VOICE_ASSIST): Rechercher, and the dictation right away.
                 val voice = native.keyCode == android.view.KeyEvent.KEYCODE_VOICE_ASSIST
-                if ((native.keyCode == android.view.KeyEvent.KEYCODE_SEARCH || voice) && !fullScreenPlayer && !state.kids) {
+                if ((native.keyCode == android.view.KeyEvent.KEYCODE_SEARCH || voice) && !fullScreenPlayer && !state.kids && !shortsShown) {
                     if (native.repeatCount == 0) {
                         if (state.section != Search || state.opened != null) showSection(Search)
                         if (voice || !native.isFromSource(android.view.InputDevice.SOURCE_GAMEPAD)) dictate = true
@@ -197,7 +206,7 @@ fun Root(vm: MainViewModel) {
                 }
                 // ◀◀ / ▶▶ on the remote (L1 / R1 on a gamepad): previous / next section, the focus on
                 // its tab, stopping at the ends; the same keys as in miryo and miryo iptv.
-                if (native.keyCode in PAGE_KEYS && showHeader && !fullScreenPlayer) {
+                if (native.keyCode in PAGE_KEYS && showHeader && !fullScreenPlayer && !shortsShown) {
                     if (native.repeatCount == 0) {
                         val sections = if (state.kids) listOf(Home) else dev.miraiijo.miryotube.data.Section.entries.filter { it != Search && (!it.account || state.signedIn) }
                         val forward = native.keyCode == android.view.KeyEvent.KEYCODE_BUTTON_R1 || native.keyCode == android.view.KeyEvent.KEYCODE_MEDIA_FAST_FORWARD
@@ -275,7 +284,16 @@ fun Root(vm: MainViewModel) {
                 val current = layerKey == pageKey
                 if (current) last[0] = view
                 val shown = if (current) view else last[0] ?: view
-                if (shown.section == dev.miraiijo.miryotube.data.Section.SEARCH && shown.opened == null) {
+                if (shown.section == Shorts && shown.opened == null) {
+                    val row = shown.page.rows.firstOrNull()
+                    ShortsLanding(
+                        current = row?.items?.getOrNull(shortsIndex) ?: row?.items?.firstOrNull(),
+                        loading = shown.page.loading,
+                        error = shown.page.error,
+                        onWatch = { watchingShorts = true },
+                        onRetry = vm::retry,
+                    )
+                } else if (shown.section == dev.miraiijo.miryotube.data.Section.SEARCH && shown.opened == null) {
                     SearchPage(
                         query = shown.query,
                         page = shown.page,
@@ -334,6 +352,23 @@ fun Root(vm: MainViewModel) {
                 }
             }
         }
+        }
+        if (shortsShown) {
+            val row = page.rows.firstOrNull()
+            ShortsPlayer(
+                row = row,
+                index = shortsIndex.coerceIn(0, (row?.items?.size ?: 1).coerceAtLeast(1) - 1),
+                signedIn = state.signedIn,
+                onIndex = { shortsIndex = it },
+                onLoadMore = vm::loadMore,
+                onOpenChannel = { id, name -> vm.openChannel(id, name, null) },
+                onNotice = vm::showNotice,
+                onExit = {
+                    watchingShorts = false
+                    // Back on the « Shorts » tab (Up is free again for the other tabs).
+                    tabFocusTick++
+                },
+            )
         }
         ProfileSwitchCover(state.switchingTo)
         // Sign-in and pairing open over the dialog they come from ("Qui regarde ?", Réglages): a
