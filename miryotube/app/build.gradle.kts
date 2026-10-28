@@ -22,7 +22,9 @@ android {
     // with them, 24.3 MB instead of 14.8 MB. GitHub's runners: their newest NDK. PC: this version,
     // installed once (SDK Manager > SDK Tools > NDK). checkNativeLibsStripped fails the build without it.
     val ciNdk = System.getenv("ANDROID_NDK_LATEST_HOME")?.let { file(it) }?.takeIf { it.isDirectory }
-    if (ciNdk != null) ndkPath = ciNdk.path else ndkVersion = pcNdkVersion
+    // (AGP wants ndkVersion to match the NDK at ndkPath: its folder is named after its version.)
+    ndkVersion = ciNdk?.name ?: pcNdkVersion
+    if (ciNdk != null) ndkPath = ciNdk.path
 
     defaultConfig {
         applicationId = "dev.miraiijo.lumentube"
