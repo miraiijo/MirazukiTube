@@ -219,29 +219,45 @@ private fun SearchBar(
     }
 
     Row(modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(Dimens.PillGap), verticalAlignment = Alignment.CenterVertically) {
-        Surface(
-            // The pill only opens the keyboard: moving across it with the remote never pops it up.
-            onClick = { editing = true },
-            // Down: the chips right under the bar (the 2D search sometimes picked the side menu).
-            // The redesign's big pill (miryo's search): light by day, translucent at night.
-            modifier = Modifier.weight(1f).height(56.dp).focusRequester(requester).focusProperties { down = below },
-            shape = ClickableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
-            scale = ClickableSurfaceDefaults.scale(focusedScale = 1f, pressedScale = 1f),
-            colors = ClickableSurfaceDefaults.colors(
-                containerColor = if (Palette.colors.isLight) Palette.Panel else Palette.ControlIdle,
-                contentColor = Palette.TextPrimary,
-                // Focused: only the ring changes, the bar keeps its color.
-                focusedContainerColor = if (Palette.colors.isLight) Palette.Panel else Palette.ControlIdle,
-                focusedContentColor = Palette.TextPrimary,
-            ),
-            border = ClickableSurfaceDefaults.border(
-                focusedBorder = androidx.tv.material3.Border(androidx.compose.foundation.BorderStroke(2.dp, Palette.FocusRing), shape = androidx.compose.foundation.shape.CircleShape),
-            ),
-        ) {
-            Row(Modifier.fillMaxSize().padding(horizontal = 22.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(MiryoIcon.SEARCH, size = 18.dp, color = Palette.TextSecondary)
-                Spacer(Modifier.width(14.dp))
-                if (editing) {
+        Box(Modifier.weight(1f).height(56.dp)) {
+            Surface(
+                // The pill only opens the keyboard: moving across it with the remote never pops it up.
+                onClick = { editing = true },
+                // Down: the chips right under the bar (the 2D search sometimes picked the side menu).
+                // The redesign's big pill (miryo's search): light by day, translucent at night.
+                modifier = Modifier.fillMaxSize().focusRequester(requester).focusProperties { down = below },
+                shape = ClickableSurfaceDefaults.shape(shape = androidx.compose.foundation.shape.CircleShape),
+                scale = ClickableSurfaceDefaults.scale(focusedScale = 1f, pressedScale = 1f),
+                colors = ClickableSurfaceDefaults.colors(
+                    containerColor = if (Palette.colors.isLight) Palette.Panel else Palette.ControlIdle,
+                    contentColor = Palette.TextPrimary,
+                    // Focused: only the ring changes, the bar keeps its color.
+                    focusedContainerColor = if (Palette.colors.isLight) Palette.Panel else Palette.ControlIdle,
+                    focusedContentColor = Palette.TextPrimary,
+                ),
+                border = ClickableSurfaceDefaults.border(
+                    focusedBorder = androidx.tv.material3.Border(androidx.compose.foundation.BorderStroke(2.dp, Palette.FocusRing), shape = androidx.compose.foundation.shape.CircleShape),
+                ),
+            ) {
+                Row(Modifier.fillMaxSize().padding(horizontal = 22.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Icon(MiryoIcon.SEARCH, size = 18.dp, color = Palette.TextSecondary)
+                    Spacer(Modifier.width(14.dp))
+                    if (!editing) {
+                        Text(
+                            text.ifBlank { "Rechercher sur YouTube" },
+                            fontSize = 22.sp,
+                            fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
+                            color = if (text.isBlank()) Palette.TextSecondary else Palette.TextPrimary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+            }
+            // Typing: the field on top of the pill, not inside it. Inside the clickable pill the field
+            // never got the input connection on the box, so the Android keyboard didn't open.
+            if (editing) {
+                Row(Modifier.matchParentSize().padding(start = 22.dp + 18.dp + 14.dp, end = 22.dp), verticalAlignment = Alignment.CenterVertically) {
                     BasicTextField(
                         value = text,
                         onValueChange = {
@@ -270,15 +286,6 @@ private fun SearchBar(
                         keyboard?.show()
                         context.getSystemService(InputMethodManager::class.java)?.showSoftInput(view, 0)
                     }
-                } else {
-                    Text(
-                        text.ifBlank { "Rechercher sur YouTube" },
-                        fontSize = 22.sp,
-                        fontWeight = androidx.compose.ui.text.font.FontWeight.Medium,
-                        color = if (text.isBlank()) Palette.TextSecondary else Palette.TextPrimary,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                    )
                 }
             }
         }
