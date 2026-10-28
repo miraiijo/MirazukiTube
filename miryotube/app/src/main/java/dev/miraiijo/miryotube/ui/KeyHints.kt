@@ -42,7 +42,6 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.core.content.edit
 import androidx.tv.material3.Text
 
@@ -186,7 +185,7 @@ private fun HintPill(hints: List<KeyHint>, style: HintStyle) {
     val compact = style == HintStyle.COMPACT
     val onArt = style == HintStyle.ART || compact
     val text = if (onArt) Color.White.copy(alpha = 0.80f) else Palette.TextSecondary
-    val fontSize = if (compact) 12.sp else Dimens.TextMin
+    val fontSize = Dimens.TextMin
     val shape = if (compact) RoundedCornerShape(12.dp) else RoundedCornerShape(50)
     val reduced = dev.miraiijo.miryotube.system.LowEnd.reduced()
     val pill = when (style) {
@@ -219,7 +218,7 @@ private fun HintItem(hint: KeyHint, onArt: Boolean, text: Color, fontSize: TextU
 /** One key, drawn: arrows, Menu and Lecture / Pause as lines; OK and Retour written, as on the remote. */
 @Composable
 fun KeyCap(key: RemoteKey, onArt: Boolean = false, compact: Boolean = false) {
-    val height: Dp = if (compact) 20.dp else 24.dp
+    val height: Dp = if (compact) 22.dp else 24.dp
     val shape = RoundedCornerShape(if (compact) 6.dp else 8.dp)
     val fill = when {
         onArt -> Color.White.copy(alpha = 0.16f)
@@ -228,15 +227,16 @@ fun KeyCap(key: RemoteKey, onArt: Boolean = false, compact: Boolean = false) {
     }
     val ink = if (onArt) Color.White else Palette.TextPrimary
     Box(
-        Modifier.height(height).defaultMinSize(minWidth = height).background(fill, shape).padding(horizontal = if (compact) 4.dp else 6.dp),
+        Modifier.defaultMinSize(minWidth = height, minHeight = height).background(fill, shape).padding(horizontal = if (compact) 4.dp else 6.dp),
         contentAlignment = Alignment.Center,
     ) {
-        val label = if (compact) 10.sp else 11.sp
+        // Never below the suite's 13 sp minimum, even inside a key.
+        val label = Dimens.TextMin
         when (key) {
             RemoteKey.OK -> Text("OK", color = ink, fontSize = label, fontWeight = FontWeight.Bold, maxLines = 1)
             RemoteKey.OK_LONG -> Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp)) {
                 Text("OK", color = ink, fontSize = label, fontWeight = FontWeight.Bold, maxLines = 1)
-                Text("long", color = ink.copy(alpha = 0.75f), fontSize = label * 0.8f, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                Text("long", color = ink.copy(alpha = 0.75f), fontSize = label, fontWeight = FontWeight.Normal, maxLines = 1)
             }
             RemoteKey.BACK -> Text("Retour", color = ink, fontSize = label, fontWeight = FontWeight.Bold, maxLines = 1)
             else -> {
