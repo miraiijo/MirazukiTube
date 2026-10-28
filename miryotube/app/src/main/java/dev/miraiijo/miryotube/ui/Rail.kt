@@ -363,6 +363,17 @@ private enum class SettingsPage(val label: String) { SEARCH("Rechercher"), ACCOU
 /** Réglages opens on its first page (Rechercher is right above it). */
 private val OPENING = SettingsPage.ACCOUNT
 
+/** What miryo's « Invité » profile may change here (as in miryo): the look and the subtitles. */
+private val GUEST_PAGES = listOf(SettingsPage.DISPLAY, SettingsPage.PLAYBACK)
+
+@Composable
+private fun GuestHint() {
+    Text(
+        "Profil Invité de miryo : YouTube sans compte, seulement l’affichage et les sous-titres.",
+        fontSize = 15.sp, color = Palette.TextSecondary,
+    )
+}
+
 /** Réglages › Lecture › Taille des sous-titres, in miryo's words (link.MiryoLook.SUB_SIZES). */
 private val SUBTITLE_SIZE_NAMES = listOf("s" to "Petite", "m" to "Normale", "l" to "Grande", "xl" to "Très grande")
 
@@ -402,6 +413,8 @@ fun SettingsDialog(
     onUnhideChannel: (String) -> Unit = {},
     folders: List<dev.miraiijo.miryotube.data.Folder> = emptyList(),
     onDeleteFolder: (String) -> Unit = {},
+    /** miryo's « Invité » profile: only Affichage (look, size) and Lecture (subtitles); no account. */
+    guest: Boolean = false,
 ) {
     MiryoDialog(onDismissRequest = onDismiss) {
         val first = remember { FocusRequester() }
@@ -416,13 +429,14 @@ fun SettingsDialog(
                 pair.tryRequestFocus()
             }
         }
-        var page by remember { mutableStateOf(OPENING) }
+        val opening = if (guest) SettingsPage.DISPLAY else OPENING
+        var page by remember { mutableStateOf(opening) }
         // Rechercher can't take the focus before Compte has it: Android's own first focus would
         // land on it for a frame and show its page, then Compte's (the menu and the page jumped).
         var settled by remember { mutableStateOf(false) }
         // Mises à jour › Vérifier.
         val check = remember { FocusRequester() }
-        val pages = SettingsPage.entries.filter { it != SettingsPage.KIDS || kidChannels != null }
+        val pages = if (guest) GUEST_PAGES else SettingsPage.entries.filter { it != SettingsPage.KIDS || kidChannels != null }
         // Rechercher › a result: its page's menu item takes the focus (which shows the page).
         val navFocus = remember { SettingsPage.entries.associateWith { FocusRequester() } }
         Column(Modifier.fillMaxSize().miryoBackground().safePadding()) {
@@ -445,9 +459,9 @@ fun SettingsDialog(
                             item.label,
                             current = item == page,
                             modifier = Modifier
-                                .focusRequester(if (item == OPENING) first else navFocus.getValue(item))
+                                .focusRequester(if (item == opening) first else navFocus.getValue(item))
                                 .focusProperties { canFocus = settled || item != SettingsPage.SEARCH },
-                            onFocus = { if (settled || item == OPENING) page = item },
+                            onFocus = { if (settled || item == opening) page = item },
                         )
                     }
                 }
@@ -467,18 +481,19 @@ fun SettingsDialog(
                     when (page) {
                         SettingsPage.SEARCH -> SettingsSearch(pages = pages.map { it.name }.toSet()) { name ->
                             val target = SettingsPage.valueOf(name)
-                            (if (target == OPENING) first else navFocus.getValue(target)).tryRequestFocus()
+                            (if (target == opening) first else navFocus.getValue(target)).tryRequestFocus()
                         }
                         SettingsPage.PLAYBACK -> {
-                            SettingCard("Lecture automatique", "À la fin d’une vidéo, la suivante démarre après un court compte à rebours.") {
+                            if (guest) GuestHint()
+                            if (!guest) SettingCard("Lecture automatique", "À la fin d’une vidéo, la suivante démarre après un court compte à rebours.") {
                                 Choice("Activée", settings.autoplay) { onSettings(settings.copy(autoplay = true)) }
                                 Choice("Désactivée", !settings.autoplay) { onSettings(settings.copy(autoplay = false)) }
                             }
-                            SettingCard("Passer les sponsors (SponsorBlock)", "Sponsors, autopromo et rappels d’abonnement sautés automatiquement.") {
+                            if (!guest) SettingCard("Passer les sponsors (SponsorBlock)", "Sponsors, autopromo et rappels d’abonnement sautés automatiquement.") {
                                 Choice("Activé", settings.sponsorBlock) { onSettings(settings.copy(sponsorBlock = true)) }
                                 Choice("Désactivé", !settings.sponsorBlock) { onSettings(settings.copy(sponsorBlock = false)) }
                             }
-                            SettingCard("Volume stable", "Même niveau sonore d’une vidéo à l’autre.") {
+                            if (!guest) SettingCard("Volume stable", "Même niveau sonore d’une vidéo à l’autre.") {
                                 Choice("Activé", settings.stableVolume) { onSettings(settings.copy(stableVolume = true)) }
                                 Choice("Désactivé", !settings.stableVolume) { onSettings(settings.copy(stableVolume = false)) }
                             }
@@ -534,38 +549,40 @@ fun SettingsDialog(
                                 if (miryoText || likeMiryo) Choice("Comme miryo", likeMiryo) { onSettings(settings.copy(uiScale = UI_SCALE_MIRYO)) }
                                 Choice("Par défaut", !likeMiryo && size == UI_SCALE_DEFAULT) { onSettings(settings.copy(uiScale = UI_SCALE_DEFAULT)) }
                             }
-                            SettingCard("DeArrow", "Titres et miniatures de la communauté, sans racolage, quand il y en a.") {
-                                Choice("Activé", settings.deArrow) { onSettings(settings.copy(deArrow = true)) }
-                                Choice("Désactivé", !settings.deArrow) { onSettings(settings.copy(deArrow = false)) }
-                            }
-                            // miryo's choice wins when it says one (Réglages › Affichage there).
-                            val hintsContext = androidx.compose.ui.platform.LocalContext.current
-                            val miryoHints = dev.miraiijo.miryotube.link.MiryoLook.current?.keyHints
-                            var ownHints by remember { mutableStateOf(KeyHints.ownEnabled(hintsContext)) }
-                            var hintsReset by remember { mutableStateOf(false) }
-                            SettingCard(
-                                "Aides des touches",
-                                when {
-                                    hintsReset -> "C’est fait : chaque écran remontre ses aides."
-                                    miryoHints != null -> "Les touches à utiliser, en bas à droite quand un écran s’ouvre. Réglé dans miryo : " + (if (miryoHints) "affichées." else "masquées.")
-                                    else -> "Les touches à utiliser, en bas à droite quand un écran s’ouvre, ses 3 premières fois."
-                                },
-                            ) {
-                                if (miryoHints == null) {
-                                    Choice("Activées", ownHints) { KeyHints.setEnabled(hintsContext, true); ownHints = true }
-                                    Choice("Désactivées", !ownHints) { KeyHints.setEnabled(hintsContext, false); ownHints = false }
+                            if (guest) GuestHint() else {
+                                SettingCard("DeArrow", "Titres et miniatures de la communauté, sans racolage, quand il y en a.") {
+                                    Choice("Activé", settings.deArrow) { onSettings(settings.copy(deArrow = true)) }
+                                    Choice("Désactivé", !settings.deArrow) { onSettings(settings.copy(deArrow = false)) }
                                 }
-                                MiryoButton("Les revoir", contentColor = Palette.ChipText) { KeyHints.reset(hintsContext); hintsReset = true }
-                            }
-                            // Measured on this box (fluidity test), with the recommended choice; Complètes on a modest box asks first.
-                            Column(
-                                Modifier
-                                    .fillMaxWidth()
-                                    .liquidGlass(RoundedCornerShape(16.dp))
-                                    .padding(horizontal = 18.dp, vertical = 16.dp),
-                            ) {
-                                Text("Animations", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Palette.TextPrimary, modifier = Modifier.padding(bottom = 8.dp))
-                                AnimationsChoice(settings.animations, { onSettings(settings.copy(animations = it)) })
+                                // miryo's choice wins when it says one (Réglages › Affichage there).
+                                val hintsContext = androidx.compose.ui.platform.LocalContext.current
+                                val miryoHints = dev.miraiijo.miryotube.link.MiryoLook.current?.keyHints
+                                var ownHints by remember { mutableStateOf(KeyHints.ownEnabled(hintsContext)) }
+                                var hintsReset by remember { mutableStateOf(false) }
+                                SettingCard(
+                                    "Aides des touches",
+                                    when {
+                                        hintsReset -> "C’est fait : chaque écran remontre ses aides."
+                                        miryoHints != null -> "Les touches à utiliser, en bas à droite quand un écran s’ouvre. Réglé dans miryo : " + (if (miryoHints) "affichées." else "masquées.")
+                                        else -> "Les touches à utiliser, en bas à droite quand un écran s’ouvre, ses 3 premières fois."
+                                    },
+                                ) {
+                                    if (miryoHints == null) {
+                                        Choice("Activées", ownHints) { KeyHints.setEnabled(hintsContext, true); ownHints = true }
+                                        Choice("Désactivées", !ownHints) { KeyHints.setEnabled(hintsContext, false); ownHints = false }
+                                    }
+                                    MiryoButton("Les revoir", contentColor = Palette.ChipText) { KeyHints.reset(hintsContext); hintsReset = true }
+                                }
+                                // Measured on this box (fluidity test), with the recommended choice; Complètes on a modest box asks first.
+                                Column(
+                                    Modifier
+                                        .fillMaxWidth()
+                                        .liquidGlass(RoundedCornerShape(16.dp))
+                                        .padding(horizontal = 18.dp, vertical = 16.dp),
+                                ) {
+                                    Text("Animations", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = Palette.TextPrimary, modifier = Modifier.padding(bottom = 8.dp))
+                                    AnimationsChoice(settings.animations, { onSettings(settings.copy(animations = it)) })
+                                }
                             }
                         }
                         SettingsPage.SOUNDS -> {

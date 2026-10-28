@@ -221,6 +221,8 @@ data class UiState(
      */
     val kids: Boolean = false,
     val kidsLocked: Boolean = false,
+    /** miryo is on its « Invité » profile: YouTube without account, no account choice, few settings. */
+    val miryoGuest: Boolean = false,
     /** The kids profile exists (its parental code is set) and the channels it may watch. */
     val kidsExists: Boolean = false,
     val kidChannels: List<KidChannel> = emptyList(),
@@ -376,7 +378,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
             // for the one picked (not when miryo launched a video and asked to skip it, nor when it
             // was answered before the process was killed).
             val ask = if (restored) saved.get<Boolean>(KEY_PICKED) == false else accounts.size >= 2 || guest
-            if (ask && !skipPicker && miryoGuest == null) {
+            if (ask && !skipPicker && miryoGuest == null && !MiryoProfile.currentGuest) {
                 _state.update { it.copy(accounts = accounts, choosingAccount = true) }
             } else {
                 _state.update { it.copy(accounts = accounts) }
@@ -1103,6 +1105,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { kidsStore.refreshSuite(); dev.miraiijo.miryotube.link.MiryoLook.refresh(getApplication()) }
         kidsUi()
         val miryoKids = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MiryoProfile.currentIsKids(getApplication()) }
+        _state.update { it.copy(miryoGuest = MiryoProfile.currentGuest) }
         return kidsMutex.withLock {
             when {
                 miryoKids == true -> beginKids(fromMiryo = true)
@@ -1148,6 +1151,7 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
             kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { kidsStore.refreshSuite(); dev.miraiijo.miryotube.link.MiryoLook.refresh(getApplication()) }
             kidsUi()
             val miryoKids = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { MiryoProfile.currentIsKids(getApplication()) } ?: return@launch
+            _state.update { it.copy(miryoGuest = MiryoProfile.currentGuest) }
             kidsMutex.withLock {
                 val s = _state.value
                 if (miryoKids && !(s.kids && s.kidsLocked)) {
@@ -1461,6 +1465,8 @@ class MainViewModel(application: Application, private val saved: SavedStateHandl
         when {
             // miryo's kids profile: the way out is in miryo, behind its own parental code.
             s.kidsLocked -> showNotice("Profil enfant de miryo : change de profil dans miryo.")
+            // miryo's Invité: YouTube without account, nothing to choose.
+            s.miryoGuest -> showNotice("Profil Invité de miryo : YouTube sans compte. Choisis ton profil dans miryo pour retrouver le tien.")
             // miryo tube's kids profile: the parental code first.
             s.kids -> _state.update { it.copy(pin = PinPrompt(PinStep.UNLOCK)) }
             else -> {
