@@ -106,6 +106,8 @@ private class Entry(
     val header: Boolean = false,
     /** A picture on the left (a chapter's). */
     val image: String? = null,
+    /** The value always whole (a chapter's time): the label is the one cut. */
+    val keepValue: Boolean = false,
     val onClick: () -> Unit,
 )
 
@@ -313,7 +315,7 @@ private fun buildEntries(
     PlayerMenu.INFO -> emptyList()
     // Each chapter with its start time; OK jumps there (the one playing is checked).
     PlayerMenu.CHAPTERS -> actions.chapters.mapIndexed { index, chapter ->
-        Entry(chapter.title.ifBlank { "Chapitre ${index + 1}" }, formatDuration(chapter.startMs).ifEmpty { "0:00" }, selected = index == actions.currentChapter, image = chapter.image) {
+        Entry(chapter.title.ifBlank { "Chapitre ${index + 1}" }, formatDuration(chapter.startMs).ifEmpty { "0:00" }, selected = index == actions.currentChapter, image = chapter.image, keepValue = true) {
             actions.onChapter(chapter)
             onMenu(PlayerMenu.MAIN)
         }
@@ -429,7 +431,11 @@ private fun MenuRow(entry: Entry, modifier: Modifier) {
                     Thumbnail(null, entry.image, Modifier.fillMaxSize(), small = true, width = CHAPTER_IMAGE)
                 }
             }
-            if (entry.value == null) {
+            if (entry.value != null && entry.keepValue) {
+                // A long chapter title ends in « … », its time stays whole on the right.
+                Text(entry.label, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                Text(entry.value, fontSize = 14.sp, color = LocalContentColor.current.copy(alpha = 0.65f), maxLines = 1, softWrap = false, modifier = Modifier.padding(start = 12.dp))
+            } else if (entry.value == null) {
                 Text(entry.label, fontSize = 15.sp, fontWeight = FontWeight.Medium, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
             } else {
                 // The label first, whole (up to a cap); the value takes the rest, right-aligned, and
